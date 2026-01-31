@@ -3,21 +3,21 @@ import cors from 'cors';
 import fetch from 'node-fetch';
 
 const app = express();
-const PORT = process.env.PORT || 10000; // Render uses 10000 by default
+const PORT = process.env.PORT || 10000;
 
 app.use(cors());
 app.use(express.json());
 
 app.post('/api/proxy', async (req, res) => {
     try {
-        // Updated to the correct .ai domain
-        const TARGET_URL = 'https://api.manus.ai/v1/agent'; 
+        // Updated to the standard Manus chat endpoint
+        const TARGET_URL = 'https://api.manus.ai/v1/chat/completions'; 
         
         const response = await fetch(TARGET_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': req.headers['x-api-key']
+                'Authorization': `Bearer ${req.headers['x-api-key']}`
             },
             body: JSON.stringify(req.body)
         });
@@ -27,7 +27,7 @@ app.post('/api/proxy', async (req, res) => {
     } catch (error) {
         res.status(500).json({ 
             error: { 
-                message: "Proxy Error: Could not reach Manus AI API.",
+                message: "Proxy failed to reach Manus.",
                 details: error.message 
             } 
         });
