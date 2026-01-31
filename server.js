@@ -10,24 +10,24 @@ app.use(express.json());
 
 app.post('/api/proxy', async (req, res) => {
     try {
-        // Updated to the official Manus Agent endpoint
+        // This is the correct official endpoint for Manus AI
         const TARGET_URL = 'https://api.manus.ai/v1/chat/completions'; 
         
-        console.log("Attempting to connect to Manus...");
-
         const response = await fetch(TARGET_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${req.headers['x-api-key']}`
+                'Authorization': `Bearer ${req.headers['x-api-key']}` // Manus uses Bearer tokens
             },
-            body: JSON.stringify(req.body)
+            body: JSON.stringify({
+                ...req.body,
+                model: "manus" // Ensures the correct model is called
+            })
         });
 
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error("Proxy Error:", error.message);
         res.status(500).json({ 
             error: { 
                 message: "Proxy failed to reach Manus.",
