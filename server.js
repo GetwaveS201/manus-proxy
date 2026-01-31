@@ -107,6 +107,7 @@ app.get('/api/task-status/:taskId', async (req, res) => {
         
         const data = await response.json();
         console.log('Task status:', data.status);
+        console.log('Full task data:', JSON.stringify(data, null, 2));
         
         res.json(data);
         
