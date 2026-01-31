@@ -536,17 +536,34 @@
                         
                         const statusData = await statusRes.json();
                         
-                        // CRITICAL FIX: Extract text properly from content array
+                        // CRITICAL FIX: Handle both single message and array of messages
                         if (statusData.status === 'completed') {
                             let reply = '';
                             
-                            // Check if content is array
-                            if (statusData.content && Array.isArray(statusData.content)) {
-                                // Extract all text from output_text items
+                            // Check if response is an ARRAY of messages (new format)
+                            if (Array.isArray(statusData)) {
+                                // Find the last assistant message with content
+                                const assistantMessages = statusData.filter(msg => 
+                                    msg.role === 'assistant' && 
+                                    msg.content && 
+                                    Array.isArray(msg.content) && 
+                                    msg.content.length > 0
+                                );
+                                
+                                if (assistantMessages.length > 0) {
+                                    // Get the last assistant message
+                                    const lastMsg = assistantMessages[assistantMessages.length - 1];
+                                    const textItems = lastMsg.content
+                                        .filter(item => item && item.type === 'output_text' && item.text)
+                                        .map(item => item.text);
+                                    reply = textItems.join('\n\n');
+                                }
+                            }
+                            // Check if response is single message object (old format)
+                            else if (statusData.content && Array.isArray(statusData.content)) {
                                 const textItems = statusData.content
                                     .filter(item => item && item.type === 'output_text' && item.text)
                                     .map(item => item.text);
-                                
                                 reply = textItems.join('\n\n');
                             }
                             
