@@ -10,18 +10,19 @@ app.use(express.json());
 
 app.post('/api/proxy', async (req, res) => {
     try {
-        // This is the correct official endpoint for Manus AI
-        const TARGET_URL = 'https://api.manus.ai/v1/chat/completions'; 
+        // Official Manus API Tasks endpoint
+        const TARGET_URL = 'https://api.manus.ai/v1/tasks'; 
         
+        // Manus expects "API_KEY" in the header and "prompt" in the body
         const response = await fetch(TARGET_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${req.headers['x-api-key']}` // Manus uses Bearer tokens
+                'accept': 'application/json',
+                'content-type': 'application/json',
+                'API_KEY': req.headers['x-api-key'] 
             },
             body: JSON.stringify({
-                ...req.body,
-                model: "manus" // Ensures the correct model is called
+                prompt: req.body.messages?.[req.body.messages.length - 1]?.content || req.body.prompt
             })
         });
 
