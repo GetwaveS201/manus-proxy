@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manus AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            max-height: 800px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .settings-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .api-setup {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            padding: 20px 30px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .api-setup.hidden {
+            display: none;
+        }
+        
+        .api-setup input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .api-setup input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .api-setup button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .api-setup button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .user-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .bot-avatar {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        
+        .message-content {
+            flex: 1;
+            padding: 16px 20px;
+            border-radius: 16px;
+            max-width: 70%;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .bot .message-content {
+            background: white;
+            color: #2d3436;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .error .message-content {
+            background: #ff7675;
+            color: white;
+            border: none;
+        }
+        
+        .loading-indicator {
+            display: inline-block;
+        }
+        
+        .loading-indicator::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .input-area {
+            padding: 25px 30px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        .input-area input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        .input-area input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-area input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+        
+        .btn {
+            padding: 16px 28px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 15px;
+        }
+        
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-send:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-clear {
+            background: #f1f3f5;
+            color: #495057;
+        }
+        
+        .btn-clear:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+        
+        .status-bar {
+            padding: 8px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #868e96;
+            text-align: center;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            color: #868e96;
+            padding: 60px 20px;
+        }
+        
+        .welcome-message h2 {
+            font-size: 28px;
+            color: #2d3436;
+            margin-bottom: 12px;
+        }
+        
+        .welcome-message p {
+            font-size: 16px;
+        }
+        
+        /* Scrollbar styling */
+        .chat-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-area::-webkit-scrollbar-track {
+            background: #f1f3f5;
+        }
+        
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 4px;
+        }
+        
+        .chat-area::-webkit-scrollbar-thumb:hover {
+            background: #ced4da;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .container {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .input-area {
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                flex: 1;
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <div class="header-icon">🤖</div>
+                Manus AI
+            </h1>
+            <button class="settings-btn" onclick="showApiSetup()">⚙️ Settings</button>
+        </div>
+        
+        <div id="api-setup" class="api-setup">
+            <input type="password" id="api-key-input" placeholder="Enter your Manus API key...">
+            <button onclick="saveApiKey()">💾 Save Key</button>
+        </div>
+        
+        <div class="chat-area" id="chat-area">
+            <div class="welcome-message">
+                <h2>👋 Welcome to Manus AI</h2>
+                <p>Start a conversation by typing a message below</p>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="message-input" 
+                    placeholder="Type your message..." 
+                    onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"
+                >
+            </div>
+            <button class="btn btn-send" onclick="sendMessage()" id="send-btn">
+                ▲ Send
+            </button>
+            <button class="btn btn-clear" onclick="clearChat()">
+                🗑️
+            </button>
+        </div>
+        
+        <div class="status-bar" id="status-bar">Ready</div>
+    </div>
+
+    <script>
+        let API_KEY = localStorage.getItem('manus_api_key') || '';
+        
+        // Initialize
+        window.onload = function() {
+            if (API_KEY) {
+                document.getElementById('api-setup').classList.add('hidden');
+            }
+            document.getElementById('message-input').focus();
+        };
+        
+        function showApiSetup() {
+            const setup = document.getElementById('api-setup');
+            setup.classList.toggle('hidden');
+        }
+        
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (!key) {
+                alert('Please enter an API key');
+                return;
+            }
+            localStorage.setItem('manus_api_key', key);
+            API_KEY = key;
+            document.getElementById('api-setup').classList.add('hidden');
+            document.getElementById('api-key-input').value = '';
+            updateStatus('✓ API key saved');
+            clearChat();
+            addBotMessage('API key saved! How can I help you today?');
+        }
+        
+        function updateStatus(text) {
+            document.getElementById('status-bar').textContent = text;
+        }
+        
+        function addMessage(role, text, isError = false) {
+            const chatArea = document.getElementById('chat-area');
+            
+            // Remove welcome message if exists
+            const welcome = chatArea.querySelector('.welcome-message');
+            if (welcome) welcome.remove();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}${isError ? ' error' : ''}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = `message-avatar ${role}-avatar`;
+            avatar.textContent = role === 'user' ? '👤' : '🤖';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+            
+            if (role === 'user') {
+                messageDiv.appendChild(content);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(content);
+            }
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            return content;
+        }
+        
+        function addUserMessage(text) {
+            addMessage('user', text);
+        }
+        
+        function addBotMessage(text, isError = false) {
+            return addMessage('bot', text, isError);
+        }
+        
+        function clearChat() {
+            const chatArea = document.getElementById('chat-area');
+            chatArea.innerHTML = '';
+        }
+        
+        async function sendMessage() {
+            if (!API_KEY) {
+                alert('Please save your API key first!');
+                showApiSetup();
+                return;
+            }
+            
+            const input = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-btn');
+            const val = input.value.trim();
+            
+            if (!val) return;
+            
+            // Disable inputs
+            input.disabled = true;
+            sendBtn.disabled = true;
+            
+            addUserMessage(val);
+            input.value = '';
+            
+            const loadingMsg = addBotMessage('Thinking...');
+            loadingMsg.innerHTML = '<span class="loading-indicator">Thinking</span>';
+            updateStatus('Creating task...');
+            
+            try {
+                // Step 1: Create task
+                const createRes = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify({ prompt: val })
+                });
+                
+                if (!createRes.ok) {
+                    throw new Error(`Server error: ${createRes.status}`);
+                }
+                
+                const createData = await createRes.json();
+                
+                if (!createData.task_id) {
+                    throw new Error('No task_id received');
+                }
+                
+                const taskId = createData.task_id;
+                updateStatus('Task created, waiting for response...');
+                
+                // Step 2: Poll for result
+                let attempts = 0;
+                const maxAttempts = 60;
+                
+                while (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    updateStatus(`Checking... (${attempts * 2}s)`);
+                    loadingMsg.innerHTML = `<span class="loading-indicator">Processing (${attempts * 2}s)</span>`;
+                    
+                    try {
+                        const statusRes = await fetch(
+                            `https://manus-proxy-dxaj.onrender.com/api/task-status/${taskId}`,
+                            {
+                                method: 'GET',
+                                headers: { 'x-api-key': API_KEY }
+                            }
+                        );
+                        
+                        if (!statusRes.ok) {
+                            attempts++;
+                            continue;
+                        }
+                        
+                        const statusData = await statusRes.json();
+                        
+                        // CRITICAL FIX: Extract text properly from content array
+                        if (statusData.status === 'completed') {
+                            let reply = '';
+                            
+                            // Check if content is array
+                            if (statusData.content && Array.isArray(statusData.content)) {
+                                // Extract all text from output_text items
+                                const textItems = statusData.content
+                                    .filter(item => item && item.type === 'output_text' && item.text)
+                                    .map(item => item.text);
+                                
+                                reply = textItems.join('\n\n');
+                            }
+                            
+                            // Fallback checks
+                            if (!reply && statusData.result) {
+                                reply = typeof statusData.result === 'string' 
+                                    ? statusData.result 
+                                    : JSON.stringify(statusData.result, null, 2);
+                            }
+                            
+                            if (!reply && statusData.output) {
+                                reply = typeof statusData.output === 'string'
+                                    ? statusData.output
+                                    : JSON.stringify(statusData.output, null, 2);
+                            }
+                            
+                            if (!reply) {
+                                reply = 'Response received but no text could be extracted.\n\nRaw response:\n' + 
+                                       JSON.stringify(statusData, null, 2);
+                            }
+                            
+                            loadingMsg.textContent = reply;
+                            loadingMsg.parentElement.classList.remove('error');
+                            updateStatus('✓ Complete');
+                            
+                            input.disabled = false;
+                            sendBtn.disabled = false;
+                            input.focus();
+                            return;
+                        }
+                        
+                        if (statusData.status === 'failed') {
+                            throw new Error('Task failed: ' + (statusData.error || 'Unknown error'));
+                        }
+                        
+                        attempts++;
+                        
+                    } catch (pollError) {
+                        console.error('Poll error:', pollError);
+                        attempts++;
+                        if (attempts >= maxAttempts) {
+                            throw pollError;
+                        }
+                    }
+                }
+                
+                throw new Error('Task timed out after 120 seconds. The server might be sleeping (first request can take 60s).');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                loadingMsg.textContent = `❌ ${error.message}`;
+                loadingMsg.parentElement.classList.add('error');
+                updateStatus('Error occurred');
+                
+                if (error.message.includes('Failed to fetch')) {
+                    addBotMessage('Network error. Check your internet connection.', true);
+                } else if (error.message.includes('401')) {
+                    addBotMessage('Invalid API key. Please check your settings.', true);
+                }
+            }
+            
+            input.disabled = false;
+            sendBtn.disabled = false;
+            input.focus();
+        }
+    </script>
+</body>
+</html>
