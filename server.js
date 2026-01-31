@@ -10,10 +10,13 @@ app.use(express.json());
 
 app.post('/api/proxy', async (req, res) => {
     try {
-        // Official Manus API Tasks endpoint
         const TARGET_URL = 'https://api.manus.ai/v1/tasks'; 
         
-        // Manus expects "API_KEY" in the header and "prompt" in the body
+        // This part extracts your message text to make sure 'prompt' is never empty
+        const userPrompt = req.body.prompt || 
+                           (req.body.messages && req.body.messages[req.body.messages.length - 1].content) || 
+                           "Hello";
+
         const response = await fetch(TARGET_URL, {
             method: 'POST',
             headers: {
@@ -22,7 +25,7 @@ app.post('/api/proxy', async (req, res) => {
                 'API_KEY': req.headers['x-api-key'] 
             },
             body: JSON.stringify({
-                prompt: req.body.messages?.[req.body.messages.length - 1]?.content || req.body.prompt
+                prompt: userPrompt // Manus strictly requires this field
             })
         });
 
