@@ -3,18 +3,16 @@ import cors from 'cors';
 import fetch from 'node-fetch';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render uses 10000 by default
 
 app.use(cors());
 app.use(express.json());
 
 app.post('/api/proxy', async (req, res) => {
     try {
-        // Try manus.ai if manus.app fails, as they recently updated their branding
+        // Updated to the correct .ai domain
         const TARGET_URL = 'https://api.manus.ai/v1/agent'; 
         
-        console.log(`Forwarding request to: ${TARGET_URL}`);
-
         const response = await fetch(TARGET_URL, {
             method: 'POST',
             headers: {
@@ -27,10 +25,9 @@ app.post('/api/proxy', async (req, res) => {
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error("Fetch Error:", error.message);
         res.status(500).json({ 
             error: { 
-                message: "The proxy couldn't reach Manus. Check if api.manus.ai is correct.",
+                message: "Proxy Error: Could not reach Manus AI API.",
                 details: error.message 
             } 
         });
