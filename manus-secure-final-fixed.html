@@ -497,9 +497,21 @@
           }
           
           // Check if task is complete
-          if (data.status === 'completed' && data.result) {
+          if (data.status === 'completed' && data.content) {
             document.getElementById(loadingId)?.remove();
-            addMessage('assistant', marked.parse(data.result));
+            
+            // Extract text from content array
+            let responseText = '';
+            if (Array.isArray(data.content)) {
+              responseText = data.content
+                .filter(item => item.type === 'output_text')
+                .map(item => item.text)
+                .join('\n\n');
+            } else {
+              responseText = data.result || data.output || JSON.stringify(data);
+            }
+            
+            addMessage('assistant', marked.parse(responseText));
             setTimeout(() => hljs.highlightAll(), 100);
             return;
           }
