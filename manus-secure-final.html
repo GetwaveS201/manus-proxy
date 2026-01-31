@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manus Interface - Secure Direct</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #0f0f0f;
+      background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0f0f0f 70%);
+      font-family: 'Inter', sans-serif;
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1a1a1a; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+    .prose h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #fff; }
+    .prose h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #e5e7eb; }
+    .prose p { margin-bottom: 1rem; line-height: 1.6; color: #d1d5db; }
+    .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #d1d5db; }
+    .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; color: #d1d5db; }
+    .prose pre { background: #1e1e1e; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; border: 1px solid #333; }
+    .prose code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: rgba(255,255,255,0.1); padding: 0.2em 0.4em; border-radius: 0.25em; color: #60a5fa; }
+    .prose pre code { background: transparent; padding: 0; color: inherit; }
+    .prose strong { color: white; font-weight: 600; }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading { animation: spin 1s linear infinite; }
+    
+    .hidden { display: none; }
+  </style>
+</head>
+<body class="text-white min-h-screen">
+  
+  <!-- CORS Warning Banner -->
+  <div id="corsWarning" class="fixed top-0 left-0 right-0 bg-yellow-600/20 border-b border-yellow-500/30 p-3 z-50">
+    <div class="container mx-auto max-w-4xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      <div class="flex-1">
+        <p class="text-yellow-200 text-sm">
+          <strong>CORS Restriction:</strong> Due to browser security, you need to install a CORS extension or use Firefox for this to work.
+          <br/>
+          <span class="text-xs text-yellow-300 mt-1 block">Chrome: Install "CORS Unblock" • Firefox: Works by default • Edge: Install "CORS Unblock"</span>
+        </p>
+      </div>
+      <button id="dismissCorsWarning" class="text-yellow-400 hover:text-yellow-300">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="loginScreen" class="fixed inset-0 flex items-center justify-center p-6 pt-20">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-2">Manus AI</h1>
+        <p class="text-gray-400">Secure Interface</p>
+        <div class="mt-2 flex items-center justify-center gap-2 text-xs text-green-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          <span>Encrypted • Secure • Private</span>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm" class="bg-[#1a1a1a] rounded-2xl border border-gray-700 p-8 shadow-2xl">
+        <h2 class="text-2xl font-semibold mb-6">Sign In</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Email</label>
+            <input type="email" id="loginEmail" placeholder="your@email.com" class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all"/>
+          </div>
+          
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Master Password</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all"/>
+            <p class="text-xs text-gray-500 mt-1">This password encrypts your API key</p>
+          </div>
+
+          <div id="loginError" class="hidden p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm"></div>
+
+          <button id="loginBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white py-3 rounded-xl font-medium transition shadow-lg">
+            Sign In
+          </button>
+        </div>
+
+        <div class="mt-6 text-center">
+          <button id="showSignup" class="text-gray-400 hover:text-white transition text-sm">
+            Don't have an account? <span class="text-blue-400">Sign up</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Signup Form -->
+      <div id="signupForm" class="hidden bg-[#1a1a1a] rounded-2xl border border-gray-700 p-8 shadow-2xl">
+        <h2 class="text-2xl font-semibold mb-6">Create Account</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Full Name</label>
+            <input type="text" id="signupName" placeholder="John Doe" class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all"/>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Email</label>
+            <input type="email" id="signupEmail" placeholder="your@email.com" class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all"/>
+          </div>
+          
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Master Password</label>
+            <input type="password" id="signupPassword" placeholder="••••••••" class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all"/>
+            <p class="text-xs text-gray-500 mt-1">Minimum 8 characters, use a strong password</p>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Confirm Password</label>
+            <input type="password" id="signupPasswordConfirm" placeholder="••••••••" class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all"/>
+          </div>
+
+          <div id="signupError" class="hidden p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm"></div>
+
+          <button id="signupBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white py-3 rounded-xl font-medium transition shadow-lg">
+            Create Account
+          </button>
+        </div>
+
+        <div class="mt-6 text-center">
+          <button id="showLogin" class="text-gray-400 hover:text-white transition text-sm">
+            Already have an account? <span class="text-blue-400">Sign in</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key Setup (After Login) -->
+  <div id="apiKeySetup" class="hidden fixed inset-0 flex items-center justify-center p-6 bg-black/50 backdrop-blur">
+    <div class="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-gray-700 p-8 shadow-2xl">
+      <h2 class="text-2xl font-semibold mb-4">Setup API Key</h2>
+      <p class="text-gray-400 text-sm mb-6">Your API key will be encrypted with your master password and stored securely.</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">Manus API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="Enter your Manus API key..." class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500"/>
+          <p class="text-xs text-gray-500 mt-2">Get your API key from <a href="https://manus.app" target="_blank" class="text-blue-400 hover:text-blue-300 underline">manus.app</a></p>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="saveApiKey" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-medium transition">Save Key</button>
+          <button id="skipApiKey" class="px-6 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-medium transition">Skip</button>
+        </div>
+      </div>
+
+      <div class="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+        <div class="flex items-start gap-2">
+          <svg class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <div class="text-xs text-blue-200">
+            <strong>Security:</strong> Your API key is encrypted using AES-256 encryption with your master password. It never leaves your browser.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Chat Interface -->
+  <div id="chatInterface" class="hidden pt-16">
+    <!-- Top Bar -->
+    <div class="fixed top-0 left-0 right-0 bg-[#0f0f0f]/90 backdrop-blur border-b border-gray-800 z-50" style="margin-top: 48px;">
+      <div class="container mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">Manus AI</h1>
+          <p class="text-xs text-gray-500" id="userEmail"></p>
+        </div>
+        <div class="flex gap-2">
+          <button id="lockBtn" class="px-4 py-2 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-sm hover:bg-yellow-600/30 transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            Lock
+          </button>
+          <button id="settingsBtn" class="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          </button>
+          <button id="logoutBtn" class="p-2 hover:bg-red-500/20 rounded-lg text-gray-400 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container mx-auto max-w-4xl px-4 pt-24 pb-8">
+      <!-- Conversation -->
+      <div id="conversation" class="mb-6 space-y-4 min-h-[400px]">
+        <!-- Messages will appear here -->
+      </div>
+
+      <!-- Input Area -->
+      <div class="sticky bottom-0 bg-[#0f0f0f] pt-4 pb-2">
+        <div class="bg-[#1a1a1a] rounded-xl border border-gray-700 p-4">
+          <textarea id="messageInput" placeholder="Ask Manus anything..." rows="3" class="w-full bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none mb-3"></textarea>
+          
+          <div class="flex items-center justify-between">
+            <div class="flex gap-2">
+              <button id="slidesMode" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-500 transition">Slides</button>
+              <button id="nanoBananaMode" class="px-3 py-1.5 bg-[#2a2a2a] text-gray-300 rounded-lg text-sm hover:bg-[#333] transition">Nano Banana Pro</button>
+            </div>
+            
+            <div class="flex gap-2">
+              <button id="clearBtn" class="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-sm hover:bg-red-500/20 transition">Clear</button>
+              <button id="sendBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur flex items-center justify-center p-6 z-50">
+    <div class="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-gray-700 p-8 shadow-2xl">
+      <h2 class="text-2xl font-semibold mb-6">Settings</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">Update API Key</label>
+          <input type="password" id="updateApiKeyInput" placeholder="Enter new API key..." class="w-full bg-[#111] border border-gray-700 text-white placeholder-gray-600 rounded-xl py-2 px-4 focus:outline-none focus:border-blue-500"/>
+        </div>
+
+        <button id="saveNewApiKey" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-xl font-medium transition">Update API Key</button>
+
+        <div class="border-t border-gray-700 pt-4">
+          <button id="clearDataBtn" class="w-full bg-red-600/20 text-red-400 border border-red-500/30 py-2 rounded-xl font-medium hover:bg-red-600/30 transition">Clear All Data</button>
+          <p class="text-xs text-gray-500 mt-2">This will remove all stored data including encrypted keys</p>
+        </div>
+      </div>
+
+      <button id="closeSettings" class="mt-6 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-xl font-medium transition">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Dismiss CORS warning
+    document.getElementById('dismissCorsWarning').addEventListener('click', () => {
+      document.getElementById('corsWarning').style.display = 'none';
+    });
+
+    // Security and Encryption System
+    const SECURITY = {
+      encrypt(data, password) {
+        return CryptoJS.AES.encrypt(data, password).toString();
+      },
+      
+      decrypt(encryptedData, password) {
+        try {
+          const bytes = CryptoJS.AES.decrypt(encryptedData, password);
+          return bytes.toString(CryptoJS.enc.Utf8);
+        } catch (e) {
+          return null;
+        }
+      },
+      
+      hashPassword(password) {
+        return CryptoJS.SHA256(password).toString();
+      },
+      
+      validatePassword(password) {
+        if (password.length < 8) return { valid: false, message: 'Password must be at least 8 characters' };
+        return { valid: true };
+      },
+      
+      generateSessionToken() {
+        return CryptoJS.lib.WordArray.random(32).toString();
+      }
+    };
+
+    // Authentication System
+    const AUTH = {
+      currentUser: null,
+      sessionToken: null,
+      
+      signup(name, email, password) {
+        if (localStorage.getItem('user_' + email)) {
+          return { success: false, message: 'Account already exists' };
+        }
+        
+        const passwordCheck = SECURITY.validatePassword(password);
+        if (!passwordCheck.valid) {
+          return { success: false, message: passwordCheck.message };
+        }
+        
+        const userData = {
+          name,
+          email,
+          passwordHash: SECURITY.hashPassword(password),
+          createdAt: Date.now()
+        };
+        
+        localStorage.setItem('user_' + email, JSON.stringify(userData));
+        return { success: true };
+      },
+      
+      login(email, password) {
+        const userData = localStorage.getItem('user_' + email);
+        if (!userData) {
+          return { success: false, message: 'Account not found' };
+        }
+        
+        const user = JSON.parse(userData);
+        const passwordHash = SECURITY.hashPassword(password);
+        
+        if (user.passwordHash !== passwordHash) {
+          return { success: false, message: 'Invalid password' };
+        }
+        
+        this.currentUser = user;
+        this.currentUser.masterPassword = password;
+        this.sessionToken = SECURITY.generateSessionToken();
+        sessionStorage.setItem('sessionToken', this.sessionToken);
+        sessionStorage.setItem('currentUser', email);
+        
+        return { success: true, user };
+      },
+      
+      logout() {
+        this.currentUser = null;
+        this.sessionToken = null;
+        sessionStorage.clear();
+      },
+      
+      checkSession() {
+        const token = sessionStorage.getItem('sessionToken');
+        const email = sessionStorage.getItem('currentUser');
+        if (!token || !email) return false;
+        
+        const userData = localStorage.getItem('user_' + email);
+        if (!userData) return false;
+        
+        this.currentUser = JSON.parse(userData);
+        this.sessionToken = token;
+        return true;
+      },
+      
+      saveApiKey(apiKey) {
+        if (!this.currentUser || !this.currentUser.masterPassword) return false;
+        
+        const encrypted = SECURITY.encrypt(apiKey, this.currentUser.masterPassword);
+        localStorage.setItem('apiKey_' + this.currentUser.email, encrypted);
+        return true;
+      },
+      
+      getApiKey() {
+        if (!this.currentUser || !this.currentUser.masterPassword) return null;
+        
+        const encrypted = localStorage.getItem('apiKey_' + this.currentUser.email);
+        if (!encrypted) return null;
+        
+        return SECURITY.decrypt(encrypted, this.currentUser.masterPassword);
+      },
+      
+      hasApiKey() {
+        return !!localStorage.getItem('apiKey_' + this.currentUser.email);
+      }
+    };
+
+    let currentMode = 'slides';
+    let sessionTimeout;
+
+    function resetSessionTimeout() {
+      clearTimeout(sessionTimeout);
+      sessionTimeout = setTimeout(() => {
+        lockApp();
+      }, 30 * 60 * 1000);
+    }
+
+    function lockApp() {
+      AUTH.logout();
+      document.getElementById('chatInterface').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('conversation').innerHTML = '';
+      alert('Session locked for security. Please sign in again.');
+    }
+
+    if (AUTH.checkSession()) {
+      showApiKeySetupOrChat();
+    }
+
+    document.getElementById('showSignup').addEventListener('click', () => {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('signupForm').classList.remove('hidden');
+    });
+
+    document.getElementById('showLogin').addEventListener('click', () => {
+      document.getElementById('signupForm').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+    });
+
+    document.getElementById('signupBtn').addEventListener('click', () => {
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const confirm = document.getElementById('signupPasswordConfirm').value;
+      
+      if (!name || !email || !password) {
+        showError('signupError', 'Please fill all fields');
+        return;
+      }
+      
+      if (password !== confirm) {
+        showError('signupError', 'Passwords do not match');
+        return;
+      }
+      
+      const result = AUTH.signup(name, email, password);
+      if (!result.success) {
+        showError('signupError', result.message);
+        return;
+      }
+      
+      AUTH.login(email, password);
+      document.getElementById('loginScreen').classList.add('hidden');
+      showApiKeySetupOrChat();
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      
+      if (!email || !password) {
+        showError('loginError', 'Please fill all fields');
+        return;
+      }
+      
+      const result = AUTH.login(email, password);
+      if (!result.success) {
+        showError('loginError', result.message);
+        return;
+      }
+      
+      document.getElementById('loginScreen').classList.add('hidden');
+      showApiKeySetupOrChat();
+      resetSessionTimeout();
+    });
+
+    function showApiKeySetupOrChat() {
+      if (AUTH.hasApiKey()) {
+        showChatInterface();
+      } else {
+        document.getElementById('apiKeySetup').classList.remove('hidden');
+      }
+    }
+
+    function showChatInterface() {
+      document.getElementById('apiKeySetup').classList.add('hidden');
+      document.getElementById('chatInterface').classList.remove('hidden');
+      document.getElementById('userEmail').textContent = AUTH.currentUser.email;
+      resetSessionTimeout();
+    }
+
+    document.getElementById('saveApiKey').addEventListener('click', () => {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      if (!apiKey) {
+        alert('Please enter an API key');
+        return;
+      }
+      
+      AUTH.saveApiKey(apiKey);
+      showChatInterface();
+    });
+
+    document.getElementById('skipApiKey').addEventListener('click', () => {
+      if (confirm('You can add your API key later in settings. Continue without API key?')) {
+        showChatInterface();
+      }
+    });
+
+    document.getElementById('lockBtn').addEventListener('click', lockApp);
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Logout and clear session?')) {
+        lockApp();
+      }
+    });
+
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeSettings').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.add('hidden');
+    });
+
+    document.getElementById('saveNewApiKey').addEventListener('click', () => {
+      const newKey = document.getElementById('updateApiKeyInput').value.trim();
+      if (!newKey) {
+        alert('Please enter an API key');
+        return;
+      }
+      
+      AUTH.saveApiKey(newKey);
+      document.getElementById('updateApiKeyInput').value = '';
+      alert('API key updated successfully!');
+    });
+
+    document.getElementById('clearDataBtn').addEventListener('click', () => {
+      if (confirm('This will delete ALL your data including encrypted API keys. This action cannot be undone. Continue?')) {
+        if (confirm('Are you absolutely sure? This will delete everything!')) {
+          localStorage.clear();
+          sessionStorage.clear();
+          alert('All data cleared. Please refresh the page.');
+          location.reload();
+        }
+      }
+    });
+
+    document.getElementById('slidesMode').addEventListener('click', () => {
+      currentMode = 'slides';
+      document.getElementById('slidesMode').classList.add('bg-blue-600', 'text-white');
+      document.getElementById('slidesMode').classList.remove('bg-[#2a2a2a]', 'text-gray-300');
+      document.getElementById('nanoBananaMode').classList.remove('bg-blue-600', 'text-white');
+      document.getElementById('nanoBananaMode').classList.add('bg-[#2a2a2a]', 'text-gray-300');
+    });
+
+    document.getElementById('nanoBananaMode').addEventListener('click', () => {
+      currentMode = 'nano-banana';
+      document.getElementById('nanoBananaMode').classList.add('bg-blue-600', 'text-white');
+      document.getElementById('nanoBananaMode').classList.remove('bg-[#2a2a2a]', 'text-gray-300');
+      document.getElementById('slidesMode').classList.remove('bg-blue-600', 'text-white');
+      document.getElementById('slidesMode').classList.add('bg-[#2a2a2a]', 'text-gray-300');
+    });
+
+    async function sendMessage() {
+      resetSessionTimeout();
+      
+      const apiKey = AUTH.getApiKey();
+      if (!apiKey) {
+        alert('Please add your API key in settings first!');
+        document.getElementById('settingsBtn').click();
+        return;
+      }
+      
+      const input = document.getElementById('messageInput');
+      const message = input.value.trim();
+      
+      if (!message) return;
+
+      addMessage('user', message);
+      input.value = '';
+
+      const loadingId = 'loading-' + Date.now();
+      addMessage('assistant', '<div class="flex items-center gap-2 text-gray-400"><svg class="w-5 h-5 loading" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Thinking...</div>', loadingId);
+
+      try {
+        const response = await fetch('https://api.manus.app/v1/agent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify({
+            message: message,
+            mode: currentMode,
+            stream: false
+          })
+        });
+
+        document.getElementById(loadingId)?.remove();
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API Error ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        const result = data.response || data.message || JSON.stringify(data);
+        
+        addMessage('assistant', marked.parse(result));
+        setTimeout(() => hljs.highlightAll(), 100);
+
+      } catch (error) {
+        document.getElementById(loadingId)?.remove();
+        
+        let errorMsg = error.message;
+        let solution = '';
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+          errorMsg = 'CORS Error: Browser blocked the request';
+          solution = `
+            <div class="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-sm">
+              <strong class="text-blue-300">Solutions:</strong>
+              <ol class="list-decimal list-inside mt-2 space-y-1 text-blue-200">
+                <li>Install "CORS Unblock" extension (Chrome/Edge)</li>
+                <li>Use Firefox browser (works by default)</li>
+                <li>Or ask me to create a backend server version</li>
+              </ol>
+            </div>
+          `;
+        }
+        
+        addMessage('assistant', `
+          <div class="p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200">
+            <strong>Error:</strong> ${errorMsg}
+            ${solution}
+          </div>
+        `);
+      }
+    }
+
+    function addMessage(role, content, id) {
+      const conversation = document.getElementById('conversation');
+      const messageDiv = document.createElement('div');
+      if (id) messageDiv.id = id;
+      
+      messageDiv.className = role === 'user' ? 
+        'bg-blue-600/10 border border-blue-500/20 rounded-xl p-4' : 
+        'bg-[#1a1a1a] border border-gray-700 rounded-xl p-4';
+      
+      messageDiv.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full ${role === 'user' ? 'bg-blue-600' : 'bg-purple-600'} flex items-center justify-center flex-shrink-0">
+            ${role === 'user' ? '👤' : '🤖'}
+          </div>
+          <div class="flex-1 prose prose-invert">${content}</div>
+        </div>
+      `;
+      
+      conversation.appendChild(messageDiv);
+      messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function showError(elementId, message) {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('messageInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (confirm('Clear conversation?')) {
+        document.getElementById('conversation').innerHTML = '';
+      }
+    });
+
+    document.addEventListener('click', resetSessionTimeout);
+    document.addEventListener('keypress', resetSessionTimeout);
+  </script>
+</body>
+</html>
