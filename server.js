@@ -12,30 +12,62 @@ app.post('/api/proxy', async (req, res) => {
     try {
         const TARGET_URL = 'https://api.manus.ai/v1/tasks'; 
         
-        // This line makes sure we find the message text no matter how it's sent
-        const userPrompt = req.body.prompt || 
-                           (req.body.messages && req.body.messages[req.body.messages.length - 1].content);
-
-        if (!userPrompt) {
-            return res.status(400).json({ error: "No message found in request." });
+        // Extract message from multiple possible formats
+        let userPrompt = null;
+        
+        if (req.body.prompt) {
+            userPrompt = req.body.prompt;
+        } else if (req.body.message) {
+            userPrompt = req.body.message;
+        } else if (req.body.messages && Array.isArray(req.body.messages)) {
+            const lastMessage = req.body.messages[req.body.messages.length - 1];
+            userPrompt = lastMessage.content || lastMessage.text;
+        } else if (req.body.text) {
+            userPrompt = req.body.text;
         }
-
+        
+        // If still no message, reject
+        if (!userPrompt) {
+            console.log('Request body received:', JSON.stringify(req.body));
+            return res.status(400).json({ 
+                error: "No message found in request.",
+                receivedData: req.body 
+            });
+        }
+        
+        // Get API key from header
+        const apiKey = req.headers['x-api-key'] || req.headers['api-key'];
+        
+        if (!apiKey) {
+            return res.status(401).json({ error: "API key missing" });
+        }
+        
+        console.log('Sending to Manus:', userPrompt);
+        
         const response = await fetch(TARGET_URL, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
                 'content-type': 'application/json',
-                'API_KEY': req.headers['x-api-key'] // Sent from your browser settings
+                'API_KEY': apiKey
             },
             body: JSON.stringify({
-                prompt: userPrompt, // This must be a string, not an array
-                agentProfile: "manus-1.6" // Optional: helps specify the agent
+                prompt: userPrompt,
+                agentProfile: "manus-1.6"
             })
         });
-
+        
         const data = await response.json();
+        
+        if (!response.ok) {
+            console.log('Manus error:', data);
+            return res.status(response.status).json(data);
+        }
+        
         res.json(data);
+        
     } catch (error) {
+        console.error('Server error:', error);
         res.status(500).json({ 
             error: { 
                 message: "Proxy failed to reach Manus.",
@@ -43,6 +75,11 @@ app.post('/api/proxy', async (req, res) => {
             } 
         });
     }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'Server is running' });
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
