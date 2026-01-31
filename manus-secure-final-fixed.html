@@ -460,7 +460,7 @@
       document.getElementById('slidesMode').classList.add('bg-[#2a2a2a]', 'text-gray-300');
     });
 
-    async function pollTaskResult(taskId, apiKey, loadingId, maxAttempts = 30) {
+    async function pollTaskResult(taskId, apiKey, loadingId, maxAttempts = 60) {
       let attempts = 0;
       const pollInterval = 2000; // 2 seconds
       
@@ -518,7 +518,7 @@
         }
       }
       
-      throw new Error('Task timed out - took longer than 60 seconds');
+      throw new Error('Task timed out - took longer than 120 seconds');
     }
 
     async function sendMessage() {
