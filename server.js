@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json());
 
+// Main proxy endpoint - creates task
 app.post('/api/proxy', async (req, res) => {
     try {
         const TARGET_URL = 'https://api.manus.ai/v1/tasks'; 
@@ -53,7 +54,7 @@ app.post('/api/proxy', async (req, res) => {
             },
             body: JSON.stringify({
                 prompt: userPrompt,
-                agentProfile: "manus-1.6"
+                agentProfile: req.body.mode === 'nano-banana' ? 'nano-banana-pro' : 'manus-1.6'
             })
         });
         
@@ -64,6 +65,7 @@ app.post('/api/proxy', async (req, res) => {
             return res.status(response.status).json(data);
         }
         
+        console.log('Task created:', data.task_id);
         res.json(data);
         
     } catch (error) {
@@ -71,6 +73,48 @@ app.post('/api/proxy', async (req, res) => {
         res.status(500).json({ 
             error: { 
                 message: "Proxy failed to reach Manus.",
+                details: error.message 
+            } 
+        });
+    }
+});
+
+// New endpoint - check task status
+app.get('/api/task-status/:taskId', async (req, res) => {
+    try {
+        const { taskId } = req.params;
+        const apiKey = req.headers['x-api-key'] || req.headers['api-key'];
+        
+        if (!apiKey) {
+            return res.status(401).json({ error: "API key missing" });
+        }
+        
+        console.log('Checking task status:', taskId);
+        
+        const response = await fetch(`https://api.manus.ai/v1/tasks/${taskId}`, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'API_KEY': apiKey
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.log('Task status error:', errorData);
+            return res.status(response.status).json(errorData);
+        }
+        
+        const data = await response.json();
+        console.log('Task status:', data.status);
+        
+        res.json(data);
+        
+    } catch (error) {
+        console.error('Task status check error:', error);
+        res.status(500).json({ 
+            error: { 
+                message: "Failed to check task status",
                 details: error.message 
             } 
         });
