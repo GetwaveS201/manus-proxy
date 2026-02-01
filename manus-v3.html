@@ -512,13 +512,15 @@
                 
                 // Step 2: Poll for result
                 let attempts = 0;
-                const maxAttempts = 60;
+                const maxAttempts = 90; // 180 seconds total
                 
                 while (attempts < maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     
-                    updateStatus(`Checking... (${attempts * 2}s)`);
-                    loadingMsg.innerHTML = `<span class="loading-indicator">Processing (${attempts * 2}s)</span>`;
+                    attempts++;
+                    const elapsed = attempts * 2;
+                    updateStatus(`Checking... (${elapsed}s) - Please wait, can take up to 3 minutes`);
+                    loadingMsg.innerHTML = `<span class="loading-indicator">Processing (${elapsed}s)</span>`;
                     
                     try {
                         const statusRes = await fetch(
@@ -536,55 +538,64 @@
                         
                         const statusData = await statusRes.json();
                         
-                        // CRITICAL FIX: Handle both single message and array of messages
-                        if (statusData.status === 'completed') {
-                            let reply = '';
+                        // DEBUG: Log what we received
+                        console.log('=== RECEIVED RESPONSE ===');
+                        console.log('Type:', Array.isArray(statusData) ? 'Array' : 'Object');
+                        console.log('Data:', JSON.stringify(statusData, null, 2));
+                        
+                        let reply = '';
+                        let isCompleted = false;
+                        
+                        // Handle ARRAY response (Manus returns array of messages)
+                        if (Array.isArray(statusData)) {
+                            console.log('Processing array of', statusData.length, 'messages');
                             
-                            // Check if response is an ARRAY of messages (new format)
-                            if (Array.isArray(statusData)) {
-                                // Find the last assistant message with content
-                                const assistantMessages = statusData.filter(msg => 
-                                    msg.role === 'assistant' && 
-                                    msg.content && 
-                                    Array.isArray(msg.content) && 
-                                    msg.content.length > 0
-                                );
+                            // Find ALL assistant messages
+                            const assistantMessages = statusData.filter(msg => {
+                                const isAssistant = msg.role === 'assistant';
+                                const isComplete = msg.status === 'completed';
+                                const hasContent = msg.content && Array.isArray(msg.content) && msg.content.length > 0;
                                 
-                                if (assistantMessages.length > 0) {
-                                    // Get the last assistant message
-                                    const lastMsg = assistantMessages[assistantMessages.length - 1];
-                                    const textItems = lastMsg.content
-                                        .filter(item => item && item.type === 'output_text' && item.text)
-                                        .map(item => item.text);
-                                    reply = textItems.join('\n\n');
-                                }
-                            }
-                            // Check if response is single message object (old format)
-                            else if (statusData.content && Array.isArray(statusData.content)) {
-                                const textItems = statusData.content
+                                console.log(`Message ${msg.id}:`, {
+                                    role: msg.role,
+                                    status: msg.status,
+                                    hasContent: hasContent
+                                });
+                                
+                                return isAssistant && isComplete && hasContent;
+                            });
+                            
+                            console.log('Found', assistantMessages.length, 'assistant messages');
+                            
+                            if (assistantMessages.length > 0) {
+                                // Get LAST assistant message
+                                const lastMsg = assistantMessages[assistantMessages.length - 1];
+                                console.log('Using message:', lastMsg.id);
+                                
+                                // Extract text
+                                const textItems = lastMsg.content
                                     .filter(item => item && item.type === 'output_text' && item.text)
                                     .map(item => item.text);
+                                
                                 reply = textItems.join('\n\n');
+                                isCompleted = true;
+                                
+                                console.log('Extracted text:', reply);
                             }
-                            
-                            // Fallback checks
-                            if (!reply && statusData.result) {
-                                reply = typeof statusData.result === 'string' 
-                                    ? statusData.result 
-                                    : JSON.stringify(statusData.result, null, 2);
-                            }
-                            
-                            if (!reply && statusData.output) {
-                                reply = typeof statusData.output === 'string'
-                                    ? statusData.output
-                                    : JSON.stringify(statusData.output, null, 2);
-                            }
-                            
-                            if (!reply) {
-                                reply = 'Response received but no text could be extracted.\n\nRaw response:\n' + 
-                                       JSON.stringify(statusData, null, 2);
-                            }
-                            
+                        }
+                        // Handle OBJECT response (fallback)
+                        else if (statusData.status === 'completed' && statusData.content) {
+                            console.log('Processing single object');
+                            const textItems = statusData.content
+                                .filter(item => item && item.type === 'output_text' && item.text)
+                                .map(item => item.text);
+                            reply = textItems.join('\n\n');
+                            isCompleted = true;
+                        }
+                        
+                        // Display response if found
+                        if (isCompleted && reply) {
+                            console.log('✓ SUCCESS! Displaying:', reply);
                             loadingMsg.textContent = reply;
                             loadingMsg.parentElement.classList.remove('error');
                             updateStatus('✓ Complete');
@@ -593,9 +604,24 @@
                             sendBtn.disabled = false;
                             input.focus();
                             return;
+                        } else if (isCompleted && !reply) {
+                            // Task is completed but we couldn't extract text
+                            console.error('Task completed but no text extracted!');
+                            loadingMsg.textContent = 'Response received but could not extract text. Check console for details.';
+                            loadingMsg.parentElement.classList.add('error');
+                            
+                            // Show raw response in console for debugging
+                            console.log('Raw response:', statusData);
+                            return;
                         }
                         
-                        if (statusData.status === 'failed') {
+                        // Check if task failed
+                        if (Array.isArray(statusData)) {
+                            const failedMsg = statusData.find(msg => msg.status === 'failed');
+                            if (failedMsg) {
+                                throw new Error('Task failed: ' + (failedMsg.error || 'Unknown error'));
+                            }
+                        } else if (statusData.status === 'failed') {
                             throw new Error('Task failed: ' + (statusData.error || 'Unknown error'));
                         }
                         
@@ -610,7 +636,7 @@
                     }
                 }
                 
-                throw new Error('Task timed out after 120 seconds. The server might be sleeping (first request can take 60s).');
+                throw new Error('Task timed out after 3 minutes. The server might be sleeping or Manus is very busy.');
                 
             } catch (error) {
                 console.error('Error:', error);
