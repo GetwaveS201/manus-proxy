@@ -536,51 +536,55 @@
                         
                         const statusData = await statusRes.json();
                         
-                        // THE FIX: Manus returns an ARRAY of messages
-                        // We need to find the assistant's response inside that array
-                        
-                        let reply = '';
-                        let isCompleted = false;
-                        
-                        // Check if response is an ARRAY (the "box of envelopes")
-                        if (Array.isArray(statusData)) {
-                            // Find messages that are:
-                            // 1. From the assistant (not the user)
-                            // 2. Have actual content
-                            // 3. Are completed
-                            const assistantMessages = statusData.filter(msg => 
-                                msg.role === 'assistant' && 
-                                msg.status === 'completed' &&
-                                msg.content && 
-                                Array.isArray(msg.content) && 
-                                msg.content.length > 0
-                            );
+                        // CRITICAL FIX: Handle both single message and array of messages
+                        if (statusData.status === 'completed') {
+                            let reply = '';
                             
-                            if (assistantMessages.length > 0) {
-                                isCompleted = true;
+                            // Check if response is an ARRAY of messages (new format)
+                            if (Array.isArray(statusData)) {
+                                // Find the last assistant message with content
+                                const assistantMessages = statusData.filter(msg => 
+                                    msg.role === 'assistant' && 
+                                    msg.content && 
+                                    Array.isArray(msg.content) && 
+                                    msg.content.length > 0
+                                );
                                 
-                                // Get the LAST assistant message (the actual response)
-                                const lastMsg = assistantMessages[assistantMessages.length - 1];
-                                
-                                // Extract all text from the content array
-                                const textItems = lastMsg.content
+                                if (assistantMessages.length > 0) {
+                                    // Get the last assistant message
+                                    const lastMsg = assistantMessages[assistantMessages.length - 1];
+                                    const textItems = lastMsg.content
+                                        .filter(item => item && item.type === 'output_text' && item.text)
+                                        .map(item => item.text);
+                                    reply = textItems.join('\n\n');
+                                }
+                            }
+                            // Check if response is single message object (old format)
+                            else if (statusData.content && Array.isArray(statusData.content)) {
+                                const textItems = statusData.content
                                     .filter(item => item && item.type === 'output_text' && item.text)
                                     .map(item => item.text);
-                                
                                 reply = textItems.join('\n\n');
                             }
-                        }
-                        // Single message object format (fallback)
-                        else if (statusData.status === 'completed' && statusData.content) {
-                            isCompleted = true;
-                            const textItems = statusData.content
-                                .filter(item => item && item.type === 'output_text' && item.text)
-                                .map(item => item.text);
-                            reply = textItems.join('\n\n');
-                        }
-                        
-                        // If we found a completed response
-                        if (isCompleted && reply) {
+                            
+                            // Fallback checks
+                            if (!reply && statusData.result) {
+                                reply = typeof statusData.result === 'string' 
+                                    ? statusData.result 
+                                    : JSON.stringify(statusData.result, null, 2);
+                            }
+                            
+                            if (!reply && statusData.output) {
+                                reply = typeof statusData.output === 'string'
+                                    ? statusData.output
+                                    : JSON.stringify(statusData.output, null, 2);
+                            }
+                            
+                            if (!reply) {
+                                reply = 'Response received but no text could be extracted.\n\nRaw response:\n' + 
+                                       JSON.stringify(statusData, null, 2);
+                            }
+                            
                             loadingMsg.textContent = reply;
                             loadingMsg.parentElement.classList.remove('error');
                             updateStatus('✓ Complete');
@@ -591,13 +595,7 @@
                             return;
                         }
                         
-                        // Check if task failed
-                        if (Array.isArray(statusData)) {
-                            const failedMsg = statusData.find(msg => msg.status === 'failed');
-                            if (failedMsg) {
-                                throw new Error('Task failed: ' + (failedMsg.error || 'Unknown error'));
-                            }
-                        } else if (statusData.status === 'failed') {
+                        if (statusData.status === 'failed') {
                             throw new Error('Task failed: ' + (statusData.error || 'Unknown error'));
                         }
                         
