@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manus AI - Debug Mode</title>
+    <title>Manus AI - Professional Chat</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -27,7 +27,7 @@
             height: 85vh;
         }
         .header {
-            background: #dc3545; /* Red for debug */
+            background: #007bff;
             color: white;
             padding: 15px 20px;
             display: flex;
@@ -45,7 +45,9 @@
             border-radius: 15px;
             font-size: 12px;
             cursor: pointer;
+            transition: all 0.2s;
         }
+        .header-btn:hover { background: white; color: #007bff; }
         
         .chat-area {
             flex: 1;
@@ -64,22 +66,19 @@
             line-height: 1.5;
             font-size: 15px;
         }
-        .user { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .bot { background: #e9ecef; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; white-space: pre-wrap; }
-        
-        .debug-log {
-            background: #212529;
-            color: #00ff00;
-            font-family: monospace;
-            font-size: 12px;
-            padding: 10px;
-            margin: 10px;
-            border-radius: 8px;
-            max-height: 200px;
-            overflow-y: auto;
+        .user {
+            background: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot {
+            background: #e9ecef;
+            color: #1c1e21;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
             white-space: pre-wrap;
         }
-
         .input-area {
             padding: 20px;
             background: white;
@@ -87,19 +86,50 @@
             display: flex;
             gap: 12px;
         }
-        input { flex: 1; padding: 12px 16px; border: 1px solid #ced4da; border-radius: 24px; font-size: 15px; outline: none; }
-        button#send-btn { padding: 10px 24px; background: #dc3545; color: white; border: none; border-radius: 24px; font-weight: 600; cursor: pointer; }
+        input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ced4da;
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+        }
+        button#send-btn {
+            padding: 10px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-weight: 600;
+            cursor: pointer;
+        }
         button:disabled { background: #ccc; cursor: not-allowed; }
         
-        .api-setup { background: #fff3cd; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; display: none; }
-        .api-setup input { margin: 10px; max-width: 300px; }
-        .api-setup button { padding: 8px 20px; background: #856404; color: white; border: none; border-radius: 20px; cursor: pointer; }
+        .api-setup {
+            background: #fff3cd;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #ffeeba;
+            display: none;
+        }
+        .api-setup input {
+            margin: 10px;
+            max-width: 300px;
+        }
+        .api-setup button {
+            padding: 8px 20px;
+            background: #856404;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-title">Manus AI - DEBUG MODE</div>
+            <div class="header-title">Manus AI Assistant</div>
             <div class="header-btns">
                 <button class="header-btn" onclick="resetKey()">Change API Key</button>
             </div>
@@ -112,10 +142,8 @@
         </div>
         
         <div class="chat-area" id="chat">
-            <div class="message bot">DEBUG MODE: I will show the raw server response below each message.</div>
+            <div class="message bot">Hello! I'm your Manus AI assistant.</div>
         </div>
-        
-        <div id="debug-output" class="debug-log">Waiting for data...</div>
         
         <div class="input-area">
             <input type="text" id="input" placeholder="Ask me anything..." onkeypress="if(event.key==='Enter')send()">
@@ -124,31 +152,37 @@
     </div>
 
     <script>
+        /**
+         * SENIOR DEVELOPER NOTE:
+         * The "[object Object]" error happened because the code was trying to display 
+         * a complex data structure as simple text. I've added a "Deep Search" function 
+         * that digs through the response to find the actual text.
+         */
+
         let API_KEY = localStorage.getItem('manus_key') || '';
         const setupBox = document.getElementById('api-setup');
-        const debugOutput = document.getElementById('debug-output');
         
-        if (!API_KEY) setupBox.style.display = 'block';
-        
-        function logDebug(obj) {
-            debugOutput.textContent = "RAW DATA FROM SERVER:\n" + JSON.stringify(obj, null, 2);
-            console.log("DEBUG:", obj);
+        if (!API_KEY) {
+            setupBox.style.display = 'block';
         }
-
+        
         function saveKey() {
             const key = document.getElementById('api-key').value.trim();
             if (!key) return alert('Please enter a valid key!');
             localStorage.setItem('manus_key', key);
             API_KEY = key;
             setupBox.style.display = 'none';
-            addMsg('bot', '✅ API Key saved!');
+            addMsg('bot', '✅ API Key saved! You can now start chatting.');
         }
 
         function resetKey() {
-            localStorage.removeItem('manus_key');
-            API_KEY = '';
-            setupBox.style.display = 'block';
-            addMsg('bot', '⚠️ API Key cleared.');
+            if (confirm('Do you want to change your API key?')) {
+                localStorage.removeItem('manus_key');
+                API_KEY = '';
+                setupBox.style.display = 'block';
+                document.getElementById('api-key').value = '';
+                addMsg('bot', '⚠️ API Key cleared. Please enter a new one above.');
+            }
         }
         
         function addMsg(role, text) {
@@ -160,9 +194,47 @@
             chat.scrollTop = chat.scrollHeight;
             return msg;
         }
+
+        // DEEP SEARCH: This function digs through any object to find "text"
+        function findTextInObject(obj) {
+            if (!obj) return null;
+            
+            // If it's already a string, return it
+            if (typeof obj === 'string') return obj;
+            
+            // If it's an array, search each item
+            if (Array.isArray(obj)) {
+                for (let item of obj) {
+                    const found = findTextInObject(item);
+                    if (found) return found;
+                }
+            }
+            
+            // If it's an object, check common fields
+            if (typeof obj === 'object') {
+                // Check direct fields first
+                if (obj.text && typeof obj.text === 'string') return obj.text;
+                if (obj.content && typeof obj.content === 'string') return obj.content;
+                if (obj.output && typeof obj.output === 'string') return obj.output;
+                
+                // If content is an array (very common), search it
+                if (Array.isArray(obj.content)) return findTextInObject(obj.content);
+                if (Array.isArray(obj.output)) return findTextInObject(obj.output);
+                
+                // Last resort: search all keys
+                for (let key in obj) {
+                    const found = findTextInObject(obj[key]);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
         
         async function send() {
-            if (!API_KEY) return alert('Please save your API key first!');
+            if (!API_KEY) {
+                setupBox.style.display = 'block';
+                return alert('Please save your API key first!');
+            }
             
             const input = document.getElementById('input');
             const btn = document.getElementById('send-btn');
@@ -185,45 +257,42 @@
                 });
                 
                 const createData = await createRes.json();
-                logDebug(createData);
-                
-                if (!createData.task_id) throw new Error('No Task ID returned');
+                if (!createData.task_id) throw new Error('Invalid API Key or Server Error');
                 
                 let attempts = 0;
-                while (attempts < 60) {
+                const maxAttempts = 100; 
+                
+                while (attempts < maxAttempts) {
                     await new Promise(r => setTimeout(r, 3000));
                     attempts++;
-                    loadingMsg.textContent = `Polling... (${attempts * 3}s)`;
+                    loadingMsg.textContent = `Processing... (${attempts * 3}s)`;
                     
                     const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${createData.task_id}`, {
                         headers: { 'x-api-key': API_KEY }
                     });
                     
                     const statusData = await statusRes.json();
-                    logDebug(statusData);
+                    console.log("Status Data:", statusData);
                     
-                    // EXTRACTION LOGIC
-                    let text = '';
+                    let finalReply = '';
                     
-                    // 1. Check if it's the full task object (from server.js line 112)
-                    if (statusData && statusData.status === 'completed' && statusData.output) {
-                        text = statusData.output.text || statusData.output;
-                    }
-                    
-                    // 2. Check if it's the array format
-                    if (!text && Array.isArray(statusData)) {
+                    // 1. If it's an array, look for the assistant's message
+                    if (Array.isArray(statusData)) {
                         const assistantMsgs = statusData.filter(m => m.role === 'assistant' && m.status === 'completed');
                         if (assistantMsgs.length > 0) {
                             const lastMsg = assistantMsgs[assistantMsgs.length - 1];
-                            if (lastMsg.content && Array.isArray(lastMsg.content)) {
-                                text = lastMsg.content.filter(item => item.text).map(item => item.text).join('\n\n');
-                            }
+                            finalReply = findTextInObject(lastMsg);
+                        }
+                    } else {
+                        // 2. If it's a single object, search it directly
+                        if (statusData.status === 'completed') {
+                            finalReply = findTextInObject(statusData);
                         }
                     }
                     
-                    if (text) {
-                        loadingMsg.textContent = text;
-                        return;
+                    if (finalReply) {
+                        loadingMsg.textContent = finalReply;
+                        return; 
                     }
                 }
                 throw new Error('Timed out');
