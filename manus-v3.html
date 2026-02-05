@@ -36,7 +36,8 @@
             font-weight: bold;
         }
         .header-title { font-size: 1.2rem; }
-        .reset-btn {
+        .header-btns { display: flex; gap: 10px; }
+        .header-btn {
             background: rgba(255,255,255,0.2);
             color: white;
             border: 1px solid white;
@@ -46,7 +47,7 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .reset-btn:hover { background: white; color: #007bff; }
+        .header-btn:hover { background: white; color: #007bff; }
         
         .chat-area {
             flex: 1;
@@ -64,6 +65,7 @@
             word-wrap: break-word;
             line-height: 1.5;
             font-size: 15px;
+            position: relative;
         }
         .user {
             background: #007bff;
@@ -109,7 +111,7 @@
             padding: 15px;
             text-align: center;
             border-bottom: 1px solid #ffeeba;
-            display: none; /* Hidden by default, shown via JS */
+            display: none;
         }
         .api-setup input {
             margin: 10px;
@@ -123,13 +125,21 @@
             border-radius: 20px;
             cursor: pointer;
         }
+        .status-tag {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 5px;
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="header-title">Manus AI Assistant</div>
-            <button class="reset-btn" onclick="resetKey()">Change API Key</button>
+            <div class="header-btns">
+                <button class="header-btn" onclick="resetKey()">Change API Key</button>
+            </div>
         </div>
         
         <div id="api-setup" class="api-setup">
@@ -151,8 +161,9 @@
     <script>
         let API_KEY = localStorage.getItem('manus_key') || '';
         const setupBox = document.getElementById('api-setup');
+        let currentTaskId = null;
+        let isPolling = false;
         
-        // Initial check
         if (!API_KEY) {
             setupBox.style.display = 'block';
         }
@@ -186,6 +197,42 @@
             return msg;
         }
         
+        async function checkStatus(taskId, loadingMsg) {
+            try {
+                const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${taskId}`, {
+                    headers: { 'x-api-key': API_KEY }
+                });
+                
+                const statusData = await statusRes.json();
+                console.log("Status Check:", statusData);
+                
+                if (Array.isArray(statusData)) {
+                    // Strategy: Look for the last assistant message that is NOT empty
+                    const assistantMsgs = statusData.filter(m => m.role === 'assistant');
+                    
+                    if (assistantMsgs.length > 0) {
+                        const lastMsg = assistantMsgs[assistantMsgs.length - 1];
+                        
+                        // If it's completed and has content, we're done
+                        if (lastMsg.status === 'completed' && lastMsg.content && Array.isArray(lastMsg.content)) {
+                            const text = lastMsg.content
+                                .filter(item => item.text !== undefined)
+                                .map(item => item.text)
+                                .join('\n\n');
+                            
+                            if (text.trim()) {
+                                loadingMsg.textContent = text;
+                                return true; // Success
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Poll error:", err);
+            }
+            return false;
+        }
+
         async function send() {
             if (!API_KEY) {
                 setupBox.style.display = 'block';
@@ -196,7 +243,7 @@
             const btn = document.getElementById('send-btn');
             const userText = input.value.trim();
             
-            if (!userText) return;
+            if (!userText || isPolling) return;
             
             addMsg('user', userText);
             input.value = '';
@@ -204,6 +251,7 @@
             btn.disabled = true;
             
             const loadingMsg = addMsg('bot', 'Thinking...');
+            isPolling = true;
             
             try {
                 const createRes = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
@@ -215,38 +263,30 @@
                 const createData = await createRes.json();
                 if (!createData.task_id) throw new Error('Invalid API Key or Server Error');
                 
+                currentTaskId = createData.task_id;
+                console.log("Task ID:", currentTaskId);
+                
                 let attempts = 0;
-                while (attempts < 60) {
+                const maxAttempts = 150; // 5 minutes (2s intervals)
+                
+                while (attempts < maxAttempts) {
                     await new Promise(r => setTimeout(r, 2000));
                     attempts++;
                     loadingMsg.textContent = `Processing... (${attempts * 2}s)`;
                     
-                    const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${createData.task_id}`, {
-                        headers: { 'x-api-key': API_KEY }
-                    });
-                    
-                    const statusData = await statusRes.json();
-                    let extractedText = '';
-                    
-                    if (Array.isArray(statusData)) {
-                        const assistantMsgs = statusData.filter(m => m.role === 'assistant' && m.status === 'completed');
-                        if (assistantMsgs.length > 0) {
-                            const lastMsg = assistantMsgs[assistantMsgs.length - 1];
-                            if (lastMsg.content && Array.isArray(lastMsg.content)) {
-                                extractedText = lastMsg.content.filter(item => item.text !== undefined).map(item => item.text).join('\n\n');
-                            }
-                        }
-                    }
-                    
-                    if (extractedText) {
-                        loadingMsg.textContent = extractedText;
-                        return; 
+                    const finished = await checkStatus(currentTaskId, loadingMsg);
+                    if (finished) {
+                        isPolling = false;
+                        input.disabled = false;
+                        btn.disabled = false;
+                        return;
                     }
                 }
-                throw new Error('Timed out');
+                throw new Error('Timed out after 5 minutes. Manus might still be working, try sending another message in a moment.');
             } catch (err) {
                 loadingMsg.textContent = `❌ Error: ${err.message}`;
             } finally {
+                isPolling = false;
                 input.disabled = false;
                 btn.disabled = false;
             }
