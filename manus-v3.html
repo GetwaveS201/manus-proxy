@@ -154,9 +154,9 @@
     <script>
         /**
          * SENIOR DEVELOPER NOTE:
-         * The "[object Object]" error happened because the code was trying to display 
-         * a complex data structure as simple text. I've added a "Deep Search" function 
-         * that digs through the response to find the actual text.
+         * Fixed the "Echoing" bug. The previous version was too eager and was 
+         * finding the user's own message in the response. 
+         * Now, we strictly filter for 'assistant' messages only.
          */
 
         let API_KEY = localStorage.getItem('manus_key') || '';
@@ -195,36 +195,39 @@
             return msg;
         }
 
-        // DEEP SEARCH: This function digs through any object to find "text"
-        function findTextInObject(obj) {
+        // DEEP SEARCH: Now strictly ignores anything that looks like a user message
+        function findAssistantText(obj) {
             if (!obj) return null;
-            
-            // If it's already a string, return it
-            if (typeof obj === 'string') return obj;
             
             // If it's an array, search each item
             if (Array.isArray(obj)) {
                 for (let item of obj) {
-                    const found = findTextInObject(item);
-                    if (found) return found;
+                    // Only process items that are NOT marked as 'user'
+                    if (item.role !== 'user') {
+                        const found = findAssistantText(item);
+                        if (found) return found;
+                    }
                 }
             }
             
-            // If it's an object, check common fields
+            // If it's an object
             if (typeof obj === 'object') {
-                // Check direct fields first
+                // If this object is a user message, skip it entirely
+                if (obj.role === 'user') return null;
+
+                // Check common text fields
                 if (obj.text && typeof obj.text === 'string') return obj.text;
-                if (obj.content && typeof obj.content === 'string') return obj.content;
-                if (obj.output && typeof obj.output === 'string') return obj.output;
                 
-                // If content is an array (very common), search it
-                if (Array.isArray(obj.content)) return findTextInObject(obj.content);
-                if (Array.isArray(obj.output)) return findTextInObject(obj.output);
+                // Search nested content/output
+                if (obj.content) return findAssistantText(obj.content);
+                if (obj.output) return findAssistantText(obj.output);
                 
-                // Last resort: search all keys
+                // Search all other keys as a last resort
                 for (let key in obj) {
-                    const found = findTextInObject(obj[key]);
-                    if (found) return found;
+                    if (key !== 'role') { // Don't re-check role
+                        const found = findAssistantText(obj[key]);
+                        if (found) return found;
+                    }
                 }
             }
             return null;
@@ -276,17 +279,20 @@
                     
                     let finalReply = '';
                     
-                    // 1. If it's an array, look for the assistant's message
+                    // 1. If it's an array, look for the COMPLETED assistant message
                     if (Array.isArray(statusData)) {
-                        const assistantMsgs = statusData.filter(m => m.role === 'assistant' && m.status === 'completed');
+                        const assistantMsgs = statusData.filter(m => 
+                            m.role === 'assistant' && 
+                            m.status === 'completed'
+                        );
                         if (assistantMsgs.length > 0) {
                             const lastMsg = assistantMsgs[assistantMsgs.length - 1];
-                            finalReply = findTextInObject(lastMsg);
+                            finalReply = findAssistantText(lastMsg);
                         }
                     } else {
-                        // 2. If it's a single object, search it directly
-                        if (statusData.status === 'completed') {
-                            finalReply = findTextInObject(statusData);
+                        // 2. If it's a single object, ensure it's completed and NOT a user role
+                        if (statusData.status === 'completed' && statusData.role !== 'user') {
+                            finalReply = findAssistantText(statusData);
                         }
                     }
                     
