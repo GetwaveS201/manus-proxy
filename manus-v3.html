@@ -151,8 +151,8 @@
         </div>
         
         <div class="chat-area" id="chat">
-            <div class="message system">Manus Terminal v1.0.0 initialized.</div>
-            <div class="message system">Ready for input...</div>
+            <div class="message system">Manus Terminal v1.1.0 initialized.</div>
+            <div class="message system">Mode: Exhaustive Search Enabled.</div>
         </div>
         
         <div class="input-area">
@@ -164,9 +164,9 @@
 
     <script>
         /**
-         * SENIOR DEVELOPER TERMINAL FIX:
-         * This version is built to capture the ACTUAL output from the Manus engine.
-         * It looks for 'output', 'result', and 'content' fields to ensure nothing is missed.
+         * MASTER KEY VERSION:
+         * This version uses a recursive search to find ANY text in the response.
+         * It ignores the 'user' role to prevent echoing.
          */
 
         let API_KEY = localStorage.getItem('manus_key') || '';
@@ -200,39 +200,50 @@
             return msg;
         }
 
-        // THE CORE FIX: A more aggressive extractor for terminal output
-        function extractManusOutput(data) {
-            if (!data) return null;
+        // THE MASTER KEY: Recursively finds all text that isn't from the user
+        function exhaustiveTextSearch(obj, foundTexts = []) {
+            if (!obj) return foundTexts;
 
-            // 1. Check for the standard 'output' field (often used in terminal responses)
-            if (data.output) {
-                if (typeof data.output === 'string') return data.output;
-                if (data.output.text) return data.output.text;
+            // If it's a string and long enough to be a response, keep it
+            if (typeof obj === 'string' && obj.length > 0) {
+                // Avoid adding IDs or short status words
+                if (obj.length > 5 || !/^[a-z0-9_-]+$/i.test(obj)) {
+                    foundTexts.push(obj);
+                }
+                return foundTexts;
             }
 
-            // 2. Check for 'result' field
-            if (data.result) {
-                if (typeof data.result === 'string') return data.result;
-                if (data.result.text) return data.result.text;
-            }
+            if (Array.isArray(obj)) {
+                for (let item of obj) {
+                    // Skip user messages
+                    if (item && item.role === 'user') continue;
+                    exhaustiveTextSearch(item, foundTexts);
+                }
+            } else if (typeof obj === 'object') {
+                // Skip user messages
+                if (obj.role === 'user') return foundTexts;
 
-            // 3. Check for 'content' array (standard for messages)
-            if (Array.isArray(data.content)) {
-                const textParts = data.content
-                    .filter(item => item.text || item.type === 'text' || item.type === 'output_text')
-                    .map(item => item.text || item.content);
-                if (textParts.length > 0) return textParts.join('\n');
-            }
+                // Prioritize known text fields
+                const priorityFields = ['text', 'content', 'output', 'result', 'message'];
+                for (let field of priorityFields) {
+                    if (obj[field]) {
+                        if (typeof obj[field] === 'string') {
+                            foundTexts.push(obj[field]);
+                        } else {
+                            exhaustiveTextSearch(obj[field], foundTexts);
+                        }
+                    }
+                }
 
-            // 4. If it's an array of messages, find the last assistant message
-            if (Array.isArray(data)) {
-                const assistantMsgs = data.filter(m => m.role === 'assistant' && m.status === 'completed');
-                if (assistantMsgs.length > 0) {
-                    return extractManusOutput(assistantMsgs[assistantMsgs.length - 1]);
+                // Search everything else
+                for (let key in obj) {
+                    if (!priorityFields.includes(key) && key !== 'role' && key !== 'id' && key !== 'task_id') {
+                        exhaustiveTextSearch(obj[key], foundTexts);
+                    }
                 }
             }
 
-            return null;
+            return foundTexts;
         }
         
         async function send() {
@@ -262,31 +273,32 @@
                 if (!createData.task_id) throw new Error('TASK_CREATION_FAILED');
                 
                 let attempts = 0;
-                while (attempts < 120) { // 6 minutes
+                while (attempts < 120) {
                     await new Promise(r => setTimeout(r, 3000));
                     attempts++;
-                    loadingMsg.textContent = `[PROCESSING_TASK_${createData.task_id.substring(0,8)}... ${attempts * 3}s]`;
+                    loadingMsg.textContent = `[PROCESSING... ${attempts * 3}s]`;
                     
                     const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${createData.task_id}`, {
                         headers: { 'x-api-key': API_KEY }
                     });
                     
                     const statusData = await statusRes.json();
-                    const output = extractManusOutput(statusData);
                     
-                    if (output) {
-                        loadingMsg.textContent = output;
-                        return; 
-                    }
+                    // Use the Master Key to find any text
+                    const allTexts = exhaustiveTextSearch(statusData);
                     
-                    // If the task is marked as completed but we found no output, try one last deep search
-                    if (statusData.status === 'completed') {
-                        const finalSearch = JSON.stringify(statusData);
-                        if (finalSearch.length > 100) {
-                             // If we still have nothing, show the raw status to help debug
-                             loadingMsg.textContent = "[TASK_COMPLETED_BUT_NO_TEXT_FOUND]";
-                             console.log("Full Response:", statusData);
-                        }
+                    // Filter out the original prompt if it leaked in
+                    const filteredTexts = allTexts.filter(t => t !== userText && t !== 'completed' && t !== 'processing');
+                    
+                    if (filteredTexts.length > 0) {
+                        // Get the longest text found (usually the actual answer)
+                        const bestText = filteredTexts.reduce((a, b) => a.length > b.length ? a : b);
+                        loadingMsg.textContent = bestText;
+                        
+                        // If the task is done, we stop
+                        if (statusData.status === 'completed') return;
+                    } else if (statusData.status === 'completed') {
+                        loadingMsg.textContent = "[TASK_FINISHED_BUT_NO_TEXT_EXTRACTED]";
                         return;
                     }
                 }
