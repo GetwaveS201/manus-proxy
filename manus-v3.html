@@ -73,6 +73,7 @@
         .user { color: #58a6ff; }
         .user::before { content: "> "; }
         .bot { color: #c9d1d9; }
+        .thinking { color: #8b949e; font-style: italic; font-size: 12px; border-left: 2px solid #30363d; padding-left: 10px; margin: 5px 0; }
         .system { color: #8b949e; font-style: italic; }
         
         .input-area {
@@ -151,8 +152,8 @@
         </div>
         
         <div class="chat-area" id="chat">
-            <div class="message system">Manus Terminal v1.1.0 initialized.</div>
-            <div class="message system">Mode: Exhaustive Search Enabled.</div>
+            <div class="message system">Manus Terminal v1.2.0 initialized.</div>
+            <div class="message system">Listening for Manus AI output...</div>
         </div>
         
         <div class="input-area">
@@ -164,9 +165,9 @@
 
     <script>
         /**
-         * MASTER KEY VERSION:
-         * This version uses a recursive search to find ANY text in the response.
-         * It ignores the 'user' role to prevent echoing.
+         * MANUS-STYLE TERMINAL FIX:
+         * This version is specifically designed to capture the "Thinking process"
+         * and the final output as seen in the official Manus app.
          */
 
         let API_KEY = localStorage.getItem('manus_key') || '';
@@ -200,50 +201,45 @@
             return msg;
         }
 
-        // THE MASTER KEY: Recursively finds all text that isn't from the user
-        function exhaustiveTextSearch(obj, foundTexts = []) {
-            if (!obj) return foundTexts;
+        // THE MANUS EXTRACTOR: Captures thinking and final output
+        function processManusData(data) {
+            let results = { thinking: [], output: null };
 
-            // If it's a string and long enough to be a response, keep it
-            if (typeof obj === 'string' && obj.length > 0) {
-                // Avoid adding IDs or short status words
-                if (obj.length > 5 || !/^[a-z0-9_-]+$/i.test(obj)) {
-                    foundTexts.push(obj);
-                }
-                return foundTexts;
+            if (!data) return results;
+
+            // 1. Check for 'steps' or 'thinking' (common in agent tasks)
+            if (data.steps && Array.isArray(data.steps)) {
+                results.thinking = data.steps.map(s => s.thought || s.text).filter(Boolean);
             }
 
-            if (Array.isArray(obj)) {
-                for (let item of obj) {
-                    // Skip user messages
-                    if (item && item.role === 'user') continue;
-                    exhaustiveTextSearch(item, foundTexts);
-                }
-            } else if (typeof obj === 'object') {
-                // Skip user messages
-                if (obj.role === 'user') return foundTexts;
+            // 2. Check for the final output
+            if (data.output) {
+                if (typeof data.output === 'string') results.output = data.output;
+                else if (data.output.text) results.output = data.output.text;
+            }
 
-                // Prioritize known text fields
-                const priorityFields = ['text', 'content', 'output', 'result', 'message'];
-                for (let field of priorityFields) {
-                    if (obj[field]) {
-                        if (typeof obj[field] === 'string') {
-                            foundTexts.push(obj[field]);
-                        } else {
-                            exhaustiveTextSearch(obj[field], foundTexts);
-                        }
+            // 3. If it's an array of messages (standard chat format)
+            if (Array.isArray(data)) {
+                const assistantMsgs = data.filter(m => m.role === 'assistant');
+                for (let msg of assistantMsgs) {
+                    // Extract thinking from content if it exists
+                    if (msg.content && Array.isArray(msg.content)) {
+                        const thinkingParts = msg.content.filter(c => c.type === 'thinking').map(c => c.text);
+                        results.thinking.push(...thinkingParts);
+                        
+                        const outputParts = msg.content.filter(c => c.type === 'text' || c.type === 'output_text').map(c => c.text);
+                        if (outputParts.length > 0) results.output = outputParts.join('\n');
                     }
-                }
-
-                // Search everything else
-                for (let key in obj) {
-                    if (!priorityFields.includes(key) && key !== 'role' && key !== 'id' && key !== 'task_id') {
-                        exhaustiveTextSearch(obj[key], foundTexts);
+                    
+                    // If it's just a completed message with text
+                    if (msg.status === 'completed' && !results.output) {
+                        if (typeof msg.content === 'string') results.output = msg.content;
+                        else if (msg.content && msg.content.text) results.output = msg.content.text;
                     }
                 }
             }
 
-            return foundTexts;
+            return results;
         }
         
         async function send() {
@@ -260,7 +256,8 @@
             input.disabled = true;
             btn.disabled = true;
             
-            const loadingMsg = addMsg('bot', '[WAITING_FOR_MANUS...]');
+            const loadingMsg = addMsg('bot', '[INITIALIZING_AGENT...]');
+            let thinkingMsg = null;
             
             try {
                 const createRes = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
@@ -270,35 +267,42 @@
                 });
                 
                 const createData = await createRes.json();
-                if (!createData.task_id) throw new Error('TASK_CREATION_FAILED');
+                if (!createData.task_id) throw new Error('AGENT_START_FAILED');
                 
                 let attempts = 0;
+                let lastThinkingCount = 0;
+
                 while (attempts < 120) {
                     await new Promise(r => setTimeout(r, 3000));
                     attempts++;
-                    loadingMsg.textContent = `[PROCESSING... ${attempts * 3}s]`;
                     
                     const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${createData.task_id}`, {
                         headers: { 'x-api-key': API_KEY }
                     });
                     
                     const statusData = await statusRes.json();
+                    const processed = processManusData(statusData);
                     
-                    // Use the Master Key to find any text
-                    const allTexts = exhaustiveTextSearch(statusData);
-                    
-                    // Filter out the original prompt if it leaked in
-                    const filteredTexts = allTexts.filter(t => t !== userText && t !== 'completed' && t !== 'processing');
-                    
-                    if (filteredTexts.length > 0) {
-                        // Get the longest text found (usually the actual answer)
-                        const bestText = filteredTexts.reduce((a, b) => a.length > b.length ? a : b);
-                        loadingMsg.textContent = bestText;
-                        
-                        // If the task is done, we stop
+                    // Update Thinking Process
+                    if (processed.thinking.length > lastThinkingCount) {
+                        for (let i = lastThinkingCount; i < processed.thinking.length; i++) {
+                            addMsg('thinking', `[THOUGHT]: ${processed.thinking[i]}`);
+                        }
+                        lastThinkingCount = processed.thinking.length;
+                    }
+
+                    // Update Final Output
+                    if (processed.output) {
+                        loadingMsg.textContent = processed.output;
                         if (statusData.status === 'completed') return;
-                    } else if (statusData.status === 'completed') {
-                        loadingMsg.textContent = "[TASK_FINISHED_BUT_NO_TEXT_EXTRACTED]";
+                    } else {
+                        loadingMsg.textContent = `[AGENT_WORKING... ${attempts * 3}s]`;
+                    }
+                    
+                    if (statusData.status === 'completed' && !processed.output) {
+                        // Final fallback: just show the raw data if we still have nothing
+                        loadingMsg.textContent = "[TASK_COMPLETE_CHECK_CONSOLE]";
+                        console.log("Final Data:", statusData);
                         return;
                     }
                 }
