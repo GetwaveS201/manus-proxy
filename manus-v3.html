@@ -993,8 +993,11 @@
                         if (extracted.status === 'completed' && !extracted.output) {
                             loadingMsg.remove();
                             console.error('Task completed but no output. Full response:', statusData);
-                            addMsg('bot', '⚠️ The task completed but I couldn\'t extract the response. Check the browser console (F12) to see the raw API data. This might mean the API response format changed.');
-                            showToast('Check console for raw API response');
+                            
+                            // Show raw response in chat for debugging
+                            const debugMsg = `⚠️ **Task completed but no output found**\n\nRaw API Response:\n\`\`\`json\n${JSON.stringify(statusData, null, 2)}\n\`\`\`\n\nPlease screenshot this and share it so we can fix the extraction logic.`;
+                            addMsg('bot', debugMsg);
+                            showToast('Check the message above for raw API data');
                             break;
                         }
                         
