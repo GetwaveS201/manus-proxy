@@ -826,8 +826,31 @@
             let output = null;
             let status = null;
 
-            // Strategy 1: Array of messages
-            if (Array.isArray(data)) {
+            // CRITICAL FIX: Check for data.output array first (Manus API format)
+            if (data.output && Array.isArray(data.output)) {
+                console.log('Found data.output array, length:', data.output.length);
+                for (let item of data.output) {
+                    if (item.role === 'assistant') {
+                        console.log('Found assistant in output array:', item);
+                        if (Array.isArray(item.content)) {
+                            item.content.forEach(contentItem => {
+                                console.log('Content item:', contentItem);
+                                if (contentItem.type === 'thinking' && contentItem.text) {
+                                    thinking.push(contentItem.text);
+                                }
+                                if ((contentItem.type === 'output_text' || contentItem.type === 'text') && contentItem.text) {
+                                    if (!output) output = '';
+                                    output += contentItem.text;
+                                    console.log('Found output text:', contentItem.text);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Strategy 2: Array of messages (fallback)
+            if (!output && Array.isArray(data)) {
                 console.log('Data is array, length:', data.length);
                 for (let item of data) {
                     if (item.role === 'assistant') {
@@ -850,12 +873,11 @@
                 }
             }
             
-            // Strategy 2: Object with properties
+            // Strategy 3: Object with properties
             if (!output && typeof data === 'object' && data !== null) {
                 console.log('Trying object extraction...');
                 
-                // Try all possible output fields
-                const outputFields = ['output', 'result', 'text', 'message', 'response', 'content'];
+                const outputFields = ['result', 'text', 'message', 'response', 'content'];
                 for (let field of outputFields) {
                     if (data[field]) {
                         console.log(`Found data.${field}:`, data[field]);
@@ -882,7 +904,7 @@
                 }
             }
             
-            // Strategy 3: Nested data
+            // Strategy 4: Nested data
             if (!output && data.data) {
                 console.log('Trying nested data.data...');
                 const nested = extractManusData(data.data);
@@ -891,17 +913,9 @@
                 if (nested.status) status = nested.status;
             }
             
-            // Strategy 4: Check for messages array
-            if (!output && data.messages && Array.isArray(data.messages)) {
-                console.log('Found messages array:', data.messages.length);
-                const nested = extractManusData(data.messages);
-                if (nested.output) output = nested.output;
-                if (nested.thinking) thinking = thinking.concat(nested.thinking);
-            }
-            
             console.log('=== EXTRACTION RESULT ===');
             console.log('Output found:', !!output);
-            console.log('Output length:', output ? output.length : 0);
+            console.log('Output:', output);
             console.log('Thinking items:', thinking.length);
             console.log('Status:', status);
             console.log('========================');
@@ -993,11 +1007,8 @@
                         if (extracted.status === 'completed' && !extracted.output) {
                             loadingMsg.remove();
                             console.error('Task completed but no output. Full response:', statusData);
-                            
-                            // Show raw response in chat for debugging
-                            const debugMsg = `⚠️ **Task completed but no output found**\n\nRaw API Response:\n\`\`\`json\n${JSON.stringify(statusData, null, 2)}\n\`\`\`\n\nPlease screenshot this and share it so we can fix the extraction logic.`;
-                            addMsg('bot', debugMsg);
-                            showToast('Check the message above for raw API data');
+                            addMsg('bot', '⚠️ Task completed but response extraction failed. Check console for details.');
+                            showToast('Extraction failed - check console');
                             break;
                         }
                         
