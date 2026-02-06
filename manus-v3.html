@@ -6,153 +6,85 @@
     <title>Manus AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <!-- Marked.js for Markdown rendering -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-tertiary: #1a1a25;
-            --bg-elevated: #22222e;
-            --accent-primary: #6366f1;
-            --accent-secondary: #8b5cf6;
-            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-            --accent-glow: rgba(99, 102, 241, 0.4);
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border-color: rgba(255, 255, 255, 0.08);
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
-            --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
+            --bg: #0a0a0a;
+            --bg-secondary: #121212;
+            --accent: #8b5cf6;
+            --accent-hover: #9d6ff7;
+            --text: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border: rgba(255, 255, 255, 0.06);
         }
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             line-height: 1.6;
-        }
-        
-        /* Animated Background */
-        .bg-gradient {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-        
-        .bg-gradient::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: 
-                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
-                radial-gradient(ellipse 50% 30% at 50% 100%, rgba(168, 85, 247, 0.04) 0%, transparent 50%);
-            animation: gradientShift 20s ease-in-out infinite;
-        }
-        
-        @keyframes gradientShift {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            33% { transform: translate(2%, 2%) rotate(2deg); }
-            66% { transform: translate(-1%, 1%) rotate(-1deg); }
+            -webkit-font-smoothing: antialiased;
         }
         
         /* Header */
         .header {
-            background: rgba(18, 18, 26, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-            padding: 14px 24px;
+            padding: 12px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            border-bottom: 1px solid var(--border);
         }
         
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            letter-spacing: -0.02em;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
         }
         
         .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--accent-gradient);
-            border-radius: 10px;
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 11px;
             font-weight: 700;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .logo-icon::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+            color: white;
         }
         
         .header-actions {
             display: flex;
-            gap: 10px;
+            gap: 16px;
             align-items: center;
+            font-size: 13px;
+            color: var(--text-secondary);
         }
         
         .header-btn {
             background: transparent;
-            border: 1px solid var(--border-color);
+            border: none;
             color: var(--text-secondary);
-            padding: 8px 14px;
-            border-radius: 8px;
             cursor: pointer;
             font-size: 13px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
         }
         
         .header-btn:hover {
+            color: var(--text);
             background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.15);
-            color: var(--text-primary);
-            transform: translateY(-1px);
-        }
-        
-        .header-btn svg {
-            width: 14px;
-            height: 14px;
         }
         
         /* Main Container */
@@ -160,65 +92,117 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 850px;
+            max-width: 800px;
             width: 100%;
             margin: 0 auto;
-            padding: 0 20px;
-            position: relative;
-            z-index: 1;
+            padding: 0 24px;
         }
         
         /* Chat Area */
         .chat-area {
             flex: 1;
             overflow-y: auto;
-            padding: 24px 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            scroll-behavior: smooth;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 32px 0;
+            min-height: 0;
         }
         
         .chat-area::-webkit-scrollbar {
             width: 6px;
         }
         
-        .chat-area::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
         .chat-area::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 3px;
         }
         
-        .chat-area::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.15);
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            text-align: center;
+        }
+        
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
+        }
+        
+        .empty-icon svg {
+            width: 32px;
+            height: 32px;
+            color: white;
+        }
+        
+        .empty-state h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        .empty-state p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            max-width: 500px;
+        }
+        
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-width: 600px;
+        }
+        
+        .suggestion-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .suggestion-chip:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
         }
         
         /* Messages */
         .message {
             display: flex;
-            gap: 14px;
-            padding: 16px 20px;
-            border-radius: 16px;
-            animation: messageSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            transition: background 0.2s ease;
+            gap: 12px;
+            animation: fadeIn 0.3s ease;
         }
         
-        @keyframes messageSlide {
-            from { 
-                opacity: 0; 
-                transform: translateY(12px) scale(0.98); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
-        }
-        
-        .message:hover {
-            background: rgba(255, 255, 255, 0.02);
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .message-avatar {
@@ -228,137 +212,90 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 11px;
             font-weight: 600;
-            font-size: 12px;
             flex-shrink: 0;
-            position: relative;
         }
         
         .user .message-avatar {
-            background: var(--accent-gradient);
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
             color: white;
-            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
         }
         
-        .bot .message-avatar, .system .message-avatar {
-            background: var(--bg-elevated);
-            color: var(--accent-primary);
-            border: 1px solid var(--border-color);
+        .bot .message-avatar {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--accent);
         }
         
         .message-content {
             flex: 1;
-            min-width: 0;
-            padding-top: 4px;
-        }
-        
-        .message-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
-        }
-        
-        .message-author {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .message-time {
-            font-size: 11px;
-            color: var(--text-muted);
+            padding-top: 6px;
         }
         
         .message-text {
-            color: var(--text-secondary);
-            line-height: 1.7;
-            font-size: 14.5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.6;
         }
         
         .user .message-text {
-            color: var(--text-primary);
-            font-weight: 400;
+            color: var(--text);
         }
         
-        .system .message-text {
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-        
-        .success .message-text {
-            color: var(--success);
-        }
-        
-        .warning .message-text {
-            color: var(--warning);
-        }
-        
-        .error .message-text {
-            color: var(--error);
+        .bot .message-text {
+            color: var(--text-secondary);
         }
         
         /* Markdown Styling */
         .message-text h1, .message-text h2, .message-text h3 {
-            color: var(--text-primary);
-            margin: 16px 0 10px;
+            color: var(--text);
+            margin: 16px 0 8px;
             font-weight: 600;
         }
         
-        .message-text h1 { font-size: 1.4em; }
-        .message-text h2 { font-size: 1.2em; }
+        .message-text h1 { font-size: 1.5em; }
+        .message-text h2 { font-size: 1.3em; }
         .message-text h3 { font-size: 1.1em; }
         
         .message-text p {
-            margin: 10px 0;
+            margin: 12px 0;
         }
         
         .message-text ul, .message-text ol {
-            margin: 10px 0;
-            padding-left: 20px;
+            margin: 12px 0;
+            padding-left: 24px;
         }
         
         .message-text li {
-            margin: 4px 0;
+            margin: 6px 0;
         }
         
         .message-text code {
-            font-family: 'JetBrains Mono', monospace;
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--accent-primary);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--accent);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.9em;
+            font-family: 'SF Mono', Consolas, monospace;
         }
         
         .message-text pre {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             padding: 16px;
-            margin: 12px 0;
+            margin: 16px 0;
             overflow-x: auto;
         }
         
         .message-text pre code {
             background: transparent;
-            color: var(--text-secondary);
             padding: 0;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-        
-        .message-text blockquote {
-            border-left: 3px solid var(--accent-primary);
-            padding-left: 14px;
-            margin: 12px 0;
-            color: var(--text-muted);
+            color: var(--text-secondary);
         }
         
         .message-text a {
-            color: var(--accent-primary);
+            color: var(--accent);
             text-decoration: none;
         }
         
@@ -366,621 +303,286 @@
             text-decoration: underline;
         }
         
-        /* Message Actions */
-        .message-actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 10px;
-            opacity: 0;
-            transform: translateY(-4px);
-            transition: all 0.2s ease;
+        .message-text strong {
+            color: var(--text);
+            font-weight: 600;
         }
         
-        .message:hover .message-actions {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        .action-btn {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 5px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .action-btn:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.15);
-            color: var(--text-secondary);
-        }
-        
-        .action-btn svg {
-            width: 12px;
-            height: 12px;
-        }
-        
-        /* Thinking Indicator */
+        /* Thinking */
         .thinking {
-            background: rgba(99, 102, 241, 0.06);
-            border: 1px solid rgba(99, 102, 241, 0.15);
-            border-radius: 12px;
-            padding: 14px 18px;
-            margin: 4px 0 4px 52px;
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 8px 0 8px 44px;
+            font-size: 13px;
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
         
         .thinking:hover {
-            background: rgba(99, 102, 241, 0.1);
-            border-color: rgba(99, 102, 241, 0.25);
+            background: rgba(139, 92, 246, 0.12);
         }
         
         .thinking-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-        
-        .thinking-icon {
-            width: 16px;
-            height: 16px;
-            color: var(--accent-primary);
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-        
-        .thinking-label {
+            gap: 8px;
+            color: var(--accent);
+            font-weight: 500;
             font-size: 12px;
-            font-weight: 600;
-            color: var(--accent-primary);
-        }
-        
-        .thinking-toggle {
-            margin-left: auto;
-            font-size: 11px;
-            color: var(--text-muted);
         }
         
         .thinking-content {
-            color: var(--text-muted);
-            font-size: 13px;
-            line-height: 1.6;
-            padding-left: 26px;
-            transition: all 0.3s ease;
+            margin-top: 8px;
+            padding-left: 20px;
         }
         
-        .thinking.collapsed .thinking-content {
-            display: none;
-        }
-        
-        .thinking.collapsed .thinking-toggle::after {
-            content: 'Show';
-        }
-        
-        .thinking:not(.collapsed) .thinking-toggle::after {
-            content: 'Hide';
-        }
-        
-        /* Loading Animation */
-        .loading-indicator {
+        /* Loading */
+        .loading-msg {
             display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 16px 20px;
+            gap: 12px;
         }
         
         .loading-dots {
             display: flex;
             gap: 4px;
+            align-items: center;
+            padding: 12px 0;
         }
         
         .loading-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--accent-primary);
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
             border-radius: 50%;
-            animation: bounce 1.4s ease-in-out infinite both;
+            animation: bounce 1.4s ease-in-out infinite;
         }
         
         .loading-dot:nth-child(1) { animation-delay: -0.32s; }
         .loading-dot:nth-child(2) { animation-delay: -0.16s; }
         
         @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-        
-        .loading-text {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-left: 8px;
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
         }
         
         /* Input Area */
         .input-area {
-            padding: 20px 0 28px;
-            background: linear-gradient(to top, var(--bg-primary) 80%, transparent);
+            padding: 20px 0 32px;
             position: sticky;
             bottom: 0;
-            z-index: 10;
+            background: var(--bg);
         }
         
         .input-wrapper {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             display: flex;
-            gap: 12px;
             align-items: flex-end;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 18px;
-            padding: 14px 18px;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: var(--shadow-md);
+            padding: 12px 16px;
+            gap: 12px;
+            transition: all 0.2s;
         }
         
         .input-wrapper:focus-within {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-lg);
+            border-color: var(--accent);
         }
         
         .input-field {
             flex: 1;
             background: transparent;
             border: none;
-            color: var(--text-primary);
-            font-size: 15px;
+            color: var(--text);
+            font-size: 14px;
             font-family: inherit;
             outline: none;
             resize: none;
             max-height: 200px;
             min-height: 24px;
-            line-height: 1.5;
         }
         
         .input-field::placeholder {
-            color: var(--text-muted);
-        }
-        
-        .input-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
+            color: var(--text-secondary);
         }
         
         .send-btn {
-            background: var(--accent-gradient);
+            background: var(--accent);
             color: white;
             border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 14px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            flex-shrink: 0;
+            transition: all 0.2s;
         }
         
         .send-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+            background: var(--accent-hover);
         }
         
         .send-btn:disabled {
-            background: var(--bg-elevated);
-            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.1);
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
         }
         
         .send-btn svg {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
         }
         
         .input-hint {
             text-align: center;
-            margin-top: 10px;
             font-size: 11px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
+            margin-top: 12px;
         }
         
-        .input-hint kbd {
-            background: var(--bg-tertiary);
-            padding: 2px 6px;
+        kbd {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
             border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 6px;
             font-size: 10px;
-            border: 1px solid var(--border-color);
+            font-family: inherit;
         }
         
-        /* API Setup Modal */
-        .api-setup {
+        /* API Modal */
+        .api-modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(12px);
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            animation: fadeIn 0.3s ease;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .api-setup.active {
+        .api-modal-overlay.active {
             display: flex;
         }
         
         .api-modal {
             background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 36px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
             max-width: 440px;
             width: 90%;
-            box-shadow: var(--shadow-glow), var(--shadow-lg);
-            animation: modalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        @keyframes modalSlide {
-            from { 
-                opacity: 0; 
-                transform: translateY(20px) scale(0.96); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
-        }
-        
-        .api-modal-icon {
-            width: 56px;
-            height: 56px;
-            background: var(--accent-gradient);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
-        }
-        
-        .api-modal-icon svg {
-            width: 28px;
-            height: 28px;
-            color: white;
         }
         
         .api-modal h2 {
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 600;
+            margin-bottom: 8px;
         }
         
         .api-modal p {
+            font-size: 13px;
             color: var(--text-secondary);
             margin-bottom: 24px;
-            line-height: 1.6;
-            font-size: 14px;
-        }
-        
-        .api-input-wrapper {
-            position: relative;
-            margin-bottom: 20px;
+            line-height: 1.5;
         }
         
         .api-input {
             width: 100%;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 14px 44px 14px 16px;
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 8px;
             font-size: 14px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: inherit;
+            margin-bottom: 16px;
             outline: none;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
         
         .api-input:focus {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px var(--accent-glow);
+            border-color: var(--accent);
         }
         
-        .api-input::placeholder {
-            color: var(--text-muted);
-        }
-        
-        .api-input-toggle {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
+        .mock-mode-toggle {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             cursor: pointer;
-            padding: 4px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
         }
         
-        .api-input-toggle:hover {
+        .mock-mode-toggle input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .mock-mode-info {
+            flex: 1;
+        }
+        
+        .mock-mode-info-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .mock-mode-info-desc {
+            font-size: 11px;
             color: var(--text-secondary);
-            background: rgba(255, 255, 255, 0.05);
+            margin-top: 2px;
         }
         
         .api-btn {
             width: 100%;
-            padding: 14px;
+            background: var(--accent);
+            color: white;
             border: none;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 8px;
             font-weight: 600;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            background: var(--accent-gradient);
-            color: white;
-            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s;
         }
         
         .api-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+            background: var(--accent-hover);
         }
         
-        .api-btn:active {
-            transform: translateY(0);
-        }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-muted);
-            animation: fadeIn 0.6s ease;
-        }
-        
-        .empty-state-icon {
-            width: 72px;
-            height: 72px;
-            background: var(--accent-gradient);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 24px;
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-        }
-        
-        .empty-state-icon svg {
-            width: 36px;
-            height: 36px;
-            color: white;
-        }
-        
-        .empty-state h2 {
-            color: var(--text-primary);
-            font-size: 22px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-        
-        .empty-state p {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 28px;
-        }
-        
-        .suggestion-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        .suggestion-chip {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 10px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .suggestion-chip:hover {
-            background: rgba(99, 102, 241, 0.1);
-            border-color: rgba(99, 102, 241, 0.3);
-            color: var(--text-primary);
-            transform: translateY(-1px);
-        }
-        
-        /* Toast Notifications */
-        .toast-container {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1001;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
+        /* Toast */
         .toast {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 14px 18px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: var(--shadow-lg);
-            animation: toastSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            min-width: 280px;
-        }
-        
-        @keyframes toastSlide {
-            from { 
-                opacity: 0; 
-                transform: translateX(20px); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateX(0); 
-            }
-        }
-        
-        .toast.hiding {
-            animation: toastHide 0.2s ease forwards;
-        }
-        
-        @keyframes toastHide {
-            to { 
-                opacity: 0; 
-                transform: translateX(20px); 
-            }
-        }
-        
-        .toast-icon {
-            width: 20px;
-            height: 20px;
-            flex-shrink: 0;
-        }
-        
-        .toast.success .toast-icon { color: var(--success); }
-        .toast.error .toast-icon { color: var(--error); }
-        .toast.info .toast-icon { color: var(--accent-primary); }
-        
-        .toast-message {
-            font-size: 13px;
-            color: var(--text-primary);
-        }
-        
-        /* Scroll to bottom button */
-        .scroll-bottom-btn {
             position: fixed;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            gap: 6px;
-            box-shadow: var(--shadow-md);
-            transition: all 0.2s ease;
-            z-index: 50;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.3s ease;
+            z-index: 1001;
         }
         
-        .scroll-bottom-btn:hover {
-            background: var(--bg-elevated);
-            color: var(--text-primary);
-        }
-        
-        .scroll-bottom-btn.visible {
-            display: flex;
-            animation: fadeIn 0.2s ease;
-        }
-        
-        .scroll-bottom-btn svg {
-            width: 14px;
-            height: 14px;
-        }
-        
-        /* Responsive */
-        @media (max-width: 640px) {
-            .header {
-                padding: 12px 16px;
-            }
-            
-            .container {
-                padding: 0 12px;
-            }
-            
-            .message {
-                padding: 12px 14px;
-                gap: 10px;
-            }
-            
-            .message-avatar {
-                width: 28px;
-                height: 28px;
-                font-size: 10px;
-            }
-            
-            .message-text {
-                font-size: 14px;
-            }
-            
-            .input-area {
-                padding: 14px 0 20px;
-            }
-            
-            .input-wrapper {
-                padding: 12px 14px;
-            }
-            
-            .api-modal {
-                padding: 28px 24px;
-            }
-            
-            .suggestion-chips {
-                gap: 8px;
-            }
-            
-            .suggestion-chip {
-                padding: 8px 12px;
-                font-size: 12px;
-            }
+        @keyframes slideIn {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="bg-gradient"></div>
-    
-    <!-- Toast Container -->
-    <div class="toast-container" id="toast-container"></div>
-    
     <!-- Header -->
     <div class="header">
         <div class="logo">
@@ -988,51 +590,24 @@
             <span>Manus AI</span>
         </div>
         <div class="header-actions">
-            <button class="header-btn" onclick="clearChat()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
-                Clear
-            </button>
-            <button class="header-btn" onclick="resetKey()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M12 1v6m0 6v6m4.22-10.22l4.24-4.24M6.34 6.34L2.1 2.1m17.8 17.8l-4.24-4.24M6.34 17.66l-4.24 4.24M23 12h-6m-6 0H1m20.24-4.24l-4.24 4.24M6.34 6.34l-4.24-4.24"/>
-                </svg>
-                Reset Key
-            </button>
+            <button class="header-btn" onclick="showSettings()">⚙ Settings</button>
+            <button class="header-btn" onclick="resetKey()">Reset Key</button>
         </div>
     </div>
 
-    <!-- API Setup Modal -->
-    <div id="api-setup" class="api-setup">
+    <!-- API Modal -->
+    <div id="api-modal" class="api-modal-overlay">
         <div class="api-modal">
-            <div class="api-modal-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0110 0v4"/>
-                </svg>
-            </div>
             <h2>Connect to Manus AI</h2>
-            <p>Enter your Manus API key to get started. Your key is stored locally in your browser and never sent to any third party.</p>
-            <div class="api-input-wrapper">
-                <input type="password" id="api-key" class="api-input" placeholder="sk-...">
-                <button class="api-input-toggle" onclick="toggleApiVisibility()">
-                    <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                </button>
-            </div>
-            <div style="margin: 16px 0; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                <label style="display: flex; align-items: center; cursor: pointer; gap: 10px;">
-                    <input type="checkbox" id="mock-mode-toggle" style="width: 18px; height: 18px; cursor: pointer;" onchange="toggleMockMode()">
-                    <div>
-                        <div style="font-size: 13px; font-weight: 600; color: var(--accent-primary);">🧪 Mock Mode (Demo)</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Test without API key or credits</div>
-                    </div>
-                </label>
-            </div>
+            <p>Enter your Manus API key to get started. Your key is stored locally and never shared.</p>
+            <input type="password" id="api-key" class="api-input" placeholder="sk-...">
+            <label class="mock-mode-toggle">
+                <input type="checkbox" id="mock-mode" onchange="toggleMockMode()">
+                <div class="mock-mode-info">
+                    <div class="mock-mode-info-title">🧪 Mock Mode (Demo)</div>
+                    <div class="mock-mode-info-desc">Test without API key or credits</div>
+                </div>
+            </label>
             <button class="api-btn" onclick="saveKey()">Connect</button>
         </div>
     </div>
@@ -1042,29 +617,21 @@
         <!-- Chat Area -->
         <div class="chat-area" id="chat">
             <div class="empty-state">
-                <div class="empty-state-icon">
+                <div class="empty-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
                 </div>
-                <h2>How can I help you today?</h2>
+                <h1>How can I help you today?</h1>
                 <p>Ask me anything — I'm ready to assist with research, coding, analysis, and more.</p>
                 <div class="suggestion-chips">
-                    <button class="suggestion-chip" onclick="setInput('Explain quantum computing in simple terms')">Explain quantum computing</button>
-                    <button class="suggestion-chip" onclick="setInput('Write a Python script to analyze CSV data')">Python data analysis</button>
-                    <button class="suggestion-chip" onclick="setInput('Create a marketing strategy for a SaaS startup')">Marketing strategy</button>
-                    <button class="suggestion-chip" onclick="setInput('Debug this code and suggest improvements')">Code review</button>
+                    <button class="suggestion-chip" onclick="setInput('Explain quantum computing')">Explain quantum computing</button>
+                    <button class="suggestion-chip" onclick="setInput('Python data analysis')">Python data analysis</button>
+                    <button class="suggestion-chip" onclick="setInput('Marketing strategy')">Marketing strategy</button>
+                    <button class="suggestion-chip" onclick="setInput('Code review')">Code review</button>
                 </div>
             </div>
         </div>
-
-        <!-- Scroll to Bottom Button -->
-        <button class="scroll-bottom-btn" id="scroll-bottom-btn" onclick="scrollToBottom()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12l7 7 7-7"/>
-            </svg>
-            New messages
-        </button>
 
         <!-- Input Area -->
         <div class="input-area">
@@ -1079,7 +646,8 @@
                 ></textarea>
                 <button onclick="send()" id="send-btn" class="send-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                     </svg>
                 </button>
             </div>
@@ -1093,124 +661,57 @@
         let API_KEY = localStorage.getItem('manus_key') || '';
         let MOCK_MODE = localStorage.getItem('mock_mode') === 'true';
         let isFirstMessage = true;
-        let thinkingElements = [];
         
-        // Check for API key on load
         window.onload = function() {
             if (!API_KEY && !MOCK_MODE) {
-                document.getElementById('api-setup').classList.add('active');
+                document.getElementById('api-modal').classList.add('active');
             }
-            // Set mock mode checkbox state
-            document.getElementById('mock-mode-toggle').checked = MOCK_MODE;
+            document.getElementById('mock-mode').checked = MOCK_MODE;
             document.getElementById('input').focus();
-            setupScrollListener();
         };
         
-        function toggleMockMode() {
-            MOCK_MODE = document.getElementById('mock-mode-toggle').checked;
-            localStorage.setItem('mock_mode', MOCK_MODE);
-            if (MOCK_MODE) {
-                showToast('Mock mode enabled - no API calls will be made', 'success');
-            } else {
-                showToast('Mock mode disabled - using real Manus API', 'success');
-            }
+        function showSettings() {
+            document.getElementById('api-modal').classList.add('active');
         }
         
-        function toggleApiVisibility() {
-            const input = document.getElementById('api-key');
-            const icon = document.getElementById('eye-icon');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22"/>';
-            } else {
-                input.type = 'password';
-                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-            }
-        }
-        
-        function saveKey() {
-            const key = document.getElementById('api-key').value.trim();
-            if (!key) {
-                showToast('Please enter your API key', 'error');
-                return;
-            }
-            localStorage.setItem('manus_key', key);
-            API_KEY = key;
-            document.getElementById('api-setup').classList.remove('active');
-            showToast('Connected to Manus AI', 'success');
-            addMsg('system', 'Connected to Manus AI successfully');
-        }
-
         function resetKey() {
             if (confirm('Reset API key? You will need to enter it again.')) {
                 localStorage.removeItem('manus_key');
                 API_KEY = '';
-                document.getElementById('api-setup').classList.add('active');
-                showToast('API key reset', 'info');
+                document.getElementById('api-modal').classList.add('active');
             }
         }
         
-        function clearChat() {
-            if (!isFirstMessage && confirm('Clear all messages?')) {
-                const chat = document.getElementById('chat');
-                chat.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
-                        </div>
-                        <h2>How can I help you today?</h2>
-                        <p>Ask me anything — I'm ready to assist with research, coding, analysis, and more.</p>
-                        <div class="suggestion-chips">
-                            <button class="suggestion-chip" onclick="setInput('Explain quantum computing in simple terms')">Explain quantum computing</button>
-                            <button class="suggestion-chip" onclick="setInput('Write a Python script to analyze CSV data')">Python data analysis</button>
-                            <button class="suggestion-chip" onclick="setInput('Create a marketing strategy for a SaaS startup')">Marketing strategy</button>
-                            <button class="suggestion-chip" onclick="setInput('Debug this code and suggest improvements')">Code review</button>
-                        </div>
-                    </div>
-                `;
-                isFirstMessage = true;
-                thinkingElements = [];
-                showToast('Chat cleared', 'info');
+        function toggleMockMode() {
+            MOCK_MODE = document.getElementById('mock-mode').checked;
+            localStorage.setItem('mock_mode', MOCK_MODE);
+            showToast(MOCK_MODE ? 'Mock mode enabled' : 'Mock mode disabled');
+        }
+        
+        function saveKey() {
+            const key = document.getElementById('api-key').value.trim();
+            if (!key && !MOCK_MODE) {
+                showToast('Please enter API key or enable mock mode');
+                return;
             }
+            if (key) {
+                localStorage.setItem('manus_key', key);
+                API_KEY = key;
+            }
+            document.getElementById('api-modal').classList.remove('active');
+            showToast('Connected successfully');
         }
         
         function setInput(text) {
-            const input = document.getElementById('input');
-            input.value = text;
-            input.focus();
-            autoResize(input);
+            document.getElementById('input').value = text;
+            document.getElementById('input').focus();
         }
         
-        // Toast notifications
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            
-            const icons = {
-                success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-                error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-                info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-            };
-            
-            toast.innerHTML = `${icons[type]}<span class="toast-message">${message}</span>`;
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.add('hiding');
-                setTimeout(() => toast.remove(), 200);
-            }, 3000);
-        }
-        
-        // Auto-resize textarea
         function autoResize(textarea) {
             textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+            textarea.style.height = textarea.scrollHeight + 'px';
         }
         
-        // Handle Enter key
         function handleKeydown(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
@@ -1218,34 +719,17 @@
             }
         }
         
-        // Scroll listener for scroll-to-bottom button
-        function setupScrollListener() {
-            const chat = document.getElementById('chat');
-            const btn = document.getElementById('scroll-bottom-btn');
-            
-            chat.addEventListener('scroll', () => {
-                const isNearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 100;
-                btn.classList.toggle('visible', !isNearBottom);
-            });
-        }
-        
-        function scrollToBottom() {
-            const chat = document.getElementById('chat');
-            chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
-        }
-        
-        function formatTime() {
-            return new Date().toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit',
-                hour12: true 
-            });
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
         
         function addMsg(role, text) {
             const chat = document.getElementById('chat');
             
-            // Remove empty state on first message
             if (isFirstMessage) {
                 chat.innerHTML = '';
                 isFirstMessage = false;
@@ -1261,165 +745,93 @@
             const content = document.createElement('div');
             content.className = 'message-content';
             
-            const header = document.createElement('div');
-            header.className = 'message-header';
-            
-            const author = document.createElement('span');
-            author.className = 'message-author';
-            author.textContent = role === 'user' ? 'You' : (role === 'system' ? 'System' : 'Manus');
-            
-            const time = document.createElement('span');
-            time.className = 'message-time';
-            time.textContent = formatTime();
-            
-            header.appendChild(author);
-            header.appendChild(time);
-            
             const textDiv = document.createElement('div');
             textDiv.className = 'message-text';
-            textDiv.innerHTML = formatMarkdown(text);
             
-            content.appendChild(header);
-            content.appendChild(textDiv);
-            
-            // Add action buttons for bot messages
-            if (role === 'bot') {
-                const actions = document.createElement('div');
-                actions.className = 'message-actions';
-                actions.innerHTML = `
-                    <button class="action-btn" onclick="copyMessage(this)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                        </svg>
-                        Copy
-                    </button>
-                `;
-                content.appendChild(actions);
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({ breaks: true, gfm: true });
+                textDiv.innerHTML = marked.parse(text);
+            } else {
+                textDiv.textContent = text;
             }
             
+            content.appendChild(textDiv);
             msg.appendChild(avatar);
             msg.appendChild(content);
             
             chat.appendChild(msg);
-            chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
+            chat.scrollTop = chat.scrollHeight;
             
             return textDiv;
         }
         
-        function copyMessage(btn) {
-            const textDiv = btn.closest('.message-content').querySelector('.message-text');
-            const text = textDiv.textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                const original = btn.innerHTML;
-                btn.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Copied!
-                `;
-                setTimeout(() => btn.innerHTML = original, 2000);
-            });
-        }
-        
-        // Enhanced markdown formatter using marked.js
-        function formatMarkdown(text) {
-            if (!text) return '';
-            
-            // Configure marked for better rendering
-            if (typeof marked !== 'undefined') {
-                marked.setOptions({
-                    breaks: true, // Convert \n to <br>
-                    gfm: true, // GitHub flavored markdown
-                    sanitize: false // Allow HTML (be careful in production)
-                });
-                
-                try {
-                    return marked.parse(text);
-                } catch (e) {
-                    console.error('Markdown parsing error:', e);
-                    // Fallback to plain text with line breaks
-                    return text.replace(/&/g, '&amp;')
-                               .replace(/</g, '&lt;')
-                               .replace(/>/g, '&gt;')
-                               .replace(/\n/g, '<br>');
-                }
-            }
-            
-            // Fallback if marked.js not loaded
-            return text.replace(/&/g, '&amp;')
-                       .replace(/</g, '&lt;')
-                       .replace(/>/g, '&gt;')
-                       .replace(/\n/g, '<br>');
-        }
-        
         function addThinking(text, id) {
             const chat = document.getElementById('chat');
-            
             const thinking = document.createElement('div');
             thinking.className = 'thinking';
-            thinking.id = `thinking-${id}`;
-            thinking.onclick = () => thinking.classList.toggle('collapsed');
-            
             thinking.innerHTML = `
-                <div class="thinking-header">
-                    <svg class="thinking-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                    </svg>
-                    <span class="thinking-label">Thinking</span>
-                    <span class="thinking-toggle"></span>
-                </div>
+                <div class="thinking-header">💭 Thinking</div>
                 <div class="thinking-content">${text}</div>
             `;
-            
             chat.appendChild(thinking);
-            chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
-            
-            return thinking;
+            chat.scrollTop = chat.scrollHeight;
         }
         
         function showLoading() {
             const chat = document.getElementById('chat');
-            
             const loading = document.createElement('div');
-            loading.className = 'message bot';
-            loading.id = 'loading-msg';
-            
+            loading.className = 'loading-msg message bot';
+            loading.id = 'loading';
             loading.innerHTML = `
                 <div class="message-avatar">M</div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="message-author">Manus</span>
-                        <span class="message-time">${formatTime()}</span>
-                    </div>
-                    <div class="loading-indicator">
-                        <div class="loading-dots">
-                            <div class="loading-dot"></div>
-                            <div class="loading-dot"></div>
-                            <div class="loading-dot"></div>
-                        </div>
-                        <span class="loading-text">Initializing agent...</span>
-                    </div>
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
                 </div>
             `;
-            
             chat.appendChild(loading);
-            chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
-            
+            chat.scrollTop = chat.scrollHeight;
             return loading;
         }
-
-        /**
-         * DATA EXTRACTION - Same logic as before
-         */
+        
+        function generateMockResponse(input) {
+            const lower = input.toLowerCase();
+            
+            if (lower.includes('hello') || lower.includes('hi')) {
+                return {
+                    thinking: ['Analyzing greeting', 'Generating response'],
+                    output: 'Hello! I\'m Manus AI in **mock mode**. How can I help you today?'
+                };
+            }
+            
+            if (lower.includes('code') || lower.includes('python')) {
+                return {
+                    thinking: ['Understanding request', 'Generating code', 'Adding comments'],
+                    output: 'Here\'s a Python example:\n\n```python\ndef fibonacci(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b\n\nfor num in fibonacci(10):\n    print(num)\n```'
+                };
+            }
+            
+            return {
+                thinking: ['Processing query', 'Formulating response'],
+                output: `I received: "${input}"\n\nIn **mock mode**, I simulate responses. Try:\n- "Hello"\n- "Write Python code"\n- "Help me write"\n\nDisable mock mode to use real Manus AI.`
+            };
+        }
+        
         function extractManusData(data) {
+            console.log('=== EXTRACTING DATA ===');
+            console.log('Raw data:', JSON.stringify(data, null, 2));
+            
             let thinking = [];
             let output = null;
             let status = null;
 
+            // Strategy 1: Array of messages
             if (Array.isArray(data)) {
+                console.log('Data is array, length:', data.length);
                 for (let item of data) {
                     if (item.role === 'assistant') {
+                        console.log('Found assistant message:', item);
                         if (Array.isArray(item.content)) {
                             item.content.forEach(contentItem => {
                                 if (contentItem.type === 'thinking' && contentItem.text) {
@@ -1438,22 +850,28 @@
                 }
             }
             
+            // Strategy 2: Object with properties
             if (!output && typeof data === 'object' && data !== null) {
-                if (data.output) {
-                    output = typeof data.output === 'string' ? data.output : data.output.text;
-                }
-                if (!output && data.result) {
-                    output = typeof data.result === 'string' ? data.result : data.result.text;
-                }
-                if (!output && data.text) {
-                    output = data.text;
-                }
-                if (!output && data.message) {
-                    output = typeof data.message === 'string' ? data.message : data.message.text;
+                console.log('Trying object extraction...');
+                
+                // Try all possible output fields
+                const outputFields = ['output', 'result', 'text', 'message', 'response', 'content'];
+                for (let field of outputFields) {
+                    if (data[field]) {
+                        console.log(`Found data.${field}:`, data[field]);
+                        if (typeof data[field] === 'string') {
+                            output = data[field];
+                            break;
+                        } else if (data[field].text) {
+                            output = data[field].text;
+                            break;
+                        }
+                    }
                 }
                 
                 if (data.status) {
                     status = data.status;
+                    console.log('Status:', status);
                 }
                 
                 if (data.steps && Array.isArray(data.steps)) {
@@ -1464,76 +882,36 @@
                 }
             }
             
+            // Strategy 3: Nested data
             if (!output && data.data) {
+                console.log('Trying nested data.data...');
                 const nested = extractManusData(data.data);
                 thinking = thinking.concat(nested.thinking);
                 if (nested.output) output = nested.output;
                 if (nested.status) status = nested.status;
             }
             
+            // Strategy 4: Check for messages array
+            if (!output && data.messages && Array.isArray(data.messages)) {
+                console.log('Found messages array:', data.messages.length);
+                const nested = extractManusData(data.messages);
+                if (nested.output) output = nested.output;
+                if (nested.thinking) thinking = thinking.concat(nested.thinking);
+            }
+            
+            console.log('=== EXTRACTION RESULT ===');
+            console.log('Output found:', !!output);
+            console.log('Output length:', output ? output.length : 0);
+            console.log('Thinking items:', thinking.length);
+            console.log('Status:', status);
+            console.log('========================');
+            
             return { thinking, output, status };
         }
         
-        /**
-         * MOCK RESPONSE GENERATOR
-         * Simulates Manus responses for testing without API credits
-         */
-        function generateMockResponse(userInput) {
-            const lower = userInput.toLowerCase();
-            
-            if (lower.includes('hello') || lower.includes('hi')) {
-                return {
-                    thinking: [
-                        'Analyzing greeting message',
-                        'Determining appropriate response tone',
-                        'Generating friendly reply'
-                    ],
-                    output: 'Hello! I\'m Manus AI. I\'m currently in **mock mode** for demonstration purposes. How can I help you today?\n\nTry asking about:\n- Code examples\n- Writing assistance\n- Data analysis\n- General questions'
-                };
-            }
-            
-            if (lower.includes('code') || lower.includes('python') || lower.includes('javascript')) {
-                return {
-                    thinking: [
-                        'Understanding coding request',
-                        'Analyzing programming language requirements',
-                        'Structuring code example with best practices',
-                        'Adding explanatory comments for clarity'
-                    ],
-                    output: 'Here\'s a Python example with **modern best practices**:\n\n```python\ndef calculate_fibonacci(n: int) -> list[int]:\n    """\n    Generate Fibonacci sequence up to n terms.\n    \n    Args:\n        n: Number of terms to generate\n    \n    Returns:\n        List of Fibonacci numbers\n    """\n    if n <= 0:\n        return []\n    elif n == 1:\n        return [0]\n    \n    sequence = [0, 1]\n    while len(sequence) < n:\n        sequence.append(sequence[-1] + sequence[-2])\n    \n    return sequence\n\n# Example usage\nresult = calculate_fibonacci(10)\nprint(f"First 10 Fibonacci numbers: {result}")\n```\n\nThis implementation:\n- Uses type hints for clarity\n- Includes comprehensive docstring\n- Handles edge cases\n- Follows PEP 8 style guidelines'
-                };
-            }
-            
-            if (lower.includes('write') || lower.includes('essay') || lower.includes('article')) {
-                return {
-                    thinking: [
-                        'Understanding writing request parameters',
-                        'Organizing content structure logically',
-                        'Developing key themes and arguments',
-                        'Crafting engaging introduction and conclusion'
-                    ],
-                    output: '# Writing Assistance Available\n\nI can help you create compelling content! To provide the best assistance, please specify:\n\n## Content Details\n1. **Topic or Subject** - What should I write about?\n2. **Target Audience** - Who will read this?\n3. **Desired Length** - How long should it be?\n4. **Tone & Style** - Formal, casual, academic, creative?\n\n## What I Can Write\n- Blog posts and articles\n- Business communications\n- Technical documentation\n- Creative fiction\n- Academic essays\n- Marketing copy\n\n*Ready to help once you provide these details!*'
-                };
-            }
-            
-            return {
-                thinking: [
-                    'Processing user query: "' + userInput.substring(0, 50) + (userInput.length > 50 ? '...' : '') + '"',
-                    'Analyzing intent and extracting key concepts',
-                    'Formulating comprehensive response strategy',
-                    'Structuring output for maximum clarity'
-                ],
-                output: `I received your message in **mock mode**:\n\n> ${userInput}\n\n## Available Features\n\nTry these prompts to see different responses:\n\n- **"Hello"** - Get a friendly greeting\n- **"Write Python code"** - See code examples\n- **"Help me write"** - Get writing assistance\n- **"Analyze data"** - Learn about data analysis\n\n### About Mock Mode\nMock mode simulates AI responses without using API credits. When you're ready to use the real Manus AI:\n\n1. Get an API key from Manus\n2. Uncheck "Mock Mode" in settings\n3. Enter your API key\n4. Start chatting with the real AI!\n\n*Real Manus AI provides much more detailed and contextual responses across any topic.*`
-            };
-        }
-        
-        /**
-         * SEND FUNCTION - Same backend logic as before
-         */
         async function send() {
-            // Check if we need API key (only in non-mock mode)
             if (!API_KEY && !MOCK_MODE) {
-                document.getElementById('api-setup').classList.add('active');
+                document.getElementById('api-modal').classList.add('active');
                 return;
             }
             
@@ -1550,114 +928,89 @@
             btn.disabled = true;
             
             const loadingMsg = showLoading();
-            const loadingText = loadingMsg.querySelector('.loading-text');
             
             try {
-                // MOCK MODE: Simulate responses without API
                 if (MOCK_MODE) {
                     await new Promise(r => setTimeout(r, 1000));
-                    loadingText.textContent = 'Generating mock response...';
-                    
                     const mockData = generateMockResponse(userText);
                     
-                    // Show thinking process
                     for (let i = 0; i < mockData.thinking.length; i++) {
-                        await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
-                        loadingText.textContent = `Thinking... (${i + 1}/${mockData.thinking.length})`;
+                        await new Promise(r => setTimeout(r, 800));
                         addThinking(mockData.thinking[i], i);
                     }
                     
-                    // Show final output
                     await new Promise(r => setTimeout(r, 1000));
                     loadingMsg.remove();
                     addMsg('bot', mockData.output);
-                    
-                    input.disabled = false;
-                    btn.disabled = false;
-                    input.focus();
-                    return;
-                }
-                
-                // REAL API MODE: Make actual Manus API calls
-                // Create task
-                const createRes = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'x-api-key': API_KEY 
-                    },
-                    body: JSON.stringify({ prompt: userText })
-                });
-                
-                const createData = await createRes.json();
-                
-                if (!createData.task_id) {
-                    throw new Error('Failed to create task: ' + JSON.stringify(createData));
-                }
-                
-                const taskId = createData.task_id;
-                
-                // Poll for results
-                let attempts = 0;
-                const maxAttempts = 60;
-                let lastThinkingCount = 0;
-                let foundOutput = false;
-                
-                while (attempts < maxAttempts && !foundOutput) {
-                    attempts++;
-                    await new Promise(r => setTimeout(r, 3000));
-                    
-                    loadingText.textContent = `Processing... (${attempts * 3}s)`;
-                    
-                    const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${taskId}`, {
-                        headers: { 'x-api-key': API_KEY }
+                } else {
+                    const createRes = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'x-api-key': API_KEY 
+                        },
+                        body: JSON.stringify({ prompt: userText })
                     });
                     
-                    if (!statusRes.ok) continue;
+                    const createData = await createRes.json();
                     
-                    const statusData = await statusRes.json();
-                    const extracted = extractManusData(statusData);
-                    
-                    // Show new thinking
-                    if (extracted.thinking.length > lastThinkingCount) {
-                        for (let i = lastThinkingCount; i < extracted.thinking.length; i++) {
-                            addThinking(extracted.thinking[i], i);
-                        }
-                        lastThinkingCount = extracted.thinking.length;
+                    if (!createData.task_id) {
+                        throw new Error('Failed to create task');
                     }
                     
-                    // Show output
-                    if (extracted.output) {
-                        loadingMsg.remove();
-                        const msgContent = addMsg('bot', extracted.output);
-                        foundOutput = true;
+                    const taskId = createData.task_id;
+                    let attempts = 0;
+                    let lastThinkingCount = 0;
+                    let foundOutput = false;
+                    
+                    while (attempts < 60 && !foundOutput) {
+                        attempts++;
+                        await new Promise(r => setTimeout(r, 3000));
                         
-                        if (extracted.status === 'completed') {
+                        const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${taskId}`, {
+                            headers: { 'x-api-key': API_KEY }
+                        });
+                        
+                        if (!statusRes.ok) continue;
+                        
+                        const statusData = await statusRes.json();
+                        const extracted = extractManusData(statusData);
+                        
+                        if (extracted.thinking.length > lastThinkingCount) {
+                            for (let i = lastThinkingCount; i < extracted.thinking.length; i++) {
+                                addThinking(extracted.thinking[i], i);
+                            }
+                            lastThinkingCount = extracted.thinking.length;
+                        }
+                        
+                        if (extracted.output) {
+                            loadingMsg.remove();
+                            addMsg('bot', extracted.output);
+                            foundOutput = true;
                             break;
                         }
+                        
+                        if (extracted.status === 'completed' && !extracted.output) {
+                            loadingMsg.remove();
+                            console.error('Task completed but no output. Full response:', statusData);
+                            addMsg('bot', '⚠️ The task completed but I couldn\'t extract the response. Check the browser console (F12) to see the raw API data. This might mean the API response format changed.');
+                            showToast('Check console for raw API response');
+                            break;
+                        }
+                        
+                        if (extracted.status === 'failed' || extracted.status === 'error') {
+                            throw new Error('Task failed');
+                        }
                     }
                     
-                    if (extracted.status === 'completed' && !extracted.output) {
-                        loadingMsg.remove();
-                        addMsg('system', 'Task completed but no output found');
-                        console.log('Completed but no output:', statusData);
-                        break;
-                    }
-                    
-                    if (extracted.status === 'failed' || extracted.status === 'error') {
-                        throw new Error(`Task ${extracted.status}`);
+                    if (!foundOutput && attempts >= 60) {
+                        throw new Error('Timeout');
                     }
                 }
-                
-                if (!foundOutput && attempts >= maxAttempts) {
-                    throw new Error(`Timeout after ${maxAttempts * 3} seconds`);
-                }
-                
             } catch (err) {
                 console.error('Error:', err);
                 loadingMsg.remove();
-                addMsg('system', 'Error: ' + err.message);
-                showToast(err.message, 'error');
+                showToast('Error: ' + err.message);
             } finally {
                 input.disabled = false;
                 btn.disabled = false;
@@ -1667,28 +1020,3 @@
     </script>
 </body>
 </html>
-<script>
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Cmd/Ctrl + K: Focus input
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        document.getElementById('input').focus();
-    }
-    
-    // Escape: Clear input
-    if (e.key === 'Escape') {
-        const input = document.getElementById('input');
-        if (input === document.activeElement && input.value) {
-            input.value = '';
-            input.style.height = 'auto';
-        }
-    }
-    
-    // ? for help (when not typing)
-    if (e.key === '?' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        showToast('⌨️ Shortcuts: Cmd/Ctrl+K (focus input) | Esc (clear) | Enter (send) | Shift+Enter (new line)', 'info');
-    }
-});
-</script>
