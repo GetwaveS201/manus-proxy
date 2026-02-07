@@ -4,205 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manus AI</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        :root {
-            --bg: #0a0a0a;
-            --bg-secondary: #121212;
-            --accent: #8b5cf6;
-            --accent-hover: #9d6ff7;
-            --text: #e5e7eb;
-            --text-secondary: #9ca3af;
-            --border: rgba(255, 255, 255, 0.06);
-        }
-        
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #ffffff;
+            color: #1f2937;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
         }
         
-        /* Header */
         .header {
-            padding: 12px 24px;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e5e7eb;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border);
         }
         
         .logo {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
-            color: var(--text);
         }
         
         .logo-icon {
             width: 20px;
             height: 20px;
-            background: var(--accent);
+            background: #8b5cf6;
             border-radius: 4px;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 11px;
             font-weight: 700;
-            color: white;
         }
         
         .header-actions {
             display: flex;
-            gap: 16px;
-            align-items: center;
-            font-size: 13px;
-            color: var(--text-secondary);
+            gap: 8px;
         }
         
         .header-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
+            background: white;
+            border: 1px solid #e5e7eb;
+            color: #6b7280;
+            padding: 6px 12px;
+            border-radius: 6px;
             font-size: 13px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s;
+            cursor: pointer;
+            transition: 0.2s;
         }
         
         .header-btn:hover {
-            color: var(--text);
-            background: rgba(255, 255, 255, 0.05);
+            background: #f9fafb;
         }
         
-        /* Main Container */
         .container {
             flex: 1;
-            display: flex;
-            flex-direction: column;
             max-width: 800px;
             width: 100%;
             margin: 0 auto;
-            padding: 0 24px;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
         }
         
-        /* Chat Area */
         .chat-area {
             flex: 1;
             overflow-y: auto;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chat-messages {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
             padding: 32px 0;
-            min-height: 0;
         }
         
-        .chat-area::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .chat-area::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        
-        /* Empty State */
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 60vh;
+            min-height: 50vh;
             text-align: center;
         }
         
-        .empty-icon {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 24px;
-            position: relative;
-            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
-        }
-        
-        .empty-icon svg {
-            width: 32px;
-            height: 32px;
-            color: white;
-        }
-        
         .empty-state h1 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text);
+            font-size: 32px;
+            font-weight: 400;
+            color: #1f2937;
+            margin-bottom: 40px;
         }
         
-        .empty-state p {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-            max-width: 500px;
-        }
-        
-        .suggestion-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            max-width: 600px;
-        }
-        
-        .suggestion-chip {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .suggestion-chip:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.1);
-            color: var(--text);
-        }
-        
-        /* Messages */
         .message {
             display: flex;
             gap: 12px;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            margin-bottom: 16px;
         }
         
         .message-avatar {
@@ -212,134 +112,38 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             flex-shrink: 0;
         }
         
         .user .message-avatar {
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            background: #8b5cf6;
             color: white;
         }
         
         .bot .message-avatar {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--accent);
-        }
-        
-        .message-content {
-            flex: 1;
-            padding-top: 6px;
+            background: #f3f4f6;
+            color: #8b5cf6;
         }
         
         .message-text {
-            color: var(--text);
+            flex: 1;
             font-size: 14px;
             line-height: 1.6;
+            padding-top: 4px;
         }
         
-        .user .message-text {
-            color: var(--text);
-        }
-        
-        .bot .message-text {
-            color: var(--text-secondary);
-        }
-        
-        /* Markdown Styling */
-        .message-text h1, .message-text h2, .message-text h3 {
-            color: var(--text);
-            margin: 16px 0 8px;
-            font-weight: 600;
-        }
-        
-        .message-text h1 { font-size: 1.5em; }
-        .message-text h2 { font-size: 1.3em; }
-        .message-text h3 { font-size: 1.1em; }
-        
-        .message-text p {
-            margin: 12px 0;
-        }
-        
-        .message-text ul, .message-text ol {
-            margin: 12px 0;
-            padding-left: 24px;
-        }
-        
-        .message-text li {
-            margin: 6px 0;
-        }
-        
-        .message-text code {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--accent);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            font-family: 'SF Mono', Consolas, monospace;
-        }
-        
-        .message-text pre {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
-            overflow-x: auto;
-        }
-        
-        .message-text pre code {
-            background: transparent;
-            padding: 0;
-            color: var(--text-secondary);
-        }
-        
-        .message-text a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-        
-        .message-text a:hover {
-            text-decoration: underline;
-        }
-        
-        .message-text strong {
-            color: var(--text);
-            font-weight: 600;
-        }
-        
-        /* Thinking */
         .thinking {
-            background: rgba(139, 92, 246, 0.08);
-            border: 1px solid rgba(139, 92, 246, 0.15);
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
             border-radius: 8px;
-            padding: 12px 16px;
+            padding: 12px;
             margin: 8px 0 8px 44px;
             font-size: 13px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.2s;
+            color: #6b7280;
         }
         
-        .thinking:hover {
-            background: rgba(139, 92, 246, 0.12);
-        }
-        
-        .thinking-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--accent);
-            font-weight: 500;
-            font-size: 12px;
-        }
-        
-        .thinking-content {
-            margin-top: 8px;
-            padding-left: 20px;
-        }
-        
-        /* Loading */
         .loading-msg {
             display: flex;
             gap: 12px;
@@ -348,14 +152,13 @@
         .loading-dots {
             display: flex;
             gap: 4px;
-            align-items: center;
-            padding: 12px 0;
+            padding: 8px 0;
         }
         
         .loading-dot {
             width: 6px;
             height: 6px;
-            background: var(--accent);
+            background: #8b5cf6;
             border-radius: 50%;
             animation: bounce 1.4s ease-in-out infinite;
         }
@@ -364,52 +167,45 @@
         .loading-dot:nth-child(2) { animation-delay: -0.16s; }
         
         @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
-            40% { transform: scale(1); opacity: 1; }
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
         }
         
-        /* Input Area */
         .input-area {
             padding: 20px 0 32px;
-            position: sticky;
-            bottom: 0;
-            background: var(--bg);
         }
         
         .input-wrapper {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
+            background: white;
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
-            display: flex;
-            align-items: flex-end;
             padding: 12px 16px;
+            display: flex;
+            align-items: center;
             gap: 12px;
-            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
         .input-wrapper:focus-within {
-            border-color: var(--accent);
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
         }
         
         .input-field {
             flex: 1;
-            background: transparent;
             border: none;
-            color: var(--text);
-            font-size: 14px;
-            font-family: inherit;
             outline: none;
+            font-size: 14px;
             resize: none;
-            max-height: 200px;
-            min-height: 24px;
+            font-family: inherit;
         }
         
         .input-field::placeholder {
-            color: var(--text-secondary);
+            color: #9ca3af;
         }
         
         .send-btn {
-            background: var(--accent);
+            background: #8b5cf6;
             color: white;
             border: none;
             width: 32px;
@@ -419,240 +215,162 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.2s;
         }
         
         .send-btn:hover {
-            background: var(--accent-hover);
+            background: #7c3aed;
         }
         
         .send-btn:disabled {
-            background: rgba(255, 255, 255, 0.1);
-            cursor: not-allowed;
+            background: #e5e7eb;
         }
         
-        .send-btn svg {
-            width: 16px;
-            height: 16px;
-        }
-        
-        .input-hint {
-            text-align: center;
-            font-size: 11px;
-            color: var(--text-secondary);
+        .action-buttons {
+            display: flex;
+            gap: 8px;
             margin-top: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
-        kbd {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 10px;
-            font-family: inherit;
+        .action-btn {
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
         }
         
-        /* API Modal */
-        .api-modal-overlay {
+        .action-btn:hover {
+            background: #f9fafb;
+        }
+        
+        .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.4);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
         }
         
-        .api-modal-overlay.active {
+        .modal-overlay.active {
             display: flex;
         }
         
-        .api-modal {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+        .modal {
+            background: white;
+            border-radius: 12px;
             padding: 32px;
             max-width: 440px;
             width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         
-        .api-modal h2 {
+        .modal h2 {
             font-size: 20px;
-            font-weight: 600;
             margin-bottom: 8px;
         }
         
-        .api-modal p {
-            font-size: 13px;
-            color: var(--text-secondary);
+        .modal p {
+            color: #6b7280;
             margin-bottom: 24px;
-            line-height: 1.5;
         }
         
-        .api-input {
+        .modal-input {
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            margin-bottom: 16px;
-            outline: none;
-            transition: all 0.2s;
-        }
-        
-        .api-input:focus {
-            border-color: var(--accent);
-        }
-        
-        .mock-mode-toggle {
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 8px;
             padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
             margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
         }
         
-        .mock-mode-toggle input {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-        
-        .mock-mode-info {
-            flex: 1;
-        }
-        
-        .mock-mode-info-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--accent);
-        }
-        
-        .mock-mode-info-desc {
-            font-size: 11px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-        
-        .api-btn {
+        .modal-btn {
             width: 100%;
-            background: var(--accent);
+            background: #8b5cf6;
             color: white;
             border: none;
             padding: 12px;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s;
         }
         
-        .api-btn:hover {
-            background: var(--accent-hover);
+        .modal-btn:hover {
+            background: #7c3aed;
         }
         
-        /* Toast */
         .toast {
             position: fixed;
             bottom: 24px;
             right: 24px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text);
+            background: white;
+            border: 1px solid #e5e7eb;
             padding: 12px 16px;
             border-radius: 8px;
-            font-size: 13px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             z-index: 1001;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <div class="logo">
             <div class="logo-icon">M</div>
             <span>Manus AI</span>
         </div>
         <div class="header-actions">
-            <button class="header-btn" onclick="showSettings()">⚙ Settings</button>
-            <button class="header-btn" onclick="resetKey()">Reset Key</button>
+            <button class="header-btn" onclick="newChat()">New Chat</button>
+            <button class="header-btn" onclick="showSettings()">Settings</button>
         </div>
     </div>
 
-    <!-- API Modal -->
-    <div id="api-modal" class="api-modal-overlay">
-        <div class="api-modal">
+    <div id="modal" class="modal-overlay">
+        <div class="modal">
             <h2>Connect to Manus AI</h2>
-            <p>Enter your Manus API key to get started. Your key is stored locally and never shared.</p>
-            <input type="password" id="api-key" class="api-input" placeholder="sk-...">
-            <label class="mock-mode-toggle">
+            <p>Enter your API key or enable mock mode</p>
+            <input type="password" id="api-key" class="modal-input" placeholder="sk-...">
+            <label style="display:flex;gap:8px;margin-bottom:16px;">
                 <input type="checkbox" id="mock-mode" onchange="toggleMockMode()">
-                <div class="mock-mode-info">
-                    <div class="mock-mode-info-title">🧪 Mock Mode (Demo)</div>
-                    <div class="mock-mode-info-desc">Test without API key or credits</div>
-                </div>
+                <span style="font-size:13px;">Mock Mode (Demo)</span>
             </label>
-            <button class="api-btn" onclick="saveKey()">Connect</button>
+            <button class="modal-btn" onclick="saveKey()">Connect</button>
         </div>
     </div>
 
-    <!-- Main Container -->
     <div class="container">
-        <!-- Chat Area -->
         <div class="chat-area" id="chat">
             <div class="empty-state">
-                <div class="empty-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                    </svg>
-                </div>
-                <h1>How can I help you today?</h1>
-                <p>Ask me anything — I'm ready to assist with research, coding, analysis, and more.</p>
-                <div class="suggestion-chips">
-                    <button class="suggestion-chip" onclick="setInput('Explain quantum computing')">Explain quantum computing</button>
-                    <button class="suggestion-chip" onclick="setInput('Python data analysis')">Python data analysis</button>
-                    <button class="suggestion-chip" onclick="setInput('Marketing strategy')">Marketing strategy</button>
-                    <button class="suggestion-chip" onclick="setInput('Code review')">Code review</button>
-                </div>
+                <h1>What can I do for you?</h1>
             </div>
         </div>
 
-        <!-- Input Area -->
         <div class="input-area">
             <div class="input-wrapper">
                 <textarea 
                     id="input" 
                     class="input-field" 
-                    placeholder="Message Manus AI..." 
+                    placeholder="Assign a task or ask anything"
                     rows="1"
-                    onkeydown="handleKeydown(event)"
-                    oninput="autoResize(this)"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"
+                    oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
                 ></textarea>
                 <button onclick="send()" id="send-btn" class="send-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="22" y1="2" x2="11" y2="13"/>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                     </svg>
                 </button>
             </div>
-            <div class="input-hint">
-                Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line
+            <div class="action-buttons">
+                <button class="action-btn" onclick="setInput('Create slides about ')">📄 Create slides</button>
+                <button class="action-btn" onclick="setInput('Build a website for ')">🌐 Build website</button>
+                <button class="action-btn" onclick="setInput('Develop an app for ')">💻 Develop app</button>
+                <button class="action-btn" onclick="setInput('Design ')">🎨 Design</button>
+                <button class="action-btn">More</button>
             </div>
         </div>
     </div>
@@ -662,127 +380,59 @@
         let MOCK_MODE = localStorage.getItem('mock_mode') === 'true';
         let isFirstMessage = true;
         
-        window.onload = function() {
-            if (!API_KEY && !MOCK_MODE) {
-                document.getElementById('api-modal').classList.add('active');
-            }
+        window.onload = () => {
+            if (!API_KEY && !MOCK_MODE) document.getElementById('modal').classList.add('active');
             document.getElementById('mock-mode').checked = MOCK_MODE;
-            document.getElementById('input').focus();
         };
         
-        function showSettings() {
-            document.getElementById('api-modal').classList.add('active');
-        }
-        
-        function resetKey() {
-            if (confirm('Reset API key? You will need to enter it again.')) {
-                localStorage.removeItem('manus_key');
-                API_KEY = '';
-                document.getElementById('api-modal').classList.add('active');
-            }
+        function showSettings() { document.getElementById('modal').classList.add('active'); }
+        function newChat() {
+            document.getElementById('chat').innerHTML = '<div class="empty-state"><h1>What can I do for you?</h1></div>';
+            isFirstMessage = true;
         }
         
         function toggleMockMode() {
             MOCK_MODE = document.getElementById('mock-mode').checked;
             localStorage.setItem('mock_mode', MOCK_MODE);
-            showToast(MOCK_MODE ? 'Mock mode enabled' : 'Mock mode disabled');
         }
         
         function saveKey() {
             const key = document.getElementById('api-key').value.trim();
-            if (!key && !MOCK_MODE) {
-                showToast('Please enter API key or enable mock mode');
-                return;
-            }
-            if (key) {
-                localStorage.setItem('manus_key', key);
-                API_KEY = key;
-            }
-            document.getElementById('api-modal').classList.remove('active');
-            showToast('Connected successfully');
+            if (!key && !MOCK_MODE) return alert('Enter API key or enable mock mode');
+            if (key) { localStorage.setItem('manus_key', key); API_KEY = key; }
+            document.getElementById('modal').classList.remove('active');
         }
         
-        function setInput(text) {
-            document.getElementById('input').value = text;
-            document.getElementById('input').focus();
-        }
-        
-        function autoResize(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-        }
-        
-        function handleKeydown(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                send();
-            }
-        }
-        
-        function showToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
+        function setInput(text) { document.getElementById('input').value = text; document.getElementById('input').focus(); }
         
         function addMsg(role, text) {
             const chat = document.getElementById('chat');
-            
-            if (isFirstMessage) {
-                chat.innerHTML = '';
-                isFirstMessage = false;
-            }
+            if (isFirstMessage) { chat.innerHTML = ''; isFirstMessage = false; }
             
             const msg = document.createElement('div');
             msg.className = `message ${role}`;
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.textContent = role === 'user' ? 'Y' : 'M';
-            
-            const content = document.createElement('div');
-            content.className = 'message-content';
-            
-            const textDiv = document.createElement('div');
-            textDiv.className = 'message-text';
-            
-            if (typeof marked !== 'undefined') {
-                marked.setOptions({ breaks: true, gfm: true });
-                textDiv.innerHTML = marked.parse(text);
-            } else {
-                textDiv.textContent = text;
-            }
-            
-            content.appendChild(textDiv);
-            msg.appendChild(avatar);
-            msg.appendChild(content);
-            
+            msg.innerHTML = `
+                <div class="message-avatar">${role === 'user' ? 'Y' : 'M'}</div>
+                <div class="message-text">${typeof marked !== 'undefined' ? marked.parse(text) : text}</div>
+            `;
             chat.appendChild(msg);
             chat.scrollTop = chat.scrollHeight;
-            
-            return textDiv;
         }
         
-        function addThinking(text, id) {
+        function addThinking(text) {
             const chat = document.getElementById('chat');
-            const thinking = document.createElement('div');
-            thinking.className = 'thinking';
-            thinking.innerHTML = `
-                <div class="thinking-header">💭 Thinking</div>
-                <div class="thinking-content">${text}</div>
-            `;
-            chat.appendChild(thinking);
-            chat.scrollTop = chat.scrollHeight;
+            const div = document.createElement('div');
+            div.className = 'thinking';
+            div.textContent = '💭 ' + text;
+            chat.appendChild(div);
         }
         
         function showLoading() {
             const chat = document.getElementById('chat');
-            const loading = document.createElement('div');
-            loading.className = 'loading-msg message bot';
-            loading.id = 'loading';
-            loading.innerHTML = `
+            const div = document.createElement('div');
+            div.className = 'loading-msg message bot';
+            div.id = 'loading';
+            div.innerHTML = `
                 <div class="message-avatar">M</div>
                 <div class="loading-dots">
                     <div class="loading-dot"></div>
@@ -790,245 +440,85 @@
                     <div class="loading-dot"></div>
                 </div>
             `;
-            chat.appendChild(loading);
-            chat.scrollTop = chat.scrollHeight;
-            return loading;
-        }
-        
-        function generateMockResponse(input) {
-            const lower = input.toLowerCase();
-            
-            if (lower.includes('hello') || lower.includes('hi')) {
-                return {
-                    thinking: ['Analyzing greeting', 'Generating response'],
-                    output: 'Hello! I\'m Manus AI in **mock mode**. How can I help you today?'
-                };
-            }
-            
-            if (lower.includes('code') || lower.includes('python')) {
-                return {
-                    thinking: ['Understanding request', 'Generating code', 'Adding comments'],
-                    output: 'Here\'s a Python example:\n\n```python\ndef fibonacci(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b\n\nfor num in fibonacci(10):\n    print(num)\n```'
-                };
-            }
-            
-            return {
-                thinking: ['Processing query', 'Formulating response'],
-                output: `I received: "${input}"\n\nIn **mock mode**, I simulate responses. Try:\n- "Hello"\n- "Write Python code"\n- "Help me write"\n\nDisable mock mode to use real Manus AI.`
-            };
+            chat.appendChild(div);
+            return div;
         }
         
         function extractManusData(data) {
-            console.log('=== EXTRACTING DATA ===');
-            console.log('Raw data:', JSON.stringify(data, null, 2));
-            
-            let thinking = [];
-            let output = null;
-            let status = null;
-
-            // CRITICAL FIX: Check for data.output array first (Manus API format)
+            let output = null, thinking = [];
             if (data.output && Array.isArray(data.output)) {
-                console.log('Found data.output array, length:', data.output.length);
                 for (let item of data.output) {
-                    if (item.role === 'assistant') {
-                        console.log('Found assistant in output array:', item);
-                        if (Array.isArray(item.content)) {
-                            item.content.forEach(contentItem => {
-                                console.log('Content item:', contentItem);
-                                if (contentItem.type === 'thinking' && contentItem.text) {
-                                    thinking.push(contentItem.text);
-                                }
-                                if ((contentItem.type === 'output_text' || contentItem.type === 'text') && contentItem.text) {
-                                    if (!output) output = '';
-                                    output += contentItem.text;
-                                    console.log('Found output text:', contentItem.text);
-                                }
-                            });
+                    if (item.role === 'assistant' && Array.isArray(item.content)) {
+                        for (let c of item.content) {
+                            if (c.type === 'output_text' && c.text) output = (output || '') + c.text;
                         }
                     }
                 }
             }
-            
-            // Strategy 2: Array of messages (fallback)
-            if (!output && Array.isArray(data)) {
-                console.log('Data is array, length:', data.length);
-                for (let item of data) {
-                    if (item.role === 'assistant') {
-                        console.log('Found assistant message:', item);
-                        if (Array.isArray(item.content)) {
-                            item.content.forEach(contentItem => {
-                                if (contentItem.type === 'thinking' && contentItem.text) {
-                                    thinking.push(contentItem.text);
-                                }
-                                if ((contentItem.type === 'text' || contentItem.type === 'output_text') && contentItem.text) {
-                                    if (!output) output = '';
-                                    output += contentItem.text;
-                                }
-                            });
-                        }
-                        else if (typeof item.content === 'string') {
-                            output = item.content;
-                        }
-                    }
-                }
-            }
-            
-            // Strategy 3: Object with properties
-            if (!output && typeof data === 'object' && data !== null) {
-                console.log('Trying object extraction...');
-                
-                const outputFields = ['result', 'text', 'message', 'response', 'content'];
-                for (let field of outputFields) {
-                    if (data[field]) {
-                        console.log(`Found data.${field}:`, data[field]);
-                        if (typeof data[field] === 'string') {
-                            output = data[field];
-                            break;
-                        } else if (data[field].text) {
-                            output = data[field].text;
-                            break;
-                        }
-                    }
-                }
-                
-                if (data.status) {
-                    status = data.status;
-                    console.log('Status:', status);
-                }
-                
-                if (data.steps && Array.isArray(data.steps)) {
-                    thinking = data.steps.map(s => s.thought || s.text || s.description).filter(Boolean);
-                }
-                if (data.thinking && Array.isArray(data.thinking)) {
-                    thinking = thinking.concat(data.thinking);
-                }
-            }
-            
-            // Strategy 4: Nested data
-            if (!output && data.data) {
-                console.log('Trying nested data.data...');
-                const nested = extractManusData(data.data);
-                thinking = thinking.concat(nested.thinking);
-                if (nested.output) output = nested.output;
-                if (nested.status) status = nested.status;
-            }
-            
-            console.log('=== EXTRACTION RESULT ===');
-            console.log('Output found:', !!output);
-            console.log('Output:', output);
-            console.log('Thinking items:', thinking.length);
-            console.log('Status:', status);
-            console.log('========================');
-            
-            return { thinking, output, status };
+            return { output, thinking, status: data.status };
         }
         
         async function send() {
-            if (!API_KEY && !MOCK_MODE) {
-                document.getElementById('api-modal').classList.add('active');
-                return;
-            }
+            if (!API_KEY && !MOCK_MODE) { showSettings(); return; }
             
             const input = document.getElementById('input');
-            const btn = document.getElementById('send-btn');
-            const userText = input.value.trim();
+            const text = input.value.trim();
+            if (!text) return;
             
-            if (!userText) return;
-            
-            addMsg('user', userText);
+            addMsg('user', text);
             input.value = '';
             input.style.height = 'auto';
             input.disabled = true;
-            btn.disabled = true;
+            document.getElementById('send-btn').disabled = true;
             
-            const loadingMsg = showLoading();
+            const loading = showLoading();
             
             try {
                 if (MOCK_MODE) {
                     await new Promise(r => setTimeout(r, 1000));
-                    const mockData = generateMockResponse(userText);
-                    
-                    for (let i = 0; i < mockData.thinking.length; i++) {
-                        await new Promise(r => setTimeout(r, 800));
-                        addThinking(mockData.thinking[i], i);
-                    }
-                    
-                    await new Promise(r => setTimeout(r, 1000));
-                    loadingMsg.remove();
-                    addMsg('bot', mockData.output);
+                    loading.remove();
+                    addMsg('bot', 'Hello! I\'m in mock mode. Disable it to use real Manus AI.');
                 } else {
-                    const createRes = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
+                    const res = await fetch('https://manus-proxy-dxaj.onrender.com/api/proxy', {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            'x-api-key': API_KEY 
-                        },
-                        body: JSON.stringify({ prompt: userText })
+                        headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+                        body: JSON.stringify({ prompt: text })
                     });
                     
-                    const createData = await createRes.json();
+                    const { task_id } = await res.json();
+                    if (!task_id) throw new Error('No task ID');
                     
-                    if (!createData.task_id) {
-                        throw new Error('Failed to create task');
-                    }
-                    
-                    const taskId = createData.task_id;
-                    let attempts = 0;
-                    let lastThinkingCount = 0;
-                    let foundOutput = false;
-                    
-                    while (attempts < 60 && !foundOutput) {
-                        attempts++;
+                    let attempts = 0, found = false;
+                    while (attempts++ < 60 && !found) {
                         await new Promise(r => setTimeout(r, 3000));
-                        
-                        const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${taskId}`, {
+                        const statusRes = await fetch(`https://manus-proxy-dxaj.onrender.com/api/task-status/${task_id}`, {
                             headers: { 'x-api-key': API_KEY }
                         });
-                        
                         if (!statusRes.ok) continue;
                         
-                        const statusData = await statusRes.json();
-                        const extracted = extractManusData(statusData);
+                        const data = await statusRes.json();
+                        const { output, thinking, status } = extractManusData(data);
                         
-                        if (extracted.thinking.length > lastThinkingCount) {
-                            for (let i = lastThinkingCount; i < extracted.thinking.length; i++) {
-                                addThinking(extracted.thinking[i], i);
-                            }
-                            lastThinkingCount = extracted.thinking.length;
-                        }
+                        thinking.forEach(t => addThinking(t));
                         
-                        if (extracted.output) {
-                            loadingMsg.remove();
-                            addMsg('bot', extracted.output);
-                            foundOutput = true;
+                        if (output) {
+                            loading.remove();
+                            addMsg('bot', output);
+                            found = true;
                             break;
                         }
                         
-                        if (extracted.status === 'completed' && !extracted.output) {
-                            loadingMsg.remove();
-                            console.error('Task completed but no output. Full response:', statusData);
-                            addMsg('bot', '⚠️ Task completed but response extraction failed. Check console for details.');
-                            showToast('Extraction failed - check console');
-                            break;
-                        }
-                        
-                        if (extracted.status === 'failed' || extracted.status === 'error') {
-                            throw new Error('Task failed');
-                        }
+                        if (status === 'completed' || status === 'failed') break;
                     }
                     
-                    if (!foundOutput && attempts >= 60) {
-                        throw new Error('Timeout');
-                    }
+                    if (!found) loading.remove();
                 }
             } catch (err) {
-                console.error('Error:', err);
-                loadingMsg.remove();
-                showToast('Error: ' + err.message);
+                loading.remove();
+                alert('Error: ' + err.message);
             } finally {
                 input.disabled = false;
-                btn.disabled = false;
-                input.focus();
+                document.getElementById('send-btn').disabled = false;
             }
         }
     </script>
