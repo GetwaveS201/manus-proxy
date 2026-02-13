@@ -315,11 +315,11 @@ async function callGemini(prompt) {
 
   console.log('🔵 Calling Gemini...');
 
-  // Try gemini-1.5-flash first (most reliable)
+  // Try latest models first (gemini-2.5-flash is most reliable)
   const models = [
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-pro'
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.5-pro'
   ];
 
   for (const model of models) {
