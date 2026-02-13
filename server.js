@@ -31,6 +31,21 @@ function chooseAI(prompt) {
     }
   }
 
+  // GEMINI TRIGGERS - Check these FIRST for simple Q&A
+  const geminiTriggers = [
+    'what is', 'what are', 'what does',
+    'how does', 'how do', 'how can',
+    'explain', 'why', 'who is', 'define',
+    'tell me about', 'can you explain',
+    'when', 'where', 'who wrote', 'who invented'
+  ];
+
+  for (const trigger of geminiTriggers) {
+    if (lower.includes(trigger)) {
+      return 'gemini';
+    }
+  }
+
   // MANUS TRIGGERS - Tasks that require DOING WORK (execution, not just explanation)
   const manusTriggers = [
     // Data processing & analysis
@@ -64,21 +79,6 @@ function chooseAI(prompt) {
   for (const trigger of manusTriggers) {
     if (lower.includes(trigger)) {
       return 'manus';
-    }
-  }
-
-  // GEMINI TRIGGERS - Only for simple Q&A and explanations
-  const geminiTriggers = [
-    'what is', 'what are', 'what does',
-    'how does', 'how do', 'how can',
-    'explain', 'why', 'who is', 'define',
-    'tell me about', 'can you explain',
-    'when', 'where', 'who wrote', 'who invented'
-  ];
-
-  for (const trigger of geminiTriggers) {
-    if (lower.includes(trigger)) {
-      return 'gemini';
     }
   }
 
@@ -433,8 +433,16 @@ async function callManus(prompt) {
     console.error('❌ Manus create error:', errorText);
 
     // Check if it's a credit limit error
-    if (errorText.includes('credit limit exceeded')) {
-      throw new Error('MANUS_CREDITS_EXCEEDED');
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.message && errorJson.message.includes('credit limit exceeded')) {
+        throw new Error('MANUS_CREDITS_EXCEEDED');
+      }
+    } catch (e) {
+      // If JSON parsing fails, check raw text
+      if (errorText.includes('credit limit exceeded')) {
+        throw new Error('MANUS_CREDITS_EXCEEDED');
+      }
     }
 
     throw new Error('Failed to create Manus task');
