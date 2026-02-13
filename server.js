@@ -418,15 +418,17 @@ async function callManus(prompt) {
     console.log(`⏳ Status: ${task.status} (${attempts + 1}/${maxAttempts})`);
 
     if (task.status === 'completed') {
-      // FIXED: Enhanced multi-layer extraction
+      // FIXED: Enhanced multi-layer extraction with correct structure
       let fullText = '';
 
-      // Method 1: Extract from output array (most common)
+      // Method 1: Extract from output array (NEW CORRECT FORMAT)
+      // Find assistant role messages with output_text type
       if (task.output && Array.isArray(task.output)) {
         for (const block of task.output) {
-          if (block.content && Array.isArray(block.content)) {
+          // Look for assistant messages
+          if (block.role === 'assistant' && block.content && Array.isArray(block.content)) {
             for (const part of block.content) {
-              if (part.type === 'text' && part.text) {
+              if (part.type === 'output_text' && part.text) {
                 fullText += part.text + '\n';
               }
             }
@@ -434,17 +436,30 @@ async function callManus(prompt) {
         }
       }
 
-      // Method 2: Try result field
+      // Method 2: Old format fallback (for backwards compatibility)
+      if (!fullText && task.output && Array.isArray(task.output)) {
+        for (const block of task.output) {
+          if (block.content && Array.isArray(block.content)) {
+            for (const part of block.content) {
+              if ((part.type === 'text' || part.type === 'output_text') && part.text) {
+                fullText += part.text + '\n';
+              }
+            }
+          }
+        }
+      }
+
+      // Method 3: Try result field
       if (!fullText && task.result) {
         fullText = typeof task.result === 'string' ? task.result : JSON.stringify(task.result);
       }
 
-      // Method 3: Try response field
+      // Method 4: Try response field
       if (!fullText && task.response) {
         fullText = typeof task.response === 'string' ? task.response : JSON.stringify(task.response);
       }
 
-      // Method 4: Try output_text field
+      // Method 5: Try output_text field
       if (!fullText && task.output_text) {
         fullText = task.output_text;
       }
