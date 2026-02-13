@@ -1,0 +1,19 @@
+{
+  "name": "ai-automation-assistant",
+  "version": "3.0.0",
+  "description": "Dual AI system with Gemini and Manus for Superior Restoration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": ["ai", "automation", "gemini", "manus"],
+  "author": "Superior Restoration",
+  "license": "MIT"
+}
