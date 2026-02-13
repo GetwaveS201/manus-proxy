@@ -326,13 +326,27 @@ app.post('/api/chat', async (req, res) => {
         response = await callManus(prompt);
       }
     } catch (error) {
-      // If Manus fails due to credit limit, fall back to Gemini
+      // Handle specific error cases with helpful messages
+
       if (error.message === 'MANUS_CREDITS_EXCEEDED' && ai === 'manus') {
+        // Manus out of credits, try Gemini as fallback
         console.log('⚠️ Manus credits exceeded, falling back to Gemini');
-        response = await callGemini(prompt);
-        actualAI = 'gemini';
-        // Add notice to response
-        response = `⚠️ Note: Manus AI credits exhausted. Using Gemini as fallback.\n\n${response}`;
+        try {
+          response = await callGemini(prompt);
+          actualAI = 'gemini';
+          response = `⚠️ Note: Manus AI credits exhausted. Using Gemini as fallback.\n\n${response}`;
+        } catch (geminiError) {
+          if (geminiError.message === 'GEMINI_QUOTA_EXCEEDED') {
+            throw new Error('BOTH_APIS_EXHAUSTED');
+          }
+          throw geminiError;
+        }
+      } else if (error.message === 'GEMINI_QUOTA_EXCEEDED' && ai === 'gemini') {
+        // Gemini quota exceeded, inform user
+        throw new Error('GEMINI_QUOTA_EXCEEDED');
+      } else if (error.message === 'BOTH_APIS_EXHAUSTED') {
+        // Both APIs exhausted
+        throw new Error('BOTH_APIS_EXHAUSTED');
       } else {
         throw error;
       }
@@ -342,9 +356,49 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error:', error.message);
-    res.status(500).json({ error: error.message });
+
+    // Provide user-friendly error messages
+    let userMessage = error.message;
+
+    if (error.message === 'GEMINI_QUOTA_EXCEEDED') {
+      userMessage = '⚠️ Gemini API quota exceeded (free tier limit reached). The quota resets daily. Please:\n\n' +
+        '1. Try again later (quotas reset at midnight Pacific Time)\n' +
+        '2. OR upgrade to paid tier at: https://ai.google.dev/pricing\n' +
+        '3. OR add Manus credits to enable the full automation features\n\n' +
+        'Current status: Gemini quota exhausted, Manus credits needed for execution tasks.';
+    } else if (error.message === 'MANUS_CREDITS_EXCEEDED') {
+      userMessage = '⚠️ Manus AI credits exhausted. To restore full automation capabilities:\n\n' +
+        '1. Add credits at: https://manus.ai/pricing\n' +
+        '2. Recommended: $50-100 for production use\n' +
+        '3. Cost: ~$0.08-$1.50 per complex task\n\n' +
+        'Simple Q&A queries will still work with Gemini (when quota available).';
+    } else if (error.message === 'BOTH_APIS_EXHAUSTED') {
+      userMessage = '⚠️ Both AI services are temporarily unavailable:\n\n' +
+        '**Gemini:** Free tier quota exceeded (resets daily at midnight PT)\n' +
+        '**Manus:** Credit limit exceeded\n\n' +
+        '**To restore service:**\n' +
+        '1. Wait for Gemini quota reset (~' + getHoursUntilMidnightPT() + ' hours)\n' +
+        '2. OR add Manus credits: https://manus.ai/pricing\n' +
+        '3. OR upgrade Gemini to paid tier: https://ai.google.dev/pricing\n\n' +
+        'We apologize for the inconvenience!';
+    }
+
+    res.status(503).json({
+      error: userMessage,
+      technical_error: error.message
+    });
   }
 });
+
+// Helper function to calculate hours until midnight Pacific Time
+function getHoursUntilMidnightPT() {
+  const now = new Date();
+  const pacificTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const midnight = new Date(pacificTime);
+  midnight.setHours(24, 0, 0, 0);
+  const hoursUntil = Math.ceil((midnight - pacificTime) / (1000 * 60 * 60));
+  return hoursUntil;
+}
 
 // ============================================
 // GEMINI API - FIXED
@@ -362,6 +416,9 @@ async function callGemini(prompt) {
     'gemini-2.0-flash',
     'gemini-2.5-pro'
   ];
+
+  let quotaError = false;
+  let lastError = '';
 
   for (const model of models) {
     try {
@@ -388,19 +445,31 @@ async function callGemini(prompt) {
           console.log(`✅ Gemini (${model}) responded`);
           return text;
         }
+      } else if (response.status === 429) {
+        // Quota exceeded
+        quotaError = true;
+        const errorData = await response.json();
+        lastError = errorData.error?.message || 'Quota exceeded';
+        console.log(`⚠️ Gemini quota exceeded for ${model}`);
+        continue;
       }
 
-      console.log(`⚠️ Model ${model} failed, trying next...`);
+      console.log(`⚠️ Model ${model} failed (status ${response.status}), trying next...`);
 
     } catch (err) {
       console.log(`⚠️ Model ${model} error:`, err.message);
+      lastError = err.message;
       continue;
     }
   }
 
-  // If all Gemini models fail, throw error (don't fallback to Manus here)
-  // Let the main handler decide what to do
-  throw new Error('All Gemini models failed - API key may be invalid or models unavailable');
+  // If all Gemini models fail due to quota, throw specific error
+  if (quotaError) {
+    throw new Error('GEMINI_QUOTA_EXCEEDED');
+  }
+
+  // Otherwise throw generic error
+  throw new Error(`All Gemini models failed: ${lastError}`);
 }
 
 // ============================================
