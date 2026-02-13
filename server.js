@@ -313,18 +313,32 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Prompt required' });
     }
 
-    const ai = chooseAI(prompt);
+    let ai = chooseAI(prompt);
     console.log(`📝 "${prompt.substring(0, 50)}..." → ${ai.toUpperCase()}`);
 
     let response;
+    let actualAI = ai;
 
-    if (ai === 'gemini') {
-      response = await callGemini(prompt);
-    } else {
-      response = await callManus(prompt);
+    try {
+      if (ai === 'gemini') {
+        response = await callGemini(prompt);
+      } else {
+        response = await callManus(prompt);
+      }
+    } catch (error) {
+      // If Manus fails due to credit limit, fall back to Gemini
+      if (error.message === 'MANUS_CREDITS_EXCEEDED' && ai === 'manus') {
+        console.log('⚠️ Manus credits exceeded, falling back to Gemini');
+        response = await callGemini(prompt);
+        actualAI = 'gemini';
+        // Add notice to response
+        response = `⚠️ Note: Manus AI credits exhausted. Using Gemini as fallback.\n\n${response}`;
+      } else {
+        throw error;
+      }
     }
 
-    res.json({ response, ai });
+    res.json({ response, ai: actualAI });
 
   } catch (error) {
     console.error('❌ Error:', error.message);
@@ -417,6 +431,12 @@ async function callManus(prompt) {
   if (!createRes.ok) {
     const errorText = await createRes.text();
     console.error('❌ Manus create error:', errorText);
+
+    // Check if it's a credit limit error
+    if (errorText.includes('credit limit exceeded')) {
+      throw new Error('MANUS_CREDITS_EXCEEDED');
+    }
+
     throw new Error('Failed to create Manus task');
   }
 
