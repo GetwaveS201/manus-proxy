@@ -398,9 +398,9 @@ async function callGemini(prompt) {
     }
   }
 
-  // If all Gemini models fail, fall back to Manus
-  console.log('⚠️ All Gemini models failed, falling back to Manus');
-  return await callManus(prompt);
+  // If all Gemini models fail, throw error (don't fallback to Manus here)
+  // Let the main handler decide what to do
+  throw new Error('All Gemini models failed - API key may be invalid or models unavailable');
 }
 
 // ============================================
