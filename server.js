@@ -17,37 +17,48 @@ console.log('🔑 Notion:', NOTION_API_KEY ? 'Ready ✅' : 'Missing ❌');
 app.use(express.json());
 
 // ============================================
-// SMART ROUTING LOGIC
+// SMART ROUTING LOGIC - ENHANCED FOR TASK EXECUTION
 // ============================================
 function chooseAI(prompt) {
   const lower = prompt.toLowerCase().trim();
 
-  // Short messages (≤ 5 words) default to Gemini for speed
+  // Short greetings/thanks only (≤ 3 words) default to Gemini
   const wordCount = prompt.trim().split(/\s+/).length;
-  if (wordCount <= 5) {
-    return 'gemini';
-  }
-
-  // Gemini keywords - fast responses for simple queries
-  const geminiTriggers = [
-    'gmail', 'email', 'google docs', 'google doc', 'google sheet',
-    'google calendar', 'calendar', 'google drive', 'drive', 'google',
-    'what is', 'how does', 'explain', 'why', 'who is', 'define',
-    'tell me about', 'how to', 'can you explain', 'what are',
-    'when', 'where', 'who', 'hello', 'hi', 'hey', 'thanks'
-  ];
-
-  for (const trigger of geminiTriggers) {
-    if (lower.includes(trigger)) {
+  if (wordCount <= 3) {
+    const greetings = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'goodbye', 'bye'];
+    if (greetings.some(g => lower === g || lower.startsWith(g + ' '))) {
       return 'gemini';
     }
   }
 
-  // Manus triggers - complex tasks requiring autonomous agent
+  // MANUS TRIGGERS - Tasks that require DOING WORK (execution, not just explanation)
   const manusTriggers = [
-    'create', 'write', 'build', 'research', 'analyze', 'plan',
-    'strategy', 'proposal', 'report', 'presentation', 'design',
-    'develop', 'implement', 'optimize', 'debug', 'fix'
+    // Data processing & analysis
+    'calculate', 'compute', 'sum', 'total', 'average', 'count',
+    'parse', 'process', 'analyze data', 'csv', 'spreadsheet',
+
+    // Research & information gathering
+    'find', 'search for', 'look up', 'compare', 'pricing',
+    'summarize', 'summary', 'research', 'investigate',
+
+    // Content creation
+    'create', 'write', 'draft', 'compose', 'generate',
+    'build', 'design', 'develop', 'make',
+
+    // Complex analysis
+    'analyze', 'evaluate', 'assess', 'review',
+    'plan', 'strategy', 'roadmap',
+
+    // Email/data access tasks
+    'my emails', 'my calendar', 'my data',
+    'access my', 'check my', 'get my',
+
+    // Business tasks
+    'proposal', 'report', 'presentation',
+    'competitive analysis', 'market research',
+
+    // Technical tasks
+    'implement', 'optimize', 'debug', 'fix', 'refactor'
   ];
 
   for (const trigger of manusTriggers) {
@@ -56,8 +67,24 @@ function chooseAI(prompt) {
     }
   }
 
-  // Default to Gemini for speed and cost savings
-  return 'gemini';
+  // GEMINI TRIGGERS - Only for simple Q&A and explanations
+  const geminiTriggers = [
+    'what is', 'what are', 'what does',
+    'how does', 'how do', 'how can',
+    'explain', 'why', 'who is', 'define',
+    'tell me about', 'can you explain',
+    'when', 'where', 'who wrote', 'who invented'
+  ];
+
+  for (const trigger of geminiTriggers) {
+    if (lower.includes(trigger)) {
+      return 'gemini';
+    }
+  }
+
+  // DEFAULT: If unclear, use Manus (better to do the work than just explain)
+  // This ensures automation tasks are actually executed
+  return 'manus';
 }
 
 // ============================================
