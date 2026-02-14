@@ -901,10 +901,11 @@ app.get('/', (req, res) => {
                 type="text"
                 id="input"
                 placeholder="Type your message or question..."
-                onkeypress="if(event.key==='Enter')send()"
+                onkeypress="if(event.key==='Enter')handleSend()"
                 autocomplete="off"
             >
-            <button onclick="send()" id="send-btn">Send</button>
+            <button onclick="handleSend()" id="send-btn">Send</button>
+            <button onclick="alert('Button click works! Input value: ' + document.getElementById('input').value)" style="background:#f59e0b;margin-left:10px;">Test Click</button>
         </div>
     </div>
     <script>
@@ -967,7 +968,8 @@ app.get('/', (req, res) => {
             return msg;
         }
 
-        async function send() {
+        window.handleSend = async function() {
+            let thinkingMsg = null;
             try {
                 const userInput = input.value.trim();
                 if (!userInput) {
@@ -980,7 +982,7 @@ app.get('/', (req, res) => {
                 sendBtn.disabled = true;
                 sendBtn.textContent = 'Thinking...';
 
-                const thinkingMsg = addThinking();
+                thinkingMsg = addThinking();
 
                 const res = await fetch('/chat', {
                     method: 'POST',
@@ -994,7 +996,7 @@ app.get('/', (req, res) => {
 
                 const data = await res.json();
 
-                thinkingMsg.remove();
+                if (thinkingMsg) thinkingMsg.remove();
 
                 if (!res.ok) {
                     throw new Error(data.error || data.message || 'Server returned error: ' + res.status);
@@ -1007,9 +1009,7 @@ app.get('/', (req, res) => {
                 addMsg('bot', data.response, data.ai, routingInfo);
 
             } catch (error) {
-                if (typeof thinkingMsg !== 'undefined' && thinkingMsg) {
-                    thinkingMsg.remove();
-                }
+                if (thinkingMsg) thinkingMsg.remove();
                 let errorMsg = '❌ Error: ' + error.message;
                 if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
                     errorMsg += '\\n\\nPlease check your internet connection.';
@@ -1021,7 +1021,7 @@ app.get('/', (req, res) => {
                 sendBtn.textContent = 'Send';
                 input.focus();
             }
-        }
+        };
 
         // Auto-focus input on load
         input.focus();
