@@ -1000,7 +1000,12 @@ app.get('/', (req, res) => {
 
             } catch (error) {
                 thinkingMsg.remove();
-                addMsg('error', '❌ Error: ' + error.message);
+                console.error('Send error:', error);
+                let errorMsg = '❌ Error: ' + error.message;
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg += '\\n\\nPossible causes:\\n- Network connection issue\\n- Server is down\\n- CORS blocking request';
+                }
+                addMsg('error', errorMsg);
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.textContent = 'Send';
