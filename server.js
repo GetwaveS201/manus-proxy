@@ -208,6 +208,7 @@ const limiter = rateLimit({
 });
 
 app.use('/api/', limiter);
+app.use('/chat', limiter);
 
 // ============================================
 // AUTHENTICATION MIDDLEWARE
@@ -904,7 +905,6 @@ app.get('/', (req, res) => {
         const chat = document.getElementById('chat');
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
-        const API_KEY = 'your-secure-api-key-here'; // Replace with your actual API key
 
         function setPrompt(text) {
             input.value = text;
@@ -973,11 +973,10 @@ app.get('/', (req, res) => {
             const thinkingMsg = addThinking();
 
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': API_KEY
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ prompt: userInput })
                 });
@@ -1014,7 +1013,92 @@ app.get('/', (req, res) => {
 });
 
 /**
- * Main chat endpoint
+ * Public chat endpoint for frontend (no auth required)
+ * POST /chat
+ * Body: { prompt: string }
+ */
+app.post('/chat', async (req, res) => {
+  const requestId = req.id;
+
+  try {
+    const { prompt } = req.body;
+
+    // Input validation
+    if (!prompt || typeof prompt !== 'string') {
+      log('WARN', 'Invalid prompt', requestId);
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Prompt must be a non-empty string'
+      });
+    }
+
+    if (prompt.length > 50000) {
+      log('WARN', 'Prompt too long', requestId);
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Prompt must be less than 50,000 characters'
+      });
+    }
+
+    // Route to appropriate AI
+    const routing = chooseAI(prompt);
+    log('INFO', `Routing decision: ${routing.ai.toUpperCase()}`, requestId, routing);
+
+    // Synchronous processing only for public endpoint
+    let response;
+    let actualAI = routing.ai;
+
+    try {
+      if (routing.ai === 'gemini') {
+        response = await callGemini(prompt);
+      } else {
+        response = await callManus(prompt);
+      }
+    } catch (error) {
+      // Intelligent fallback logic
+      if (error.message === 'MANUS_CREDITS_EXCEEDED' && routing.ai === 'manus') {
+        log('WARN', 'Manus credits exceeded, trying Gemini fallback', requestId);
+        try {
+          response = await callGemini(prompt);
+          actualAI = 'gemini';
+          response = `⚠️ Note: Manus credits exhausted. Using Gemini as fallback.\n\n${response}`;
+        } catch (geminiError) {
+          if (geminiError.message === 'GEMINI_QUOTA_EXCEEDED') {
+            throw new Error('BOTH_APIS_EXHAUSTED');
+          }
+          throw geminiError;
+        }
+      } else {
+        throw error;
+      }
+    }
+
+    log('INFO', 'Chat response generated successfully', requestId);
+
+    res.json({
+      response,
+      ai: actualAI,
+      routing: {
+        ai: routing.ai,
+        confidence: routing.confidence,
+        scores: routing.scores
+      }
+    });
+
+  } catch (error) {
+    log('ERROR', `Chat error: ${error.message}`, requestId);
+
+    const { status, userMessage } = formatError(error);
+
+    res.status(status).json({
+      error: userMessage,
+      requestId
+    });
+  }
+});
+
+/**
+ * Main chat endpoint (authenticated - for API users)
  * POST /api/chat
  * Body: { prompt: string, async?: boolean }
  * Headers: X-API-Key (required)
