@@ -56,8 +56,12 @@ Your AI Automation Assistant is now **100% working** with both Gemini and Manus 
 - **Auto-Deploy:** ✅ Enabled (deploys automatically on git push)
 
 ### Environment Variables (All Set ✅)
-- `GEMINI_API_KEY`: AIzaSyDh2jaXdYXm-SXkwQzUQ2KgeVOsC88ZiA0
-- `MANUS_API_KEY`: sk-aCKYHvdt4QQvZh6LDfd0ukAr8Y7ZMkRp3cTBgNxj4Ss3wcWKiWmBSqyyLWErBPPZI2vfPQRvAnejU2lE_GJBgu59MTm0
+- `GEMINI_API_KEY`: [Set in Render dashboard - NEVER commit to git]
+- `MANUS_API_KEY`: [Set in Render dashboard - NEVER commit to git]
+- `RENDER_API_KEY`: [Set in Render dashboard - NEVER commit to git]
+- `NOTION_API_KEY`: [Set in Render dashboard - NEVER commit to git]
+
+**Security Note:** API keys are stored as environment variables in Render and should NEVER be committed to the repository.
 
 ---
 
