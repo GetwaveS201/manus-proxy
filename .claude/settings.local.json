@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd graceful fallback when Manus credits are exhausted\n\nISSUE: Manus API returned \"credit limit exceeded\" error\nSOLUTION: Automatically fall back to Gemini with user notification\n\nCHANGES:\n- Detect credit limit errors from Manus API\n- Auto-fallback to Gemini when Manus credits exhausted\n- Add clear warning message to user about fallback\n- Prevents complete failure when credits run out\n\nThis ensures the system stays operational even when \nManus credits are depleted, maintaining service availability.\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🚨 SECURITY: Remove exposed API keys and add security measures\n\nCRITICAL SECURITY FIX - API keys were exposed in documentation\n\nCHANGES:\n✅ Removed all API keys from DEPLOYMENT_SUCCESS.md\n✅ Removed all API keys from COMPLETE_SESSION_SUMMARY.md\n✅ Added .gitignore to prevent future .env commits\n✅ Created .env.example template\n✅ Added comprehensive README.md\n✅ Created SECURITY.md with incident details\n\nREQUIRED USER ACTION:\n⚠️ ROTATE ALL API KEYS IMMEDIATELY:\n- Gemini: https://ai.google.dev/\n- Manus: https://manus.ai/\n- Render: https://dashboard.render.com/\n- Notion: https://www.notion.so/my-integrations\n\nThe exposed keys in git history can still be accessed.\nUsers should rotate keys and consider git history cleanup.\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
