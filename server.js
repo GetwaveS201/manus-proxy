@@ -897,15 +897,16 @@ app.get('/', (req, res) => {
             </div>
         </div>
         <div class="input-area">
-            <input
-                type="text"
-                id="input"
-                placeholder="Type your message or question..."
-                onkeypress="if(event.key==='Enter')handleSend()"
-                autocomplete="off"
-            >
-            <button onclick="handleSend()" id="send-btn">Send</button>
-            <button onclick="alert('Button click works! Input value: ' + document.getElementById('input').value)" style="background:#f59e0b;margin-left:10px;">Test Click</button>
+            <form id="chat-form" onsubmit="return false;" style="display:flex;gap:12px;width:100%;">
+                <input
+                    type="text"
+                    id="input"
+                    placeholder="Type your message or question..."
+                    autocomplete="off"
+                    style="flex:1;"
+                >
+                <button type="button" id="send-btn">Send</button>
+            </form>
         </div>
     </div>
     <script>
@@ -968,14 +969,11 @@ app.get('/', (req, res) => {
             return msg;
         }
 
-        window.handleSend = async function() {
+        async function handleSend() {
             let thinkingMsg = null;
             try {
                 const userInput = input.value.trim();
-                if (!userInput) {
-                    alert('Please type a message first!');
-                    return;
-                }
+                if (!userInput) return;
 
                 addMsg('user', userInput);
                 input.value = '';
@@ -990,8 +988,6 @@ app.get('/', (req, res) => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ prompt: userInput })
-                }).catch(err => {
-                    throw new Error('Network error: ' + err.message);
                 });
 
                 const data = await res.json();
@@ -999,7 +995,7 @@ app.get('/', (req, res) => {
                 if (thinkingMsg) thinkingMsg.remove();
 
                 if (!res.ok) {
-                    throw new Error(data.error || data.message || 'Server returned error: ' + res.status);
+                    throw new Error(data.error || data.message || 'Request failed');
                 }
 
                 const routingInfo = data.routing ?
@@ -1010,18 +1006,22 @@ app.get('/', (req, res) => {
 
             } catch (error) {
                 if (thinkingMsg) thinkingMsg.remove();
-                let errorMsg = '❌ Error: ' + error.message;
-                if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
-                    errorMsg += '\\n\\nPlease check your internet connection.';
-                }
-                addMsg('error', errorMsg);
-                alert('Error: ' + error.message);
+                addMsg('error', '❌ Error: ' + error.message);
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.textContent = 'Send';
                 input.focus();
             }
-        };
+        }
+
+        // Set up event listeners
+        sendBtn.addEventListener('click', handleSend);
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSend();
+            }
+        });
 
         // Auto-focus input on load
         input.focus();
