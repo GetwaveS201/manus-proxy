@@ -146,6 +146,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      connectSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -978,6 +979,7 @@ app.get('/', (req, res) => {
             const thinkingMsg = addThinking();
 
             try {
+                console.log('Sending request to /chat...');
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {
@@ -986,12 +988,16 @@ app.get('/', (req, res) => {
                     body: JSON.stringify({ prompt: userInput })
                 });
 
+                console.log('Response status:', res.status);
+                console.log('Response ok:', res.ok);
+
                 const data = await res.json();
+                console.log('Response data:', data);
 
                 thinkingMsg.remove();
 
                 if (!res.ok) {
-                    throw new Error(data.error || 'Request failed');
+                    throw new Error(data.error || data.message || 'Request failed');
                 }
 
                 const routingInfo = data.routing ?
