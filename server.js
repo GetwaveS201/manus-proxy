@@ -304,7 +304,8 @@ function chooseAI(prompt) {
     'analyze', 'evaluate', 'assess', 'review', 'examine',
     'implement', 'execute', 'run', 'perform', 'do',
     'optimize', 'improve', 'enhance', 'refactor',
-    'compare', 'contrast', 'research', 'investigate'
+    'compare', 'contrast', 'research', 'investigate',
+    'summarize', 'summarise', 'summary', 'list', 'show', 'get'
   ];
 
   for (const verb of executionVerbs) {
@@ -339,13 +340,19 @@ function chooseAI(prompt) {
     }
   }
 
-  // User data access (+35 points)
-  const dataAccess = ['my emails', 'my calendar', 'my data', 'access my', 'check my', 'get my'];
+  // User data access (+50 points - VERY IMPORTANT)
+  const dataAccess = ['my emails', 'my calendar', 'my data', 'my files', 'my documents', 'my messages'];
   for (const keyword of dataAccess) {
     if (lower.includes(keyword)) {
-      manusScore += 35;
+      manusScore += 50;
       break;
     }
+  }
+
+  // Generic "my" + data pattern (+40 points)
+  if (/\bmy\s+(last|recent|latest|first|next)\s+\d+\s+\w+/.test(lower)) {
+    // Matches: "my last 5 emails", "my recent 10 messages", etc.
+    manusScore += 40;
   }
 
   // Complex/multi-step indicators (+20 points)
