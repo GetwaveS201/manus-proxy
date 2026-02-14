@@ -156,8 +156,11 @@ app.use(helmet({
 // CORS with whitelist
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
+    // Allow requests with no origin (like mobile apps, curl, file://, etc.)
     if (!origin) return callback(null, true);
+
+    // Allow file:// protocol for local testing
+    if (origin.startsWith('file://')) return callback(null, true);
 
     if (CORS_WHITELIST.indexOf(origin) !== -1) {
       callback(null, true);
