@@ -160,11 +160,13 @@ app.use(cors({
     if (!origin) return callback(null, true);
 
     // Allow file:// protocol for local testing
-    if (origin.startsWith('file://')) return callback(null, true);
+    if (typeof origin === 'string' && origin.startsWith('file://')) return callback(null, true);
 
-    if (CORS_WHITELIST.indexOf(origin) !== -1) {
+    // Allow same-origin requests (when page is served from same domain)
+    if (CORS_WHITELIST.indexOf(origin) !== -1 || origin.includes('manus-proxy')) {
       callback(null, true);
     } else {
+      log('WARN', `CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
