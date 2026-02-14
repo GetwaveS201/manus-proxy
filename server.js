@@ -968,36 +968,36 @@ app.get('/', (req, res) => {
         }
 
         async function send() {
-            const userInput = input.value.trim();
-            if (!userInput) return;
-
-            addMsg('user', userInput);
-            input.value = '';
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Thinking...';
-
-            const thinkingMsg = addThinking();
-
             try {
-                console.log('Sending request to /chat...');
+                const userInput = input.value.trim();
+                if (!userInput) {
+                    alert('Please type a message first!');
+                    return;
+                }
+
+                addMsg('user', userInput);
+                input.value = '';
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Thinking...';
+
+                const thinkingMsg = addThinking();
+
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ prompt: userInput })
+                }).catch(err => {
+                    throw new Error('Network error: ' + err.message);
                 });
 
-                console.log('Response status:', res.status);
-                console.log('Response ok:', res.ok);
-
                 const data = await res.json();
-                console.log('Response data:', data);
 
                 thinkingMsg.remove();
 
                 if (!res.ok) {
-                    throw new Error(data.error || data.message || 'Request failed');
+                    throw new Error(data.error || data.message || 'Server returned error: ' + res.status);
                 }
 
                 const routingInfo = data.routing ?
@@ -1007,13 +1007,15 @@ app.get('/', (req, res) => {
                 addMsg('bot', data.response, data.ai, routingInfo);
 
             } catch (error) {
-                thinkingMsg.remove();
-                console.error('Send error:', error);
+                if (typeof thinkingMsg !== 'undefined' && thinkingMsg) {
+                    thinkingMsg.remove();
+                }
                 let errorMsg = '❌ Error: ' + error.message;
-                if (error.message.includes('Failed to fetch')) {
-                    errorMsg += '\\n\\nPossible causes:\\n- Network connection issue\\n- Server is down\\n- CORS blocking request';
+                if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+                    errorMsg += '\\n\\nPlease check your internet connection.';
                 }
                 addMsg('error', errorMsg);
+                alert('Error: ' + error.message);
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.textContent = 'Send';
