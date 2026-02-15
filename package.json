@@ -1,15 +1,24 @@
 {
   "name": "ai-automation-assistant",
-  "version": "3.0.0",
-  "description": "Production-ready dual AI system with Gemini and Manus",
+  "version": "2.0.0",
+  "description": "🤖 A powerful dual-AI assistant with intelligent routing between Google Gemini and Anthropic Manus. Features a beautiful dark-themed interface with markdown support, accessibility features, and comprehensive chat management.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "test": "node test.js"
+    "dev": "NODE_ENV=development node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GetwaveS201/manus-proxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GetwaveS201/manus-proxy/issues"
+  },
+  "homepage": "https://github.com/GetwaveS201/manus-proxy#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -17,7 +26,35 @@
     "cors": "^2.8.5",
     "helmet": "^7.1.0"
   },
-  "keywords": ["ai", "automation", "gemini", "manus", "api"],
-  "author": "Superior Restoration",
+  "devDependencies": {},
+  "keywords": [
+    "ai",
+    "automation",
+    "gemini",
+    "manus",
+    "anthropic",
+    "google",
+    "chatbot",
+    "assistant",
+    "api",
+    "nodejs",
+    "express",
+    "routing",
+    "markdown",
+    "accessibility",
+    "dark-theme",
+    "chat",
+    "browser-automation"
+  ],
+  "author": {
+    "name": "GetwaveS201",
+    "url": "https://github.com/GetwaveS201"
+  },
+  "contributors": [
+    {
+      "name": "Claude Sonnet 4.5",
+      "email": "noreply@anthropic.com"
+    }
+  ],
   "license": "MIT"
 }

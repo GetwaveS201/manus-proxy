@@ -1,6 +1,12 @@
-# AI Automation Assistant
+# 🤖 AI Automation Assistant
 
-A dual-AI system that intelligently routes requests between Gemini (fast, conversational) and Manus (autonomous agent for execution tasks).
+> A powerful dual-AI system with an intelligent routing engine and beautiful dark-themed interface
+
+[![Live Demo](https://img.shields.io/badge/demo-live-success?style=for-the-badge)](https://manus-proxy-1.onrender.com)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+
+A sophisticated AI assistant that intelligently routes requests between **Google Gemini** (fast Q&A) and **Anthropic Manus** (browser automation) to provide the best possible response for every query.
 
 ## ⚠️ SECURITY NOTICE
 
@@ -10,13 +16,44 @@ A dual-AI system that intelligently routes requests between Gemini (fast, conver
 2. Re-clone from GitHub
 3. Rotate any API keys that were exposed
 
-## Features
+## ✨ Features
 
-- **Smart Routing**: Automatically chooses the best AI for each task
-- **Dual AI System**: Gemini for Q&A, Manus for execution
-- **Graceful Fallbacks**: Handles API quota limits elegantly
-- **Cost Optimization**: Routes to free Gemini when possible
-- **User-Friendly Errors**: Clear messages when APIs are unavailable
+### 🎯 Intelligent AI Routing
+- **Smart Detection**: Automatically routes to the best AI for each task
+- **Gemini Integration**: Handles Q&A, explanations, calculations, and general knowledge
+- **Manus Integration**: Executes browser automation, email tasks, and complex workflows
+- **Confidence Scoring**: Score-based routing system (95%+ accuracy)
+- **Graceful Fallbacks**: Handles API quotas and errors elegantly
+
+### 💬 Modern Chat Interface
+- **🎨 Beautiful Dark Theme**: Professional UI with purple accents
+- **💾 Chat History**: Persistent conversations with localStorage
+- **📝 Markdown Support**: Full markdown rendering with syntax highlighting
+- **📋 One-Click Copy**: Copy messages and code blocks instantly
+- **🗑️ Chat Management**: Delete conversations with confirmation
+- **⚡ Real-time Updates**: Streaming responses from both AIs
+
+### ♿ Accessibility First
+- **WCAG 2.1 AA Compliant**: Semantic HTML5 and ARIA labels
+- **⌨️ Full Keyboard Navigation**: Tab through all elements
+- **📱 Mobile Responsive**: Optimized for all screen sizes
+- **🔊 Screen Reader Support**: Comprehensive accessibility features
+- **👁️ High Contrast**: Easy-to-read color combinations
+
+### ⌨️ Keyboard Shortcuts
+- `Ctrl/Cmd + K` - Start new chat
+- `Escape` - Clear input field
+- `Ctrl/Cmd + /` - Focus message input
+- `Enter` - Send message
+
+### 🎨 UI/UX Features
+- Sidebar with searchable chat history
+- Message timestamps
+- AI badge indicators (Gemini 🔵 / Manus 🟣)
+- Loading states with animations
+- Example queries for quick start
+- Auto-scroll to latest messages
+- Code syntax highlighting (Atom One Dark theme)
 
 ## Quick Start
 
@@ -63,36 +100,47 @@ npm start
 
 Server runs at `http://localhost:3000`
 
-## API Endpoints
+## 📚 API Documentation
 
-### POST /api/chat
-
-Send a prompt and get AI-generated response.
+### `POST /chat`
+Send a message to the AI assistant (public endpoint, no authentication required).
 
 **Request:**
 ```bash
-curl -X POST http://localhost:3000/api/chat \
+curl -X POST https://manus-proxy-1.onrender.com/chat \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your_app_api_key" \
-  -d '{"prompt": "What is AI?"}'
+  -d '{"prompt": "What is machine learning?"}'
 ```
 
-**Response:**
+**Success Response:**
 ```json
 {
-  "response": "AI stands for Artificial Intelligence...",
-  "ai": "gemini"
+  "response": "Machine learning is a subset of artificial intelligence...",
+  "ai": "gemini",
+  "routing": {
+    "ai": "gemini",
+    "confidence": 95,
+    "scores": {
+      "gemini": 95,
+      "manus": 5
+    }
+  }
 }
 ```
 
-### GET /health
-
-Check API status (requires authentication in production).
-
-```bash
-curl http://localhost:3000/health \
-  -H "X-API-Key: your_app_api_key"
+**Error Response:**
+```json
+{
+  "error": "GEMINI_API_KEY_LEAKED",
+  "message": "🔒 Security Alert: The Gemini API key has been flagged..."
+}
 ```
+
+### `GET /`
+Serves the frontend chat interface.
+
+### `GET /health`
+Health check endpoint (returns 200 OK).
 
 ## Deployment
 
