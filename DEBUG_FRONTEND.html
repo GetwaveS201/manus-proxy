@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend Issue</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; }
+        .test-box {
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .success { border-color: #4ade80; background: #f0fdf4; }
+        .error { border-color: #ef4444; background: #fef2f2; }
+        .warning { border-color: #f59e0b; background: #fffbeb; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { opacity: 0.9; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .log {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Frontend Debug Tool</h1>
+        <p>This will help us figure out why the Send button isn't working.</p>
+
+        <div class="test-box">
+            <h2>Test 1: Can We Reach the Server?</h2>
+            <button onclick="testServerReach()">Test Server Connection</button>
+            <div id="server-reach-result"></div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 2: Can We Send a Message?</h2>
+            <input type="text" id="test-message" placeholder="Type a test message..." value="Hello test">
+            <button onclick="testSendMessage()">Send Test Message</button>
+            <div id="send-result"></div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 3: JavaScript Console Logs</h2>
+            <p>Any errors will appear below:</p>
+            <div id="console-logs" class="log">
+                <pre id="log-output">Waiting for tests...</pre>
+            </div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 4: Network Details</h2>
+            <button onclick="showNetworkInfo()">Show Network Info</button>
+            <div id="network-info"></div>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://manus-proxy-1.onrender.com';
+        const logs = [];
+
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function(...args) {
+            logs.push({type: 'log', msg: args.join(' ')});
+            updateLogDisplay();
+            originalLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            logs.push({type: 'error', msg: args.join(' ')});
+            updateLogDisplay();
+            originalError.apply(console, args);
+        };
+
+        function updateLogDisplay() {
+            const output = document.getElementById('log-output');
+            output.textContent = logs.map(l => `[${l.type.toUpperCase()}] ${l.msg}`).join('\n') || 'No logs yet...';
+        }
+
+        async function testServerReach() {
+            const resultDiv = document.getElementById('server-reach-result');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            console.log('Testing server reach...');
+
+            try {
+                const response = await fetch(SERVER_URL);
+                console.log('Server response status:', response.status);
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Server is reachable!<br>
+                            Status: ${response.status}<br>
+                            URL: ${SERVER_URL}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Server responded with error<br>
+                            Status: ${response.status}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Server reach error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Cannot reach server<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testSendMessage() {
+            const resultDiv = document.getElementById('send-result');
+            const message = document.getElementById('test-message').value;
+
+            resultDiv.innerHTML = '<p>Sending message...</p>';
+            console.log('Sending test message:', message);
+
+            try {
+                console.log('Fetching:', `${SERVER_URL}/chat`);
+                console.log('Body:', JSON.stringify({ prompt: message }));
+
+                const response = await fetch(`${SERVER_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt: message })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Message sent successfully!<br><br>
+                            <strong>Response from ${data.ai.toUpperCase()}:</strong><br>
+                            ${data.response.substring(0, 200)}...<br><br>
+                            <strong>Routing:</strong><br>
+                            AI: ${data.routing.ai}<br>
+                            Confidence: ${data.routing.confidence}<br>
+                            Scores: Gemini=${data.routing.scores.gemini}, Manus=${data.routing.scores.manus}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Request failed<br>
+                            Status: ${response.status}<br>
+                            Error: ${data.error || 'Unknown error'}<br>
+                            Message: ${data.message || 'No message'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Send message error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to send message<br>
+                        Error: ${error.message}<br>
+                        Stack: ${error.stack}
+                    </div>
+                `;
+            }
+        }
+
+        function showNetworkInfo() {
+            const resultDiv = document.getElementById('network-info');
+            resultDiv.innerHTML = `
+                <pre>
+Current URL: ${window.location.href}
+User Agent: ${navigator.userAgent}
+Online: ${navigator.onLine}
+Server URL: ${SERVER_URL}
+                </pre>
+            `;
+        }
+
+        // Auto-run server test on load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, running auto-tests...');
+            setTimeout(testServerReach, 500);
+        });
+
+        // Catch any unhandled errors
+        window.addEventListener('error', (event) => {
+            console.error('Unhandled error:', event.error);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+    </script>
+</body>
+</html>

@@ -1034,13 +1034,112 @@ app.get('/', (req, res) => {
             margin-top: 6px;
             font-style: italic;
         }
+        /* Dark theme scrollbar */
         ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-track { background: #16162a; }
         ::-webkit-scrollbar-thumb {
-            background: #ccc;
+            background: #2d2d44;
             border-radius: 5px;
         }
-        ::-webkit-scrollbar-thumb:hover { background: #999; }
+        ::-webkit-scrollbar-thumb:hover { background: #3d3d54; }
+
+        /* Mobile responsive design */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #2d2d44;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            .sidebar-header {
+                padding: 12px;
+            }
+            .home-btn {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+            .history-section {
+                max-height: 120px;
+            }
+            .history-title {
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+            .history-item {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            .main-content {
+                height: calc(100vh - 200px);
+            }
+            .header {
+                padding: 16px 20px;
+            }
+            .header h1 {
+                font-size: 1.3rem;
+            }
+            .chat-area {
+                padding: 16px;
+            }
+            .message {
+                max-width: 100%;
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+            .input-area {
+                padding: 12px 16px;
+                gap: 8px;
+            }
+            input {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+            button {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            .empty-state h2 {
+                font-size: 1.8rem;
+            }
+            .empty-state p {
+                font-size: 1rem;
+            }
+            .example-queries {
+                max-width: 100%;
+                padding: 16px;
+            }
+        }
+
+        /* Small mobile devices */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.1rem;
+            }
+            .message {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+            .ai-badge {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            input {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+            button {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+            .empty-state h2 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1115,17 +1214,40 @@ app.get('/', (req, res) => {
         const sendBtn = document.getElementById('send-btn');
         const historyList = document.getElementById('history-list');
 
-        // Chat history management
-        let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-        let currentChatId = localStorage.getItem('currentChatId') || generateChatId();
+        // Chat history management with error handling
+        let chatHistory = [];
+        let currentChatId = '';
         let currentMessages = [];
+
+        try {
+            chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+            currentChatId = localStorage.getItem('currentChatId') || generateChatId();
+        } catch (e) {
+            console.error('Failed to load chat history:', e);
+            localStorage.setItem('chatHistory', '[]');
+            currentChatId = generateChatId();
+        }
 
         function generateChatId() {
             return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
         function saveChatHistory() {
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            try {
+                const data = JSON.stringify(chatHistory);
+                localStorage.setItem('chatHistory', data);
+            } catch (e) {
+                console.error('Failed to save chat history:', e);
+                // If quota exceeded, remove oldest chats
+                if (e.name === 'QuotaExceededError' && chatHistory.length > 10) {
+                    chatHistory = chatHistory.slice(0, 10);
+                    try {
+                        localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                    } catch (e2) {
+                        console.error('Still failed after trimming:', e2);
+                    }
+                }
+            }
         }
 
         function loadHistoryUI() {
@@ -1189,15 +1311,20 @@ app.get('/', (req, res) => {
         }
 
         function loadChat(index) {
-            const chat = chatHistory[index];
-            if (!chat) return;
+            const selectedChat = chatHistory[index];
+            if (!selectedChat || !selectedChat.messages || !Array.isArray(selectedChat.messages)) return;
 
-            currentChatId = chat.id;
-            currentMessages = chat.messages;
-            localStorage.setItem('currentChatId', currentChatId);
+            currentChatId = selectedChat.id;
+            currentMessages = selectedChat.messages;
+            try {
+                localStorage.setItem('currentChatId', currentChatId);
+            } catch (e) {
+                console.error('Failed to save current chat ID:', e);
+            }
 
             // Clear and reload chat
-            chat.innerHTML = '';
+            const chatArea = document.getElementById('chat');
+            chatArea.innerHTML = '';
             currentMessages.forEach(msg => {
                 addMsg(msg.type, msg.text, msg.aiType, msg.routingInfo);
             });
@@ -1274,25 +1401,40 @@ app.get('/', (req, res) => {
             return msg;
         }
 
+        // AbortController for request cancellation
+        let currentRequest = null;
+
         async function handleSend() {
             let thinkingMsg = null;
             try {
                 const userInput = input.value.trim();
                 if (!userInput) return;
 
-                addMsg('user', userInput);
-                input.value = '';
+                // Prevent double-submit immediately
+                if (sendBtn.disabled) return;
                 sendBtn.disabled = true;
                 sendBtn.textContent = 'Thinking...';
 
+                // Cancel previous request if exists
+                if (currentRequest) {
+                    currentRequest.abort();
+                }
+
+                addMsg('user', userInput);
+                input.value = '';
+
                 thinkingMsg = addThinking();
+
+                // Create new AbortController
+                currentRequest = new AbortController();
 
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ prompt: userInput })
+                    body: JSON.stringify({ prompt: userInput }),
+                    signal: currentRequest.signal
                 });
 
                 const data = await res.json();
@@ -1311,8 +1453,12 @@ app.get('/', (req, res) => {
 
             } catch (error) {
                 if (thinkingMsg) thinkingMsg.remove();
-                addMsg('error', '❌ Error: ' + error.message);
+                // Don't show error for aborted requests
+                if (error.name !== 'AbortError') {
+                    addMsg('error', '❌ Error: ' + error.message);
+                }
             } finally {
+                currentRequest = null;
                 sendBtn.disabled = false;
                 sendBtn.textContent = 'Send';
                 input.focus();
