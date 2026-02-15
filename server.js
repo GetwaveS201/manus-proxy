@@ -550,9 +550,30 @@ async function callManus(prompt, timeoutMs = 60000) {
 
       log('INFO', `Manus task status: ${task.status} (${elapsed}s elapsed)`);
 
+      // Extract response from output (works for both pending and completed)
+      let fullText = '';
+
+      if (task.output && Array.isArray(task.output)) {
+        for (const block of task.output) {
+          if (block.role === 'assistant' && block.content && Array.isArray(block.content)) {
+            for (const part of block.content) {
+              if (part.type === 'output_text' && part.text) {
+                fullText += part.text + '\n';
+              }
+            }
+          }
+        }
+      }
+
+      // If we have a response and task is completed OR has been processing for >30s, return it
+      if (fullText && (task.status === 'completed' || elapsed > 30)) {
+        log('INFO', 'Manus response extracted successfully');
+        return fullText.trim();
+      }
+
       if (task.status === 'completed') {
-        // Extract response
-        let fullText = '';
+        // If completed but no text extracted, try other methods
+        fullText = '';
 
         // Method 1: Extract from output array (current format)
         if (task.output && Array.isArray(task.output)) {
