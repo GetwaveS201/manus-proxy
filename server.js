@@ -568,7 +568,14 @@ async function callManus(prompt, timeoutMs = 60000) {
       // If we have a response and task is completed OR has been processing for >30s, return it
       if (fullText && (task.status === 'completed' || elapsed > 30)) {
         log('INFO', 'Manus response extracted successfully');
-        return fullText.trim();
+        const response = fullText.trim();
+
+        // Add helpful note if Manus is asking a question
+        if (response.includes('?') && response.length < 500) {
+          return response + '\n\n💡 Tip: When replying, include the full context since each message is independent. For example, instead of just "Gmail", say "Use Gmail to access my emails".';
+        }
+
+        return response;
       }
 
       if (task.status === 'completed') {
