@@ -477,10 +477,10 @@ async function callGemini(prompt, timeoutMs = 30000) {
 /**
  * Calls Manus API with extended timeout for long tasks
  * @param {string} prompt - User prompt
- * @param {number} timeoutMs - Maximum wait time (default: 10 minutes)
+ * @param {number} timeoutMs - Maximum wait time (default: 1 minute for quick feedback)
  * @returns {Promise<string>} AI response
  */
-async function callManus(prompt, timeoutMs = 600000) {
+async function callManus(prompt, timeoutMs = 60000) {
   if (!MANUS_API_KEY) {
     throw new Error('MANUS_NOT_CONFIGURED');
   }
@@ -620,7 +620,13 @@ async function callManus(prompt, timeoutMs = 600000) {
 
   // Timeout
   log('ERROR', `Manus task timeout after ${timeoutMs}ms`);
-  return `Your request "${prompt.substring(0, 80)}..." was sent to Manus AI, but it's taking longer than expected (over ${Math.round(timeoutMs / 60000)} minutes).\n\nThis usually means:\n1. The task is very complex and still processing\n2. Manus needs additional permissions to access your data\n3. There may be an issue with the Manus service\n\nYou can check the task status here: ${shareUrl || 'https://app.manus.ai'}`;
+
+  // Check if Manus is even responding
+  if (!shareUrl) {
+    return `⚠️ Manus API Issue\n\nThe request to Manus timed out after ${Math.round(timeoutMs / 1000)} seconds.\n\nPossible causes:\n1. Your Manus API key may be invalid or expired\n2. Manus credits may be exhausted\n3. Manus service may be down\n\nCurrent API Key: ${MANUS_API_KEY ? 'Set (starts with ' + MANUS_API_KEY.substring(0, 8) + '...)' : 'NOT SET'}\n\nPlease check:\n- Your Manus account at https://manus.ai/\n- Verify your API key and credits`;
+  }
+
+  return `Your request "${prompt.substring(0, 80)}..." was sent to Manus AI, but it's taking longer than expected (over ${Math.round(timeoutMs / 1000)} seconds).\n\nThe task is still processing. You can check the status here: ${shareUrl}\n\nNote: Complex tasks like accessing emails may take several minutes.`;
 }
 
 // ============================================
