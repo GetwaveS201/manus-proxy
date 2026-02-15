@@ -602,9 +602,11 @@ async function callManus(prompt, timeoutMs = 600000) {
       }
 
       if (task.status === 'failed') {
-        const error = task.error || 'Task failed';
-        log('ERROR', `Manus task failed: ${error}`);
-        throw new Error(`MANUS_TASK_FAILED: ${error}`);
+        const error = task.error || task.message || 'Task failed';
+        log('ERROR', `Manus task failed: ${error}`, null, { fullTask: task });
+
+        // Return user-friendly error message
+        return `I attempted to ${prompt.toLowerCase().substring(0, 50)}... but encountered an issue:\n\n${error}\n\nNote: Manus may need specific permissions or integrations to access your personal data like emails. The task was sent to Manus but it couldn't complete it.`;
       }
 
     } catch (err) {
@@ -618,7 +620,7 @@ async function callManus(prompt, timeoutMs = 600000) {
 
   // Timeout
   log('ERROR', `Manus task timeout after ${timeoutMs}ms`);
-  throw new Error(`MANUS_TIMEOUT: Task took longer than ${Math.round(timeoutMs / 1000)}s. Check status: ${shareUrl}`);
+  return `Your request "${prompt.substring(0, 80)}..." was sent to Manus AI, but it's taking longer than expected (over ${Math.round(timeoutMs / 60000)} minutes).\n\nThis usually means:\n1. The task is very complex and still processing\n2. Manus needs additional permissions to access your data\n3. There may be an issue with the Manus service\n\nYou can check the task status here: ${shareUrl || 'https://app.manus.ai'}`;
 }
 
 // ============================================
