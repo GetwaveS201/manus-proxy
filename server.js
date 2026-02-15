@@ -439,6 +439,12 @@ async function callGemini(prompt, timeoutMs = 30000) {
           log('INFO', `Gemini (${model}) responded successfully`);
           return text;
         }
+      } else if (response.status === 403) {
+        const errorData = await response.json();
+        if (errorData.error?.message?.includes('leaked') || errorData.error?.message?.includes('PERMISSION_DENIED')) {
+          log('ERROR', 'Gemini API key has been flagged as leaked!');
+          throw new Error('GEMINI_API_KEY_LEAKED');
+        }
       } else if (response.status === 429) {
         quotaError = true;
         const errorData = await response.json();
@@ -1403,13 +1409,14 @@ app.post('/chat', async (req, res) => {
     });
 
   } catch (error) {
-    log('ERROR', `Chat error: ${error.message}`, requestId);
+    log('ERROR', `Chat error: ${error.message}`, requestId, { stack: error.stack });
 
     const { status, userMessage } = formatError(error);
 
     res.status(status).json({
       error: userMessage,
-      requestId
+      requestId,
+      debugInfo: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -1655,6 +1662,10 @@ function formatError(error) {
     'GEMINI_NOT_CONFIGURED': {
       status: 503,
       message: 'Gemini AI is not configured. Please contact the administrator.'
+    },
+    'GEMINI_API_KEY_LEAKED': {
+      status: 403,
+      message: '🔒 Security Alert: The Gemini API key has been flagged as leaked by Google and has been disabled.\n\nTO FIX:\n1. Go to https://ai.google.dev/\n2. Delete the old API key\n3. Create a new API key\n4. Update it in Render environment variables\n5. Redeploy the service\n\nThis happens when API keys are exposed in public repositories or logs.'
     },
     'MANUS_NOT_CONFIGURED': {
       status: 503,
