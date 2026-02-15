@@ -685,6 +685,26 @@ app.get('/', (req, res) => {
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* Screen reader only content */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Focus visible for better keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #0f0f23;
@@ -1303,57 +1323,57 @@ app.get('/', (req, res) => {
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar">
+    <aside class="sidebar" role="complementary" aria-label="Chat history sidebar">
         <div class="sidebar-header">
-            <button class="home-btn" onclick="goHome()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="home-btn" onclick="goHome()" aria-label="Start new chat" title="New Chat (Ctrl+K)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     <polyline points="9 22 9 12 15 12 15 22"></polyline>
                 </svg>
                 New Chat
             </button>
         </div>
-        <div class="history-section">
-            <div class="history-title">Chat History</div>
-            <div id="history-list">
+        <nav class="history-section" aria-label="Previous conversations">
+            <h2 class="history-title">Chat History</h2>
+            <div id="history-list" role="list">
                 <!-- History items will be added here -->
             </div>
-        </div>
-    </div>
+        </nav>
+    </aside>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <main class="main-content" role="main">
         <div class="container">
-            <div class="header">
+            <header class="header" role="banner">
                 <div class="header-left">
                     <h1>🤖 AI Automation Assistant</h1>
                 </div>
                 <div class="header-right">
-                    <div class="status-badge">
-                        <span class="status-indicator"></span>
+                    <div class="status-badge" role="status" aria-label="Connection status: Online">
+                        <span class="status-indicator" aria-hidden="true"></span>
                         <span>Online</span>
                     </div>
-                    <div class="ai-models">
+                    <div class="ai-models" aria-label="Available AI models">
                         <span>Gemini</span> + <span>Manus</span>
                     </div>
                 </div>
-            </div>
-        <div class="chat-area" id="chat">
+            </header>
+        <div class="chat-area" id="chat" role="log" aria-live="polite" aria-label="Chat conversation">
             <div class="empty-state">
                 <h2>👋 Welcome!</h2>
                 <p>I'm your AI automation assistant. Ask me anything!</p>
                 <div class="example-queries">
                     <h3>Try asking:</h3>
-                    <ul>
-                        <li onclick="setPrompt(this.textContent)">📊 Build me a sales report for Q1</li>
-                        <li onclick="setPrompt(this.textContent)">🔍 Find the best CRM tools for small businesses</li>
-                        <li onclick="setPrompt(this.textContent)">📈 Calculate the ROI of our marketing campaign</li>
-                        <li onclick="setPrompt(this.textContent)">💡 What is machine learning?</li>
+                    <ul role="list">
+                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: Build me a sales report for Q1">📊 Build me a sales report for Q1</li>
+                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: Find the best CRM tools for small businesses">🔍 Find the best CRM tools for small businesses</li>
+                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: Calculate the ROI of our marketing campaign">📈 Calculate the ROI of our marketing campaign</li>
+                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: What is machine learning">💡 What is machine learning?</li>
                     </ul>
                 </div>
             </div>
         </div>
-        <div class="input-area">
+        <div class="input-area" role="region" aria-label="Message input">
             <form id="chat-form" onsubmit="return false;" style="display:flex;gap:12px;width:100%;">
                 <input
                     type="text"
@@ -1361,12 +1381,15 @@ app.get('/', (req, res) => {
                     placeholder="Type your message or question..."
                     autocomplete="off"
                     style="flex:1;"
+                    aria-label="Message input"
+                    aria-describedby="input-help"
                 >
-                <button type="button" id="send-btn">Send</button>
+                <span id="input-help" class="sr-only">Press Enter to send message</span>
+                <button type="button" id="send-btn" aria-label="Send message">Send</button>
             </form>
         </div>
         </div>
-    </div>
+    </main>
     <script>
         const chat = document.getElementById('chat');
         const input = document.getElementById('input');
@@ -1428,7 +1451,16 @@ app.get('/', (req, res) => {
             chatHistory.forEach((chat, index) => {
                 const item = document.createElement('div');
                 item.className = 'history-item';
+                item.setAttribute('role', 'listitem');
+                item.setAttribute('tabindex', '0');
+                item.setAttribute('aria-label', `Chat: ${chat.title || 'New Chat'}, ${formatTime(chat.timestamp)}`);
                 item.onclick = () => loadChat(index);
+                item.onkeypress = (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        loadChat(index);
+                    }
+                };
 
                 const title = document.createElement('div');
                 title.className = 'history-item-title';
@@ -1446,6 +1478,8 @@ app.get('/', (req, res) => {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-chat-btn';
                 deleteBtn.textContent = '🗑️';
+                deleteBtn.setAttribute('aria-label', `Delete chat: ${chat.title || 'New Chat'}`);
+                deleteBtn.setAttribute('title', 'Delete chat');
                 deleteBtn.onclick = (e) => deleteChat(index, e);
 
                 item.appendChild(title);
@@ -1526,12 +1560,33 @@ app.get('/', (req, res) => {
         // Load history on startup
         loadHistoryUI();
 
+        // Add keyboard support for example query buttons
+        document.querySelectorAll('.example-queries li[role="button"]').forEach(li => {
+            li.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setPrompt(this.textContent);
+                }
+            });
+        });
+
         function addMsg(type, text, aiType = null, routingInfo = null) {
             const emptyState = chat.querySelector('.empty-state');
             if (emptyState) emptyState.remove();
 
             const msg = document.createElement('div');
             msg.className = 'message ' + type;
+            msg.setAttribute('role', 'article');
+
+            // Set ARIA label based on message type
+            if (type === 'user') {
+                msg.setAttribute('aria-label', 'Your message');
+            } else if (type === 'bot') {
+                msg.setAttribute('aria-label', `${aiType || 'AI'} response`);
+            } else if (type === 'error') {
+                msg.setAttribute('aria-label', 'Error message');
+                msg.setAttribute('role', 'alert');
+            }
 
             if (type === 'bot' && aiType) {
                 msg.className += ' ' + aiType;
@@ -1539,6 +1594,7 @@ app.get('/', (req, res) => {
                 const badge = document.createElement('div');
                 badge.className = 'ai-badge ' + aiType;
                 badge.textContent = aiType === 'gemini' ? '🔵 Gemini' : '🟣 Manus';
+                badge.setAttribute('aria-label', `Response from ${aiType}`);
                 msg.appendChild(badge);
 
                 const br = document.createElement('br');
@@ -1580,14 +1636,21 @@ app.get('/', (req, res) => {
             if (type !== 'thinking') {
                 const actions = document.createElement('div');
                 actions.className = 'message-actions';
+                actions.setAttribute('role', 'group');
+                actions.setAttribute('aria-label', 'Message actions');
 
                 const copyBtn = document.createElement('button');
                 copyBtn.className = 'message-action-btn';
                 copyBtn.textContent = '📋 Copy';
+                copyBtn.setAttribute('aria-label', 'Copy message to clipboard');
                 copyBtn.onclick = () => {
                     navigator.clipboard.writeText(text);
                     copyBtn.textContent = '✓ Copied';
-                    setTimeout(() => copyBtn.textContent = '📋 Copy', 2000);
+                    copyBtn.setAttribute('aria-label', 'Message copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 Copy';
+                        copyBtn.setAttribute('aria-label', 'Copy message to clipboard');
+                    }, 2000);
                 };
                 actions.appendChild(copyBtn);
 
