@@ -677,6 +677,12 @@ app.get('/', (req, res) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Automation Assistant - Production</title>
+
+    <!-- Markdown and syntax highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -742,10 +748,14 @@ app.get('/', (req, res) => {
             cursor: pointer;
             transition: all 0.2s;
             border: 1px solid transparent;
+            position: relative;
         }
         .history-item:hover {
             background: #1e1e38;
             border-color: #667eea;
+        }
+        .history-item:hover .delete-chat-btn {
+            opacity: 1;
         }
         .history-item-title {
             color: #fff;
@@ -754,6 +764,7 @@ app.get('/', (req, res) => {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            padding-right: 30px;
         }
         .history-item-preview {
             color: #888;
@@ -766,6 +777,24 @@ app.get('/', (req, res) => {
             color: #666;
             font-size: 11px;
             margin-top: 4px;
+        }
+        .delete-chat-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #8b3a3a;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+        .delete-chat-btn:hover {
+            background: #a94442;
         }
 
         /* Main Content */
@@ -911,6 +940,38 @@ app.get('/', (req, res) => {
             white-space: pre-wrap;
             line-height: 1.5;
             animation: slideIn 0.3s ease-out;
+            position: relative;
+        }
+        .message-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+        .message-action-btn {
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .message-action-btn:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .user .message-action-btn {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .user .message-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
         @keyframes slideIn {
             from {
@@ -1033,6 +1094,104 @@ app.get('/', (req, res) => {
             color: #999;
             margin-top: 6px;
             font-style: italic;
+        }
+
+        /* Markdown and code styling */
+        .message pre {
+            background: #1e1e1e;
+            border: 1px solid #2d2d44;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        .message code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .message p code {
+            background: #2d2d44;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #f97583;
+        }
+        .message pre code {
+            background: transparent;
+            padding: 0;
+            color: #d4d4d4;
+        }
+        .message h1, .message h2, .message h3 {
+            color: #fff;
+            margin: 16px 0 8px;
+        }
+        .message h1 { font-size: 1.5em; border-bottom: 2px solid #2d2d44; padding-bottom: 8px; }
+        .message h2 { font-size: 1.3em; }
+        .message h3 { font-size: 1.1em; }
+        .message ul, .message ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+        .message li {
+            margin: 6px 0;
+            line-height: 1.6;
+        }
+        .message blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 16px;
+            margin: 12px 0;
+            color: #aaa;
+            font-style: italic;
+        }
+        .message a {
+            color: #667eea;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .message a:hover {
+            border-bottom-color: #667eea;
+        }
+        .message table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+        .message th, .message td {
+            border: 1px solid #2d2d44;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .message th {
+            background: #1a1a2e;
+            font-weight: 600;
+        }
+        .message img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .message pre:hover .copy-code-btn {
+            opacity: 1;
+        }
+        .copy-code-btn:hover {
+            background: #7a8ff0;
         }
         /* Dark theme scrollbar */
         ::-webkit-scrollbar { width: 10px; }
@@ -1250,6 +1409,20 @@ app.get('/', (req, res) => {
             }
         }
 
+        function deleteChat(index, event) {
+            event.stopPropagation(); // Prevent loading the chat when clicking delete
+            if (confirm('Delete this chat?')) {
+                chatHistory.splice(index, 1);
+                saveChatHistory();
+                loadHistoryUI();
+
+                // If we deleted the current chat, start a new one
+                if (chatHistory[index]?.id === currentChatId) {
+                    goHome();
+                }
+            }
+        }
+
         function loadHistoryUI() {
             historyList.innerHTML = '';
             chatHistory.forEach((chat, index) => {
@@ -1269,9 +1442,16 @@ app.get('/', (req, res) => {
                 time.className = 'history-item-time';
                 time.textContent = formatTime(chat.timestamp);
 
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-chat-btn';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.onclick = (e) => deleteChat(index, e);
+
                 item.appendChild(title);
                 item.appendChild(preview);
                 item.appendChild(time);
+                item.appendChild(deleteBtn);
                 historyList.appendChild(item);
             });
         }
@@ -1365,8 +1545,54 @@ app.get('/', (req, res) => {
                 msg.appendChild(br);
             }
 
-            const textNode = document.createTextNode(text);
-            msg.appendChild(textNode);
+            // Render markdown for bot messages, plain text for user/error
+            if (type === 'bot' && typeof marked !== 'undefined') {
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = marked.parse(text);
+                msg.appendChild(contentDiv);
+
+                // Highlight code blocks
+                if (typeof hljs !== 'undefined') {
+                    msg.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+
+                        // Add copy button to code blocks
+                        const pre = block.parentElement;
+                        if (pre.tagName === 'PRE') {
+                            const copyBtn = document.createElement('button');
+                            copyBtn.className = 'copy-code-btn';
+                            copyBtn.textContent = 'Copy';
+                            copyBtn.onclick = () => {
+                                navigator.clipboard.writeText(block.textContent);
+                                copyBtn.textContent = 'Copied!';
+                                setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+                            };
+                            pre.appendChild(copyBtn);
+                        }
+                    });
+                }
+            } else {
+                const textNode = document.createTextNode(text);
+                msg.appendChild(textNode);
+            }
+
+            // Add action buttons to all messages except thinking
+            if (type !== 'thinking') {
+                const actions = document.createElement('div');
+                actions.className = 'message-actions';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'message-action-btn';
+                copyBtn.textContent = '📋 Copy';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(text);
+                    copyBtn.textContent = '✓ Copied';
+                    setTimeout(() => copyBtn.textContent = '📋 Copy', 2000);
+                };
+                actions.appendChild(copyBtn);
+
+                msg.appendChild(actions);
+            }
 
             if (routingInfo) {
                 const info = document.createElement('div');
@@ -1464,6 +1690,25 @@ app.get('/', (req, res) => {
                 input.focus();
             }
         }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K: New chat
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                goHome();
+            }
+            // Escape: Clear input
+            if (e.key === 'Escape') {
+                input.value = '';
+                input.focus();
+            }
+            // Ctrl/Cmd + /: Focus input
+            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                e.preventDefault();
+                input.focus();
+            }
+        });
 
         // Set up event listeners
         sendBtn.addEventListener('click', handleSend);
