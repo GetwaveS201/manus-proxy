@@ -675,68 +675,173 @@ app.get('/', (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f0f23;
             min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #1a1a2e;
+            border-right: 1px solid #2d2d44;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #2d2d44;
+        }
+        .home-btn {
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            gap: 8px;
+        }
+        .home-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+        }
+        .history-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .history-title {
+            color: #888;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding: 0 8px;
+        }
+        .history-item {
+            padding: 12px;
+            margin-bottom: 6px;
+            background: #16162a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .history-item:hover {
+            background: #1e1e38;
+            border-color: #667eea;
+        }
+        .history-item-title {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .history-item-preview {
+            color: #888;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .history-item-time {
+            color: #666;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #0f0f23;
         }
         .container {
             width: 100%;
-            max-width: 1000px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #16162a;
+            border-radius: 0;
+            box-shadow: none;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 90vh;
-            max-height: 900px;
+            height: 100vh;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1a1a2e;
             color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        .header p {
-            font-size: 14px;
-            opacity: 0.95;
-        }
-        .status-bar {
-            background: rgba(255,255,255,0.1);
-            padding: 10px 20px;
-            margin-top: 15px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 20px 30px;
+            border-bottom: 1px solid #2d2d44;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            color: #4ade80;
+        }
         .status-indicator {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #4ade80;
-            margin-right: 6px;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+        .ai-models {
+            font-size: 11px;
+            color: #888;
+        }
+        .ai-models span {
+            color: #667eea;
+            font-weight: 500;
+        }
         .chat-area {
             flex: 1;
             overflow-y: auto;
-            padding: 25px;
-            background: #f8f9fa;
+            padding: 30px;
+            background: #0f0f23;
         }
         .empty-state {
             display: flex;
@@ -744,42 +849,52 @@ app.get('/', (req, res) => {
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: #6c757d;
+            color: #888;
             text-align: center;
         }
         .empty-state h2 {
             font-size: 2.5rem;
             margin-bottom: 12px;
+            color: #fff;
         }
         .empty-state p {
             font-size: 1.1rem;
             margin-bottom: 30px;
+            color: #aaa;
         }
         .example-queries {
             text-align: left;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            max-width: 500px;
+            background: #1a1a2e;
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid #2d2d44;
+            max-width: 600px;
         }
         .example-queries h3 {
             font-size: 16px;
-            margin-bottom: 12px;
-            color: #333;
+            margin-bottom: 16px;
+            color: #fff;
+            font-weight: 600;
         }
         .example-queries ul {
             list-style: none;
+            display: grid;
+            gap: 10px;
         }
         .example-queries li {
-            padding: 8px 0;
+            padding: 14px 16px;
+            background: #16162a;
+            border: 1px solid #2d2d44;
+            border-radius: 10px;
             color: #667eea;
             cursor: pointer;
             font-size: 14px;
+            transition: all 0.2s;
         }
         .example-queries li:hover {
-            color: #764ba2;
-            text-decoration: underline;
+            background: #1e1e38;
+            border-color: #667eea;
+            transform: translateX(4px);
         }
         .message {
             margin-bottom: 18px;
@@ -805,11 +920,13 @@ app.get('/', (req, res) => {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             margin-left: auto;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         .bot {
-            background: white;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background: #1a1a2e;
+            border: 1px solid #2d2d44;
+            color: #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         .bot.gemini { border-left: 4px solid #4285f4; }
         .bot.manus { border-left: 4px solid #764ba2; }
@@ -832,9 +949,9 @@ app.get('/', (req, res) => {
             color: white;
         }
         .thinking {
-            background: #fff9e6;
-            border: 1px solid #ffe066;
-            color: #997404;
+            background: #1e1e38;
+            border: 1px solid #667eea;
+            color: #667eea;
             font-style: italic;
             display: flex;
             align-items: center;
@@ -843,7 +960,7 @@ app.get('/', (req, res) => {
         .spinner {
             width: 16px;
             height: 16px;
-            border: 2px solid #997404;
+            border: 2px solid #667eea;
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
@@ -852,30 +969,36 @@ app.get('/', (req, res) => {
             to { transform: rotate(360deg); }
         }
         .error {
-            background: #fee;
-            border: 1px solid #fcc;
-            color: #c33;
+            background: #2e1a1a;
+            border: 1px solid #8b3a3a;
+            color: #ff6b6b;
         }
         .input-area {
-            padding: 25px;
-            background: white;
-            border-top: 2px solid #e0e0e0;
+            padding: 20px 30px;
+            background: #1a1a2e;
+            border-top: 1px solid #2d2d44;
             display: flex;
             gap: 12px;
         }
         input {
             flex: 1;
-            padding: 14px 18px;
-            border: 2px solid #ddd;
+            padding: 16px 20px;
+            background: #16162a;
+            border: 1px solid #2d2d44;
             border-radius: 12px;
             font-size: 15px;
             font-family: inherit;
-            transition: border-color 0.2s;
+            color: #fff;
+            transition: all 0.2s;
+        }
+        input::placeholder {
+            color: #666;
         }
         input:focus {
             outline: none;
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            background: #1a1a2e;
         }
         button {
             padding: 14px 32px;
@@ -915,15 +1038,42 @@ app.get('/', (req, res) => {
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🤖 AI Automation Assistant</h1>
-            <p>Production-Grade Dual AI System</p>
-            <div class="status-bar">
-                <span><span class="status-indicator"></span>System Online</span>
-                <span>Powered by Gemini + Manus</span>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <button class="home-btn" onclick="goHome()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                New Chat
+            </button>
+        </div>
+        <div class="history-section">
+            <div class="history-title">Chat History</div>
+            <div id="history-list">
+                <!-- History items will be added here -->
             </div>
         </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <div class="header-left">
+                    <h1>🤖 AI Automation Assistant</h1>
+                </div>
+                <div class="header-right">
+                    <div class="status-badge">
+                        <span class="status-indicator"></span>
+                        <span>Online</span>
+                    </div>
+                    <div class="ai-models">
+                        <span>Gemini</span> + <span>Manus</span>
+                    </div>
+                </div>
+            </div>
         <div class="chat-area" id="chat">
             <div class="empty-state">
                 <h2>👋 Welcome!</h2>
@@ -951,16 +1101,117 @@ app.get('/', (req, res) => {
                 <button type="button" id="send-btn">Send</button>
             </form>
         </div>
+        </div>
     </div>
     <script>
         const chat = document.getElementById('chat');
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
+        const historyList = document.getElementById('history-list');
+
+        // Chat history management
+        let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+        let currentChatId = localStorage.getItem('currentChatId') || generateChatId();
+        let currentMessages = [];
+
+        function generateChatId() {
+            return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function saveChatHistory() {
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        }
+
+        function loadHistoryUI() {
+            historyList.innerHTML = '';
+            chatHistory.forEach((chat, index) => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.onclick = () => loadChat(index);
+
+                const title = document.createElement('div');
+                title.className = 'history-item-title';
+                title.textContent = chat.title || 'New Chat';
+
+                const preview = document.createElement('div');
+                preview.className = 'history-item-preview';
+                preview.textContent = chat.messages[0]?.text?.substring(0, 60) || 'No messages';
+
+                const time = document.createElement('div');
+                time.className = 'history-item-time';
+                time.textContent = formatTime(chat.timestamp);
+
+                item.appendChild(title);
+                item.appendChild(preview);
+                item.appendChild(time);
+                historyList.appendChild(item);
+            });
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (hours < 1) return 'Just now';
+            if (hours < 24) return hours + 'h ago';
+            if (days < 7) return days + 'd ago';
+            return date.toLocaleDateString();
+        }
+
+        function saveCurrentChat() {
+            if (currentMessages.length === 0) return;
+
+            const existingIndex = chatHistory.findIndex(c => c.id === currentChatId);
+            const chatData = {
+                id: currentChatId,
+                title: currentMessages[0]?.text?.substring(0, 50) || 'New Chat',
+                messages: currentMessages,
+                timestamp: Date.now()
+            };
+
+            if (existingIndex >= 0) {
+                chatHistory[existingIndex] = chatData;
+            } else {
+                chatHistory.unshift(chatData);
+            }
+
+            saveChatHistory();
+            loadHistoryUI();
+        }
+
+        function loadChat(index) {
+            const chat = chatHistory[index];
+            if (!chat) return;
+
+            currentChatId = chat.id;
+            currentMessages = chat.messages;
+            localStorage.setItem('currentChatId', currentChatId);
+
+            // Clear and reload chat
+            chat.innerHTML = '';
+            currentMessages.forEach(msg => {
+                addMsg(msg.type, msg.text, msg.aiType, msg.routingInfo);
+            });
+        }
+
+        function goHome() {
+            saveCurrentChat();
+            currentChatId = generateChatId();
+            currentMessages = [];
+            localStorage.setItem('currentChatId', currentChatId);
+            location.reload();
+        }
 
         function setPrompt(text) {
             input.value = text;
             input.focus();
         }
+
+        // Load history on startup
+        loadHistoryUI();
 
         function addMsg(type, text, aiType = null, routingInfo = null) {
             const emptyState = chat.querySelector('.empty-state');
@@ -993,6 +1244,11 @@ app.get('/', (req, res) => {
 
             chat.appendChild(msg);
             chat.scrollTop = chat.scrollHeight;
+
+            // Save to current messages
+            currentMessages.push({ type, text, aiType, routingInfo });
+            saveCurrentChat();
+
             return msg;
         }
 
