@@ -1631,7 +1631,7 @@ app.get('/', (req, res) => {
                 item.className = 'history-item';
                 item.setAttribute('role', 'listitem');
                 item.setAttribute('tabindex', '0');
-                item.setAttribute('aria-label', `Chat: ${chat.title || 'New Chat'}, ${formatTime(chat.timestamp)}`);
+                item.setAttribute('aria-label', 'Chat: ' + (chat.title || 'New Chat') + ', ' + formatTime(chat.timestamp));
                 item.onclick = () => loadChat(index);
                 item.onkeypress = (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -1656,7 +1656,7 @@ app.get('/', (req, res) => {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-chat-btn';
                 deleteBtn.textContent = '🗑️';
-                deleteBtn.setAttribute('aria-label', `Delete chat: ${chat.title || 'New Chat'}`);
+                deleteBtn.setAttribute('aria-label', 'Delete chat: ' + (chat.title || 'New Chat'));
                 deleteBtn.setAttribute('title', 'Delete chat');
                 deleteBtn.onclick = (e) => deleteChat(index, e);
 
@@ -1760,7 +1760,7 @@ app.get('/', (req, res) => {
             if (type === 'user') {
                 msg.setAttribute('aria-label', 'Your message');
             } else if (type === 'bot') {
-                msg.setAttribute('aria-label', `${aiType || 'AI'} response`);
+                msg.setAttribute('aria-label', (aiType || 'AI') + ' response');
             } else if (type === 'error') {
                 msg.setAttribute('aria-label', 'Error message');
                 msg.setAttribute('role', 'alert');
@@ -1772,7 +1772,7 @@ app.get('/', (req, res) => {
                 const badge = document.createElement('div');
                 badge.className = 'ai-badge ' + aiType;
                 badge.textContent = aiType === 'gemini' ? '🔵 Gemini' : '🟠 OpenClaw';
-                badge.setAttribute('aria-label', `Response from ${aiType}`);
+                badge.setAttribute('aria-label', 'Response from ' + aiType);
                 msg.appendChild(badge);
 
                 const br = document.createElement('br');
