@@ -1452,6 +1452,303 @@ app.get('/', (req, res) => {
         .message pre:hover .copy-code-btn { opacity: 1; }
         .copy-code-btn:hover { background: #555; color: white; }
 
+        /* ===== ACCOUNT SECTION (sidebar bottom) ===== */
+        .account-section {
+            padding: 8px 10px 10px;
+            border-top: 1px solid #2f2f2f;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .account-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            color: #ececec;
+            font-family: inherit;
+            text-align: left;
+        }
+        .account-btn:hover {
+            background: #2a2a2a;
+            border-color: #3f3f3f;
+        }
+        .account-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #5d5dff, #7c7cff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+        .account-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .account-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #ececec;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .account-plan {
+            font-size: 10px;
+            color: #6b6b6b;
+            margin-top: 1px;
+        }
+        .account-chevron {
+            color: #555;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .account-btn.open .account-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* Account popup menu */
+        .account-menu {
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 10px;
+            right: 10px;
+            background: #1e1e1e;
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+            z-index: 200;
+            overflow: hidden;
+            display: none;
+        }
+        .account-menu.open {
+            display: block;
+            animation: menuSlideUp 0.15s ease;
+        }
+        @keyframes menuSlideUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .account-menu-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 14px 12px;
+            border-bottom: 1px solid #2f2f2f;
+        }
+        .account-menu-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #5d5dff, #7c7cff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+        .account-menu-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #ececec;
+        }
+        .account-menu-email {
+            font-size: 11px;
+            color: #6b6b6b;
+            margin-top: 1px;
+        }
+        .account-menu-items {
+            padding: 6px;
+        }
+        .account-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            color: #c5c5d2;
+            font-size: 13px;
+            transition: background 0.12s;
+            font-family: inherit;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+        .account-menu-item:hover {
+            background: #2a2a2a;
+            color: #ececec;
+        }
+        .account-menu-item.danger:hover {
+            background: rgba(239,68,68,0.1);
+            color: #f87171;
+        }
+        .account-menu-item svg {
+            flex-shrink: 0;
+            color: #6b6b6b;
+        }
+        .account-menu-item:hover svg {
+            color: #8e8ea0;
+        }
+        .account-menu-item.danger:hover svg {
+            color: #f87171;
+        }
+        .account-menu-divider {
+            height: 1px;
+            background: #2f2f2f;
+            margin: 4px 6px;
+        }
+
+        /* Profile edit modal */
+        .profile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .profile-overlay.open {
+            display: flex;
+            animation: fadeIn 0.15s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        .profile-modal {
+            background: #1e1e1e;
+            border: 1px solid #3a3a3a;
+            border-radius: 14px;
+            width: 360px;
+            max-width: calc(100vw - 32px);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+            animation: modalSlideIn 0.18s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .profile-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px 16px;
+            border-bottom: 1px solid #2f2f2f;
+        }
+        .profile-modal-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #ececec;
+        }
+        .profile-modal-close {
+            background: none;
+            border: none;
+            color: #6b6b6b;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 5px;
+            transition: color 0.12s, background 0.12s;
+            display: flex;
+        }
+        .profile-modal-close:hover {
+            color: #ececec;
+            background: #2f2f2f;
+        }
+        .profile-modal-body {
+            padding: 20px;
+        }
+        .profile-avatar-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .profile-big-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #5d5dff, #7c7cff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .profile-avatar-hint {
+            font-size: 12px;
+            color: #6b6b6b;
+            line-height: 1.5;
+        }
+        .profile-field {
+            margin-bottom: 16px;
+        }
+        .profile-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #8e8ea0;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .profile-field input {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            color: #ececec;
+            font-size: 14px;
+            padding: 10px 12px;
+            font-family: inherit;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.15s;
+        }
+        .profile-field input:focus {
+            border-color: #10a37f;
+        }
+        .profile-field input::placeholder {
+            color: #4b4b4b;
+        }
+        .profile-save-btn {
+            width: 100%;
+            padding: 11px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+            margin-top: 4px;
+        }
+        .profile-save-btn:hover {
+            background: #0d9070;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -1542,7 +1839,76 @@ app.get('/', (req, res) => {
                 <!-- History items will be added here -->
             </div>
         </nav>
+
+        <!-- Account Section (pinned to sidebar bottom) -->
+        <div class="account-section">
+            <!-- Account popup menu (shown above the button) -->
+            <div class="account-menu" id="account-menu" role="menu" aria-label="Account menu">
+                <div class="account-menu-header">
+                    <div class="account-menu-avatar" id="account-menu-avatar">U</div>
+                    <div>
+                        <div class="account-menu-name" id="account-menu-name">User</div>
+                        <div class="account-menu-email">Local Account</div>
+                    </div>
+                </div>
+                <div class="account-menu-items">
+                    <button class="account-menu-item" onclick="openProfileModal(); closeAccountMenu();" role="menuitem">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                        Edit Profile
+                    </button>
+                    <button class="account-menu-item" onclick="openSettings(); closeAccountMenu();" role="menuitem">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                        OpenClaw Settings
+                    </button>
+                    <div class="account-menu-divider"></div>
+                    <button class="account-menu-item" onclick="clearAllHistory(); closeAccountMenu();" role="menuitem">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        Clear All Chats
+                    </button>
+                    <div class="account-menu-divider"></div>
+                    <button class="account-menu-item danger" onclick="resetAccount(); closeAccountMenu();" role="menuitem">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Reset Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Account button -->
+            <button class="account-btn" id="account-btn" onclick="toggleAccountMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+                <div class="account-avatar" id="account-avatar">U</div>
+                <div class="account-info">
+                    <div class="account-name" id="account-name">User</div>
+                    <div class="account-plan">Free Plan</div>
+                </div>
+                <svg class="account-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
+        </div>
     </aside>
+
+    <!-- Profile Edit Modal -->
+    <div class="profile-overlay" id="profile-overlay" onclick="handleProfileOverlayClick(event)">
+        <div class="profile-modal" role="dialog" aria-modal="true" aria-label="Edit Profile">
+            <div class="profile-modal-header">
+                <span class="profile-modal-title">Edit Profile</span>
+                <button class="profile-modal-close" onclick="closeProfileModal()" aria-label="Close profile editor">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="profile-modal-body">
+                <div class="profile-avatar-row">
+                    <div class="profile-big-avatar" id="profile-big-avatar">U</div>
+                    <div class="profile-avatar-hint">
+                        Your avatar is automatically<br>generated from your name initials.
+                    </div>
+                </div>
+                <div class="profile-field">
+                    <label for="profile-name-input">Display Name</label>
+                    <input type="text" id="profile-name-input" placeholder="Enter your name" maxlength="40" autocomplete="off" oninput="updateProfilePreview()" />
+                </div>
+                <button class="profile-save-btn" onclick="saveProfile()">Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Settings Overlay -->
     <div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
@@ -2219,6 +2585,118 @@ app.get('/', (req, res) => {
 
         // Auto-focus input on load
         input.focus();
+
+        // ============================================
+        // ACCOUNT MANAGEMENT
+        // ============================================
+
+        let accountMenuOpen = false;
+
+        function getDisplayName() {
+            return localStorage.getItem('account_name') || 'User';
+        }
+
+        function getAvatarInitials(name) {
+            const parts = name.trim().split(/\s+/).filter(Boolean);
+            if (parts.length === 0) return 'U';
+            if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+            return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+        }
+
+        function refreshAccountUI() {
+            const name = getDisplayName();
+            const initials = getAvatarInitials(name);
+            // Sidebar button
+            document.getElementById('account-avatar').textContent = initials;
+            document.getElementById('account-name').textContent = name;
+            // Menu header
+            document.getElementById('account-menu-avatar').textContent = initials;
+            document.getElementById('account-menu-name').textContent = name;
+            // Profile modal big avatar
+            document.getElementById('profile-big-avatar').textContent = initials;
+        }
+
+        function toggleAccountMenu() {
+            const menu = document.getElementById('account-menu');
+            const btn  = document.getElementById('account-btn');
+            accountMenuOpen = !accountMenuOpen;
+            if (accountMenuOpen) {
+                menu.classList.add('open');
+                btn.classList.add('open');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                menu.classList.remove('open');
+                btn.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        function closeAccountMenu() {
+            const menu = document.getElementById('account-menu');
+            const btn  = document.getElementById('account-btn');
+            accountMenuOpen = false;
+            menu.classList.remove('open');
+            btn.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const section = document.querySelector('.account-section');
+            if (accountMenuOpen && section && !section.contains(e.target)) {
+                closeAccountMenu();
+            }
+        });
+
+        function openProfileModal() {
+            const modal = document.getElementById('profile-overlay');
+            const nameInput = document.getElementById('profile-name-input');
+            const bigAvatar = document.getElementById('profile-big-avatar');
+            nameInput.value = getDisplayName();
+            bigAvatar.textContent = getAvatarInitials(nameInput.value);
+            modal.classList.add('open');
+            setTimeout(() => nameInput.focus(), 100);
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-overlay').classList.remove('open');
+        }
+
+        function handleProfileOverlayClick(e) {
+            if (e.target === document.getElementById('profile-overlay')) {
+                closeProfileModal();
+            }
+        }
+
+        function updateProfilePreview() {
+            const val = document.getElementById('profile-name-input').value;
+            document.getElementById('profile-big-avatar').textContent = getAvatarInitials(val || 'User');
+        }
+
+        function saveProfile() {
+            const nameInput = document.getElementById('profile-name-input');
+            const newName = nameInput.value.trim() || 'User';
+            localStorage.setItem('account_name', newName);
+            refreshAccountUI();
+            closeProfileModal();
+        }
+
+        function clearAllHistory() {
+            if (!confirm('Clear all chat history? This cannot be undone.')) return;
+            localStorage.setItem('chatHistory', '[]');
+            chatHistory = [];
+            renderHistory();
+            goHome();
+        }
+
+        function resetAccount() {
+            if (!confirm('Reset your account? This will clear your name and all settings.')) return;
+            localStorage.removeItem('account_name');
+            refreshAccountUI();
+        }
+
+        // Initialize account UI on load
+        refreshAccountUI();
     </script>
 </body>
 </html>`);
