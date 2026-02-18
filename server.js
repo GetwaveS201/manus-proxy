@@ -1,6 +1,6 @@
 /**
  * AI Automation Assistant - Production Server
- * Dual AI System: Gemini (fast/free) + Manus (powerful/paid)
+ * Dual AI System: Gemini (Q&A) + OpenClaw (local AI agent)
  *
  * Features:
  * - X-API-Key authentication for all endpoints
@@ -29,7 +29,8 @@ const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MANUS_API_KEY = process.env.MANUS_API_KEY;
+const OPENCLAW_URL   = process.env.OPENCLAW_URL   || 'http://localhost:18789';
+const OPENCLAW_TOKEN = process.env.OPENCLAW_TOKEN  || '';
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const API_KEY = process.env.API_KEY || 'your-secure-api-key-here';
@@ -254,14 +255,14 @@ function requireApiKey(req, res, next) {
  * Higher score = better match
  *
  * @param {string} prompt - User prompt
- * @returns {Object} { ai: 'gemini'|'manus', confidence: number, scores: Object }
+ * @returns {Object} { ai: 'gemini'|'openclaw', confidence: number, scores: Object }
  */
 function chooseAI(prompt) {
   const lower = prompt.toLowerCase().trim();
   const words = prompt.trim().split(/\s+/);
 
   let geminiScore = 0;
-  let manusScore = 0;
+  let openclawScore = 0;
 
   // ===== GEMINI SCORING =====
 
@@ -293,7 +294,7 @@ function chooseAI(prompt) {
     }
   }
 
-  // ===== MANUS SCORING =====
+  // ===== OPENCLAW SCORING =====
 
   // EXECUTION VERBS (highest priority - +50 points each)
   const executionVerbs = [
@@ -310,15 +311,15 @@ function chooseAI(prompt) {
 
   for (const verb of executionVerbs) {
     if (lower.includes(verb)) {
-      manusScore += 50;
+      openclawScore += 50;
       break; // Only count once
     }
   }
 
-  // CRITICAL: "How can you [ACTION_VERB]" patterns should route to Manus (+60 points)
+  // CRITICAL: "How can you [ACTION_VERB]" patterns should route to OpenClaw (+60 points)
   const howCanYouPattern = /how (can|could|do) (you|i|we) (build|create|find|make|generate|calculate|analyze|write|design|develop)/i;
   if (howCanYouPattern.test(prompt)) {
-    manusScore += 60;
+    openclawScore += 60;
     geminiScore = 0; // Override gemini score
   }
 
@@ -326,7 +327,7 @@ function chooseAI(prompt) {
   const dataKeywords = ['csv', 'spreadsheet', 'data', 'parse', 'process', 'extract', 'transform'];
   for (const keyword of dataKeywords) {
     if (lower.includes(keyword)) {
-      manusScore += 30;
+      openclawScore += 30;
       break;
     }
   }
@@ -335,7 +336,7 @@ function chooseAI(prompt) {
   const businessKeywords = ['proposal', 'report', 'presentation', 'analysis', 'strategy', 'plan', 'roadmap', 'market research'];
   for (const keyword of businessKeywords) {
     if (lower.includes(keyword)) {
-      manusScore += 25;
+      openclawScore += 25;
       break;
     }
   }
@@ -344,7 +345,7 @@ function chooseAI(prompt) {
   const dataAccess = ['my emails', 'my calendar', 'my data', 'my files', 'my documents', 'my messages'];
   for (const keyword of dataAccess) {
     if (lower.includes(keyword)) {
-      manusScore += 50;
+      openclawScore += 50;
       break;
     }
   }
@@ -352,34 +353,34 @@ function chooseAI(prompt) {
   // Generic "my" + data pattern (+40 points)
   if (/\bmy\s+(last|recent|latest|first|next)\s+\d+\s+\w+/.test(lower)) {
     // Matches: "my last 5 emails", "my recent 10 messages", etc.
-    manusScore += 40;
+    openclawScore += 40;
   }
 
   // Complex/multi-step indicators (+20 points)
   const complexityIndicators = ['comprehensive', 'detailed', 'in-depth', 'thorough', 'step-by-step'];
   for (const indicator of complexityIndicators) {
     if (lower.includes(indicator)) {
-      manusScore += 20;
+      openclawScore += 20;
       break;
     }
   }
 
   // Longer prompts tend to be tasks (+1 point per word over 10)
   if (words.length > 10) {
-    manusScore += (words.length - 10);
+    openclawScore += (words.length - 10);
   }
 
   // ===== DECISION =====
 
-  const ai = manusScore > geminiScore ? 'manus' : 'gemini';
-  const confidence = Math.abs(manusScore - geminiScore);
+  const ai = openclawScore > geminiScore ? 'openclaw' : 'gemini';
+  const confidence = Math.abs(openclawScore - geminiScore);
 
   return {
     ai,
     confidence,
     scores: {
       gemini: geminiScore,
-      manus: manusScore
+      openclaw: openclawScore
     }
   };
 }
@@ -477,190 +478,98 @@ async function callGemini(prompt, timeoutMs = 30000) {
 }
 
 // ============================================
-// MANUS API INTEGRATION
+// OPENCLAW API INTEGRATION
 // ============================================
 
 /**
- * Calls Manus API with extended timeout for long tasks
- * @param {string} prompt - User prompt
- * @param {number} timeoutMs - Maximum wait time (default: 1 minute for quick feedback)
- * @returns {Promise<string>} AI response
+ * Calls a locally-running or VPS-hosted OpenClaw instance
+ * via its OpenAI-compatible chat completions API.
+ *
+ * OpenClaw exposes: POST <url>/v1/chat/completions
+ * Auth: Bearer token in Authorization header (optional)
+ *
+ * @param {string} prompt         - User prompt
+ * @param {string} openclawUrl    - Base URL, e.g. http://your-vps:18789
+ * @param {string} openclawToken  - Bearer token (may be empty)
+ * @param {number} timeoutMs      - Request timeout in ms (default: 60s)
+ * @returns {Promise<string>} AI response text
  */
-async function callManus(prompt, timeoutMs = 60000) {
-  if (!MANUS_API_KEY) {
-    throw new Error('MANUS_NOT_CONFIGURED');
+async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 60000) {
+  const url = openclawUrl || OPENCLAW_URL;
+  const token = openclawToken || OPENCLAW_TOKEN;
+
+  if (!url) {
+    throw new Error('OPENCLAW_NOT_CONFIGURED');
   }
 
-  log('INFO', 'Creating Manus task');
+  // Basic SSRF guard: only allow http/https URLs
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    throw new Error('OPENCLAW_NOT_CONFIGURED');
+  }
 
-  // Create task
-  const createRes = await fetch('https://api.manus.ai/v1/tasks', {
-    method: 'POST',
-    headers: {
-      'API_KEY': MANUS_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      prompt: prompt,
-      agentProfile: 'manus-1.6',
-      taskMode: 'agent'
-    })
-  });
+  const endpoint = `${url.replace(/\/$/, '')}/v1/chat/completions`;
+  log('INFO', `Calling OpenClaw at: ${endpoint}`);
 
-  if (!createRes.ok) {
-    const errorText = await createRes.text();
-    log('ERROR', 'Manus create task failed', null, { error: errorText });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Check for credit limit error
-    try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.message && errorJson.message.toLowerCase().includes('credit')) {
-        throw new Error('MANUS_CREDITS_EXCEEDED');
-      }
-    } catch (e) {
-      if (errorText.toLowerCase().includes('credit')) {
-        throw new Error('MANUS_CREDITS_EXCEEDED');
-      }
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: 'openclaw',
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.status === 401 || response.status === 403) {
+      log('ERROR', `OpenClaw auth failed: HTTP ${response.status}`);
+      throw new Error('OPENCLAW_AUTH_FAILED');
     }
 
-    throw new Error('MANUS_CREATE_FAILED');
-  }
-
-  const createData = await createRes.json();
-  const taskId = createData.task_id;
-  const shareUrl = createData.share_url;
-
-  log('INFO', `Manus task created: ${taskId}`);
-
-  // Poll for completion
-  const startTime = Date.now();
-  const pollInterval = 3000; // 3 seconds
-  const maxAttempts = Math.floor(timeoutMs / pollInterval);
-  let attempts = 0;
-
-  while (attempts < maxAttempts) {
-    await sleep(pollInterval);
-    attempts++;
-
-    try {
-      const statusRes = await fetch(`https://api.manus.ai/v1/tasks/${taskId}`, {
-        headers: { 'API_KEY': MANUS_API_KEY }
-      });
-
-      if (!statusRes.ok) {
-        throw new Error('Failed to check task status');
-      }
-
-      const task = await statusRes.json();
-      const elapsed = Math.round((Date.now() - startTime) / 1000);
-
-      log('INFO', `Manus task status: ${task.status} (${elapsed}s elapsed)`);
-
-      // Extract response from output (works for both pending and completed)
-      let fullText = '';
-
-      if (task.output && Array.isArray(task.output)) {
-        for (const block of task.output) {
-          if (block.role === 'assistant' && block.content && Array.isArray(block.content)) {
-            for (const part of block.content) {
-              if (part.type === 'output_text' && part.text) {
-                fullText += part.text + '\n';
-              }
-            }
-          }
-        }
-      }
-
-      // If we have a response and task is completed OR has been processing for >30s, return it
-      if (fullText && (task.status === 'completed' || elapsed > 30)) {
-        log('INFO', 'Manus response extracted successfully');
-        const response = fullText.trim();
-
-        // Add helpful note if Manus is asking a question
-        if (response.includes('?') && response.length < 500) {
-          return response + '\n\n💡 Tip: When replying, include the full context since each message is independent. For example, instead of just "Gmail", say "Use Gmail to access my emails".';
-        }
-
-        return response;
-      }
-
-      if (task.status === 'completed') {
-        // If completed but no text extracted, try other methods
-        fullText = '';
-
-        // Method 1: Extract from output array (current format)
-        if (task.output && Array.isArray(task.output)) {
-          for (const block of task.output) {
-            if (block.role === 'assistant' && block.content && Array.isArray(block.content)) {
-              for (const part of block.content) {
-                if (part.type === 'output_text' && part.text) {
-                  fullText += part.text + '\n';
-                }
-              }
-            }
-          }
-        }
-
-        // Method 2: Old format fallback
-        if (!fullText && task.output && Array.isArray(task.output)) {
-          for (const block of task.output) {
-            if (block.content && Array.isArray(block.content)) {
-              for (const part of block.content) {
-                if ((part.type === 'text' || part.type === 'output_text') && part.text) {
-                  fullText += part.text + '\n';
-                }
-              }
-            }
-          }
-        }
-
-        // Method 3: Alternative fields
-        if (!fullText && task.result) {
-          fullText = typeof task.result === 'string' ? task.result : JSON.stringify(task.result);
-        }
-        if (!fullText && task.response) {
-          fullText = typeof task.response === 'string' ? task.response : JSON.stringify(task.response);
-        }
-        if (!fullText && task.output_text) {
-          fullText = task.output_text;
-        }
-
-        fullText = fullText.trim();
-
-        if (!fullText) {
-          return `Task completed! View full results here: ${shareUrl || 'https://app.manus.ai'}`;
-        }
-
-        log('INFO', 'Manus task completed successfully');
-        return fullText;
-      }
-
-      if (task.status === 'failed') {
-        const error = task.error || task.message || 'Task failed';
-        log('ERROR', `Manus task failed: ${error}`, null, { fullTask: task });
-
-        // Return user-friendly error message
-        return `I attempted to ${prompt.toLowerCase().substring(0, 50)}... but encountered an issue:\n\n${error}\n\nNote: Manus may need specific permissions or integrations to access your personal data like emails. The task was sent to Manus but it couldn't complete it.`;
-      }
-
-    } catch (err) {
-      log('ERROR', `Manus polling error: ${err.message}`);
-      // Continue polling unless it's a known fatal error
-      if (err.message.includes('MANUS_TASK_FAILED')) {
-        throw err;
-      }
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      log('ERROR', `OpenClaw HTTP ${response.status}: ${errText}`);
+      throw new Error('OPENCLAW_UNREACHABLE');
     }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content;
+
+    if (!text) {
+      log('ERROR', 'OpenClaw returned empty response');
+      throw new Error('OPENCLAW_UNREACHABLE');
+    }
+
+    log('INFO', 'OpenClaw responded successfully');
+    return text;
+
+  } catch (err) {
+    clearTimeout(timeoutId);
+
+    if (err.name === 'AbortError') {
+      log('ERROR', `OpenClaw timeout after ${timeoutMs}ms`);
+      throw new Error('OPENCLAW_UNREACHABLE');
+    }
+
+    // Re-throw known OpenClaw errors as-is
+    if (err.message.startsWith('OPENCLAW_')) {
+      throw err;
+    }
+
+    // All other network errors (ECONNREFUSED, ENOTFOUND, etc.) = not reachable
+    log('ERROR', `OpenClaw connection error: ${err.message}`);
+    throw new Error('OPENCLAW_UNREACHABLE');
   }
-
-  // Timeout
-  log('ERROR', `Manus task timeout after ${timeoutMs}ms`);
-
-  // Check if Manus is even responding
-  if (!shareUrl) {
-    return `⚠️ Manus API Issue\n\nThe request to Manus timed out after ${Math.round(timeoutMs / 1000)} seconds.\n\nPossible causes:\n1. Your Manus API key may be invalid or expired\n2. Manus credits may be exhausted\n3. Manus service may be down\n\nCurrent API Key: ${MANUS_API_KEY ? 'Set (starts with ' + MANUS_API_KEY.substring(0, 8) + '...)' : 'NOT SET'}\n\nPlease check:\n- Your Manus account at https://manus.ai/\n- Verify your API key and credits`;
-  }
-
-  return `Your request "${prompt.substring(0, 80)}..." was sent to Manus AI, but it's taking longer than expected (over ${Math.round(timeoutMs / 1000)} seconds).\n\nThe task is still processing. You can check the status here: ${shareUrl}\n\nNote: Complex tasks like accessing emails may take several minutes.`;
 }
 
 // ============================================
@@ -746,6 +655,197 @@ app.get('/', (req, res) => {
             transform: translateY(-2px);
             box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
         }
+
+        /* AI Mode Selector */
+        .ai-mode-section {
+            padding: 12px 15px;
+            border-bottom: 1px solid #2d2d44;
+        }
+        .ai-mode-label {
+            color: #888;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .ai-mode-tabs {
+            display: flex;
+            gap: 6px;
+        }
+        .ai-mode-btn {
+            flex: 1;
+            padding: 9px 8px;
+            border-radius: 8px;
+            border: 1px solid #2d2d44;
+            background: #16162a;
+            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .ai-mode-btn:hover:not(.active) {
+            border-color: #3d3d54;
+            color: #aaa;
+            background: #1e1e38;
+        }
+        .ai-mode-btn.active.gemini {
+            background: rgba(66, 133, 244, 0.15);
+            border-color: #4285f4;
+            color: #4285f4;
+        }
+        .ai-mode-btn.active.openclaw {
+            background: rgba(249, 115, 22, 0.15);
+            border-color: #f97316;
+            color: #f97316;
+        }
+
+        /* OpenClaw Status Bar */
+        .openclaw-status {
+            padding: 8px 15px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            border-bottom: 1px solid #2d2d44;
+            background: #14142a;
+        }
+        .openclaw-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #555;
+            flex-shrink: 0;
+        }
+        .openclaw-status-dot.online  { background: #4ade80; }
+        .openclaw-status-dot.offline { background: #f87171; }
+        .openclaw-status-dot.checking {
+            background: #fbbf24;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .openclaw-settings-link {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+        }
+        .openclaw-settings-link:hover { color: #7a8ff0; }
+
+        /* Settings Panel */
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+            display: none;
+        }
+        .settings-overlay.open { display: block; }
+        .settings-panel {
+            position: fixed;
+            top: 0; right: 0;
+            width: 340px;
+            height: 100vh;
+            background: #1a1a2e;
+            border-left: 1px solid #2d2d44;
+            z-index: 1000;
+            padding: 28px 24px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+        }
+        .settings-panel.open { transform: translateX(0); }
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+        .settings-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .settings-close-btn {
+            background: #16162a;
+            border: 1px solid #2d2d44;
+            color: #888;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .settings-close-btn:hover { color: #fff; border-color: #667eea; }
+        .settings-group {
+            margin-bottom: 20px;
+        }
+        .settings-group label {
+            display: block;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 7px;
+            font-weight: 500;
+        }
+        .settings-group input[type="text"],
+        .settings-group input[type="password"] {
+            width: 100%;
+            padding: 11px 14px;
+            background: #16162a;
+            border: 1px solid #2d2d44;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .settings-group input:focus {
+            border-color: #f97316;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+        }
+        .settings-hint {
+            color: #555;
+            font-size: 11px;
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        .settings-save-btn {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        .settings-save-btn:hover { opacity: 0.9; }
+        .settings-divider {
+            border: none;
+            border-top: 1px solid #2d2d44;
+            margin: 24px 0;
+        }
+        .settings-instructions {
+            color: #666;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+        .settings-instructions strong { color: #aaa; }
+
         .history-section {
             flex: 1;
             overflow-y: auto;
@@ -1016,7 +1116,7 @@ app.get('/', (req, res) => {
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         .bot.gemini { border-left: 4px solid #4285f4; }
-        .bot.manus { border-left: 4px solid #764ba2; }
+        .bot.openclaw { border-left: 4px solid #f97316; }
         .ai-badge {
             display: inline-block;
             padding: 4px 10px;
@@ -1031,8 +1131,8 @@ app.get('/', (req, res) => {
             background: linear-gradient(135deg, #4285f4, #34a853);
             color: white;
         }
-        .ai-badge.manus {
-            background: linear-gradient(135deg, #764ba2, #667eea);
+        .ai-badge.openclaw {
+            background: linear-gradient(135deg, #f97316, #fb923c);
             color: white;
         }
         .thinking {
@@ -1333,6 +1433,36 @@ app.get('/', (req, res) => {
                 New Chat
             </button>
         </div>
+
+        <!-- AI Mode Selector -->
+        <div class="ai-mode-section">
+            <div class="ai-mode-label">AI Mode</div>
+            <div class="ai-mode-tabs" role="tablist" aria-label="Select AI mode">
+                <button class="ai-mode-btn gemini active" id="mode-gemini"
+                        onclick="setAIMode('gemini')"
+                        role="tab" aria-selected="true"
+                        aria-label="Use Gemini AI for Q&amp;A">
+                    🔵 Gemini
+                </button>
+                <button class="ai-mode-btn openclaw" id="mode-openclaw"
+                        onclick="setAIMode('openclaw')"
+                        role="tab" aria-selected="false"
+                        aria-label="Use OpenClaw AI for automation">
+                    🟠 OpenClaw
+                </button>
+            </div>
+        </div>
+
+        <!-- OpenClaw Status (only shown in OpenClaw mode) -->
+        <div class="openclaw-status" id="openclaw-status" style="display:none;" aria-live="polite">
+            <div class="openclaw-status-dot checking" id="openclaw-status-dot" aria-hidden="true"></div>
+            <span id="openclaw-status-text" style="color:#888;">Checking...</span>
+            <button class="openclaw-settings-link" onclick="openSettings()" aria-label="Open OpenClaw settings">
+                ⚙ Settings
+            </button>
+        </div>
+
+        <!-- Chat History (below mode tabs as requested) -->
         <nav class="history-section" aria-label="Previous conversations">
             <h2 class="history-title">Chat History</h2>
             <div id="history-list" role="list">
@@ -1340,6 +1470,54 @@ app.get('/', (req, res) => {
             </div>
         </nav>
     </aside>
+
+    <!-- Settings Overlay -->
+    <div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
+
+    <!-- OpenClaw Settings Panel -->
+    <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-label="OpenClaw Settings">
+        <div class="settings-header">
+            <span class="settings-title">🟠 OpenClaw Settings</span>
+            <button class="settings-close-btn" onclick="closeSettings()" aria-label="Close settings">✕</button>
+        </div>
+
+        <div class="settings-group">
+            <label for="openclaw-url-input">OpenClaw Server URL</label>
+            <input type="text" id="openclaw-url-input"
+                   placeholder="http://your-vps-ip:18789"
+                   autocomplete="off" />
+            <div class="settings-hint">
+                Enter the URL of your OpenClaw VPS server.<br>
+                Example: <code style="color:#f97316">http://1.2.3.4:18789</code>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <label for="openclaw-token-input">Bearer Token (optional)</label>
+            <input type="password" id="openclaw-token-input"
+                   placeholder="Leave blank if no auth required"
+                   autocomplete="off" />
+            <div class="settings-hint">
+                Your OpenClaw authentication token, if you configured one.
+            </div>
+        </div>
+
+        <button class="settings-save-btn" onclick="saveOpenClawSettings()">
+            💾 Save &amp; Test Connection
+        </button>
+
+        <hr class="settings-divider">
+
+        <div class="settings-instructions">
+            <strong>How to connect:</strong><br>
+            1. Start OpenClaw on your VPS server<br>
+            2. Enter your VPS IP/URL above<br>
+            3. Click "Save &amp; Test Connection"<br>
+            4. The status dot turns 🟢 green when ready<br><br>
+            <strong>Default OpenClaw port:</strong> 18789<br>
+            <strong>Docs:</strong> <a href="https://docs.openclaw.ai" target="_blank" style="color:#f97316;">docs.openclaw.ai</a>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content" role="main">
@@ -1353,8 +1531,8 @@ app.get('/', (req, res) => {
                         <span class="status-indicator" aria-hidden="true"></span>
                         <span>Online</span>
                     </div>
-                    <div class="ai-models" aria-label="Available AI models">
-                        <span>Gemini</span> + <span>Manus</span>
+                    <div class="ai-models" aria-label="Active AI mode">
+                        <span id="header-ai-display">🔵 Gemini</span>
                     </div>
                 </div>
             </header>
@@ -1593,7 +1771,7 @@ app.get('/', (req, res) => {
 
                 const badge = document.createElement('div');
                 badge.className = 'ai-badge ' + aiType;
-                badge.textContent = aiType === 'gemini' ? '🔵 Gemini' : '🟣 Manus';
+                badge.textContent = aiType === 'gemini' ? '🔵 Gemini' : '🟠 OpenClaw';
                 badge.setAttribute('aria-label', `Response from ${aiType}`);
                 msg.appendChild(badge);
 
@@ -1690,6 +1868,126 @@ app.get('/', (req, res) => {
             return msg;
         }
 
+        // ============================================
+        // AI MODE MANAGEMENT
+        // ============================================
+
+        let currentAIMode = 'gemini';
+        try { currentAIMode = localStorage.getItem('aiMode') || 'gemini'; } catch(e) {}
+
+        function setAIMode(mode) {
+            currentAIMode = mode;
+            try { localStorage.setItem('aiMode', mode); } catch(e) {}
+
+            // Update tab buttons
+            const geminiBtn = document.getElementById('mode-gemini');
+            const openclawBtn = document.getElementById('mode-openclaw');
+            if (geminiBtn) {
+                geminiBtn.classList.toggle('active', mode === 'gemini');
+                geminiBtn.setAttribute('aria-selected', mode === 'gemini');
+            }
+            if (openclawBtn) {
+                openclawBtn.classList.toggle('active', mode === 'openclaw');
+                openclawBtn.setAttribute('aria-selected', mode === 'openclaw');
+            }
+
+            // Show/hide OpenClaw status bar
+            const statusBar = document.getElementById('openclaw-status');
+            if (statusBar) statusBar.style.display = mode === 'openclaw' ? 'flex' : 'none';
+
+            // Update header display
+            const headerDisplay = document.getElementById('header-ai-display');
+            if (headerDisplay) {
+                headerDisplay.textContent = mode === 'gemini' ? '🔵 Gemini' : '🟠 OpenClaw';
+            }
+
+            // Check connection when switching to OpenClaw
+            if (mode === 'openclaw') checkOpenClawStatus();
+        }
+
+        // Apply saved mode on page load
+        setAIMode(currentAIMode);
+
+        // ============================================
+        // OPENCLAW SETTINGS
+        // ============================================
+
+        function getOpenClawSetting(key) {
+            try { return localStorage.getItem('openclaw_' + key) || ''; } catch(e) { return ''; }
+        }
+
+        function openSettings() {
+            const urlInput = document.getElementById('openclaw-url-input');
+            const tokenInput = document.getElementById('openclaw-token-input');
+            if (urlInput) urlInput.value = getOpenClawSetting('url') || 'http://your-vps-ip:18789';
+            if (tokenInput) tokenInput.value = getOpenClawSetting('token');
+            document.getElementById('settings-panel')?.classList.add('open');
+            document.getElementById('settings-overlay')?.classList.add('open');
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-panel')?.classList.remove('open');
+            document.getElementById('settings-overlay')?.classList.remove('open');
+        }
+
+        async function saveOpenClawSettings() {
+            const url   = document.getElementById('openclaw-url-input')?.value.trim() || '';
+            const token = document.getElementById('openclaw-token-input')?.value.trim() || '';
+            try {
+                localStorage.setItem('openclaw_url', url);
+                localStorage.setItem('openclaw_token', token);
+            } catch(e) { console.error('Failed to save OpenClaw settings:', e); }
+            closeSettings();
+            await checkOpenClawStatus();
+        }
+
+        // ============================================
+        // OPENCLAW CONNECTION STATUS CHECK
+        // ============================================
+
+        async function checkOpenClawStatus() {
+            const dot  = document.getElementById('openclaw-status-dot');
+            const text = document.getElementById('openclaw-status-text');
+            if (!dot || !text) return;
+
+            dot.className = 'openclaw-status-dot checking';
+            text.textContent = 'Checking...';
+            text.style.color = '#fbbf24';
+
+            try {
+                const res = await fetch('/ping-openclaw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        openclawUrl:   getOpenClawSetting('url'),
+                        openclawToken: getOpenClawSetting('token')
+                    })
+                });
+                const data = await res.json();
+
+                if (data.reachable) {
+                    dot.className = 'openclaw-status-dot online';
+                    text.textContent = 'OpenClaw connected';
+                    text.style.color = '#4ade80';
+                } else {
+                    dot.className = 'openclaw-status-dot offline';
+                    text.textContent = data.reason || 'Not reachable';
+                    text.style.color = '#f87171';
+                }
+            } catch(e) {
+                dot.className = 'openclaw-status-dot offline';
+                text.textContent = 'Check failed';
+                text.style.color = '#f87171';
+            }
+        }
+
+        // Auto-recheck every 30s while in OpenClaw mode
+        setInterval(() => { if (currentAIMode === 'openclaw') checkOpenClawStatus(); }, 30000);
+
+        // ============================================
+        // REQUEST MANAGEMENT
+        // ============================================
+
         // AbortController for request cancellation
         let currentRequest = null;
 
@@ -1722,7 +2020,12 @@ app.get('/', (req, res) => {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ prompt: userInput }),
+                    body: JSON.stringify({
+                        prompt: userInput,
+                        ai: currentAIMode,
+                        openclawUrl: getOpenClawSetting('url'),
+                        openclawToken: getOpenClawSetting('token')
+                    }),
                     signal: currentRequest.signal
                 });
 
@@ -1792,13 +2095,13 @@ app.get('/', (req, res) => {
 /**
  * Public chat endpoint for frontend (no auth required)
  * POST /chat
- * Body: { prompt: string }
+ * Body: { prompt: string, ai?: 'gemini'|'openclaw', openclawUrl?: string, openclawToken?: string }
  */
 app.post('/chat', async (req, res) => {
   const requestId = req.id;
 
   try {
-    const { prompt } = req.body;
+    const { prompt, ai: forceAI, openclawUrl, openclawToken } = req.body;
 
     // Input validation
     if (!prompt || typeof prompt !== 'string') {
@@ -1817,8 +2120,12 @@ app.post('/chat', async (req, res) => {
       });
     }
 
-    // Route to appropriate AI
+    // Route to appropriate AI (allow frontend to force a specific AI)
     const routing = chooseAI(prompt);
+    if (forceAI === 'gemini' || forceAI === 'openclaw') {
+      routing.ai = forceAI;
+      routing.confidence = 100; // manual override
+    }
     log('INFO', `Routing decision: ${routing.ai.toUpperCase()}`, requestId, routing);
 
     // Synchronous processing only for public endpoint
@@ -1829,16 +2136,16 @@ app.post('/chat', async (req, res) => {
       if (routing.ai === 'gemini') {
         response = await callGemini(prompt);
       } else {
-        response = await callManus(prompt);
+        response = await callOpenClaw(prompt, openclawUrl, openclawToken);
       }
     } catch (error) {
-      // Intelligent fallback logic
-      if (error.message === 'MANUS_CREDITS_EXCEEDED' && routing.ai === 'manus') {
-        log('WARN', 'Manus credits exceeded, trying Gemini fallback', requestId);
+      // Intelligent fallback: if OpenClaw is unreachable, try Gemini
+      if (error.message === 'OPENCLAW_UNREACHABLE' && routing.ai === 'openclaw') {
+        log('WARN', 'OpenClaw unreachable, trying Gemini fallback', requestId);
         try {
           response = await callGemini(prompt);
           actualAI = 'gemini';
-          response = `⚠️ Note: Manus credits exhausted. Using Gemini as fallback.\n\n${response}`;
+          response = `⚠️ Note: OpenClaw is not reachable. Using Gemini as fallback.\n\n${response}`;
         } catch (geminiError) {
           if (geminiError.message === 'GEMINI_QUOTA_EXCEEDED') {
             throw new Error('BOTH_APIS_EXHAUSTED');
@@ -1932,16 +2239,16 @@ app.post('/api/chat', requireApiKey, async (req, res) => {
       if (routing.ai === 'gemini') {
         response = await callGemini(prompt);
       } else {
-        response = await callManus(prompt);
+        response = await callOpenClaw(prompt, req.body.openclawUrl, req.body.openclawToken);
       }
     } catch (error) {
-      // Intelligent fallback logic
-      if (error.message === 'MANUS_CREDITS_EXCEEDED' && routing.ai === 'manus') {
-        log('WARN', 'Manus credits exceeded, trying Gemini fallback', requestId);
+      // Intelligent fallback: if OpenClaw is unreachable, try Gemini
+      if (error.message === 'OPENCLAW_UNREACHABLE' && routing.ai === 'openclaw') {
+        log('WARN', 'OpenClaw unreachable, trying Gemini fallback', requestId);
         try {
           response = await callGemini(prompt);
           actualAI = 'gemini';
-          response = `⚠️ Note: Manus credits exhausted. Using Gemini as fallback.\n\n${response}`;
+          response = `⚠️ Note: OpenClaw is not reachable. Using Gemini as fallback.\n\n${response}`;
         } catch (geminiError) {
           if (geminiError.message === 'GEMINI_QUOTA_EXCEEDED') {
             throw new Error('BOTH_APIS_EXHAUSTED');
@@ -2023,12 +2330,59 @@ app.get('/health', requireApiKey, (req, res) => {
     timestamp: new Date().toISOString(),
     services: {
       gemini: !!GEMINI_API_KEY,
-      manus: !!MANUS_API_KEY,
+      openclaw: !!OPENCLAW_TOKEN,
       render: !!RENDER_API_KEY,
       notion: !!NOTION_API_KEY
     },
     version: '4.0.0'
   });
+});
+
+/**
+ * Ping OpenClaw to check if it's reachable
+ * POST /ping-openclaw
+ * Body: { openclawUrl?: string, openclawToken?: string }
+ */
+app.post('/ping-openclaw', async (req, res) => {
+  const { openclawUrl, openclawToken } = req.body || {};
+  const url   = openclawUrl   || OPENCLAW_URL;
+  const token = openclawToken || OPENCLAW_TOKEN;
+
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    return res.json({ reachable: false, reason: 'No valid URL configured' });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${url.replace(/\/$/, '')}/v1/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: 'openclaw',
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 1
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    // 200 = success, 400 = bad request but server is up - both mean OpenClaw is reachable
+    if (response.ok || response.status === 400) {
+      return res.json({ reachable: true });
+    }
+
+    return res.json({ reachable: false, reason: `HTTP ${response.status}` });
+
+  } catch (err) {
+    const reason = err.name === 'AbortError' ? 'Timeout (5s)' : 'Connection refused';
+    return res.json({ reachable: false, reason });
+  }
 });
 
 /**
@@ -2121,25 +2475,25 @@ function formatError(error) {
       status: 403,
       message: '🔒 Security Alert: The Gemini API key has been flagged as leaked by Google and has been disabled.\n\nTO FIX:\n1. Go to https://ai.google.dev/\n2. Delete the old API key\n3. Create a new API key\n4. Update it in Render environment variables\n5. Redeploy the service\n\nThis happens when API keys are exposed in public repositories or logs.'
     },
-    'MANUS_NOT_CONFIGURED': {
+    'OPENCLAW_NOT_CONFIGURED': {
       status: 503,
-      message: 'Manus AI is not configured. Please contact the administrator.'
+      message: '🟠 OpenClaw URL is not configured. Please click ⚙ Settings in the sidebar and enter your OpenClaw VPS URL.'
+    },
+    'OPENCLAW_UNREACHABLE': {
+      status: 503,
+      message: '🟠 OpenClaw is not reachable. Please make sure OpenClaw is running on your server and check the URL in ⚙ Settings.'
+    },
+    'OPENCLAW_AUTH_FAILED': {
+      status: 403,
+      message: '🟠 OpenClaw authentication failed. Please check your Bearer token in ⚙ Settings.'
     },
     'GEMINI_QUOTA_EXCEEDED': {
       status: 503,
       message: 'Gemini API quota exceeded. The service quota resets daily. Please try again later or contact support.'
     },
-    'MANUS_CREDITS_EXCEEDED': {
-      status: 503,
-      message: 'Manus AI credits exhausted. Please contact the administrator to add credits.'
-    },
     'BOTH_APIS_EXHAUSTED': {
       status: 503,
       message: 'All AI services are temporarily unavailable. Please try again later.'
-    },
-    'MANUS_TIMEOUT': {
-      status: 504,
-      message: 'The request took too long to process. Please try a simpler query or try again later.'
     }
   };
 
