@@ -2038,7 +2038,7 @@ app.get('/', (req, res) => {
                 }
 
                 const routingInfo = data.routing ?
-                    \`Routed to \${data.routing.ai.toUpperCase()} (confidence: \${data.routing.confidence})\` :
+                    'Routed to ' + data.routing.ai.toUpperCase() + ' (confidence: ' + data.routing.confidence + ')' :
                     null;
 
                 addMsg('bot', data.response, data.ai, routingInfo);
