@@ -618,159 +618,171 @@ app.get('/', (req, res) => {
 
         /* Focus visible for better keyboard navigation */
         *:focus-visible {
-            outline: 2px solid #667eea;
+            outline: 2px solid #10a37f;
             outline-offset: 2px;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #0f0f23;
+            font-family: 'Söhne', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+            background: #212121;
             min-height: 100vh;
             display: flex;
             overflow: hidden;
+            color: #ececec;
         }
 
-        /* Sidebar */
+        /* ===== SIDEBAR ===== */
         .sidebar {
-            width: 280px;
-            background: #1a1a2e;
-            border-right: 1px solid #2d2d44;
+            width: 260px;
+            background: #171717;
+            border-right: 1px solid #2f2f2f;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            flex-shrink: 0;
         }
         .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid #2d2d44;
+            padding: 16px 12px 12px;
         }
         .home-btn {
             width: 100%;
-            padding: 14px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 15px;
+            padding: 10px 14px;
+            background: transparent;
+            color: #ececec;
+            border: 1px solid #3f3f3f;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.15s, border-color 0.15s;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            gap: 10px;
+            font-family: inherit;
         }
         .home-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+            background: #2a2a2a;
+            border-color: #555;
         }
 
         /* AI Mode Selector */
         .ai-mode-section {
-            padding: 12px 15px;
-            border-bottom: 1px solid #2d2d44;
+            padding: 4px 12px 12px;
+            border-bottom: 1px solid #2f2f2f;
         }
         .ai-mode-label {
-            color: #888;
+            color: #6b6b6b;
             font-size: 10px;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+            padding: 0 2px;
         }
         .ai-mode-tabs {
             display: flex;
-            gap: 6px;
+            gap: 5px;
         }
         .ai-mode-btn {
             flex: 1;
-            padding: 9px 8px;
-            border-radius: 8px;
-            border: 1px solid #2d2d44;
-            background: #16162a;
-            color: #666;
+            padding: 8px 6px;
+            border-radius: 7px;
+            border: 1px solid #2f2f2f;
+            background: transparent;
+            color: #8e8ea0;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
             text-align: center;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
         .ai-mode-btn:hover:not(.active) {
-            border-color: #3d3d54;
-            color: #aaa;
-            background: #1e1e38;
+            border-color: #444;
+            color: #c5c5d2;
+            background: #2a2a2a;
         }
         .ai-mode-btn.active.gemini {
-            background: rgba(66, 133, 244, 0.15);
-            border-color: #4285f4;
-            color: #4285f4;
+            background: rgba(16, 163, 127, 0.12);
+            border-color: #10a37f;
+            color: #10a37f;
         }
         .ai-mode-btn.active.openclaw {
-            background: rgba(249, 115, 22, 0.15);
-            border-color: #f97316;
-            color: #f97316;
+            background: rgba(239, 118, 35, 0.12);
+            border-color: #ef7623;
+            color: #ef7623;
         }
 
         /* OpenClaw Status Bar */
         .openclaw-status {
-            padding: 8px 15px;
+            padding: 8px 14px;
             font-size: 11px;
             display: flex;
             align-items: center;
             gap: 7px;
-            border-bottom: 1px solid #2d2d44;
-            background: #14142a;
+            border-bottom: 1px solid #2f2f2f;
+            background: #1a1a1a;
+            color: #8e8ea0;
         }
         .openclaw-status-dot {
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #555;
             flex-shrink: 0;
         }
-        .openclaw-status-dot.online  { background: #4ade80; }
-        .openclaw-status-dot.offline { background: #f87171; }
+        .openclaw-status-dot.online  { background: #10a37f; }
+        .openclaw-status-dot.offline { background: #ef4444; }
         .openclaw-status-dot.checking {
-            background: #fbbf24;
-            animation: pulse 1.2s ease-in-out infinite;
+            background: #f59e0b;
+            animation: blink 1.2s ease-in-out infinite;
         }
-        @keyframes pulse {
+        @keyframes blink {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            50% { opacity: 0.25; }
         }
         .openclaw-settings-link {
             margin-left: auto;
             background: none;
             border: none;
-            color: #667eea;
+            color: #10a37f;
             font-size: 11px;
             cursor: pointer;
             padding: 0;
-            text-decoration: underline;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        .openclaw-settings-link:hover { color: #7a8ff0; }
+        .openclaw-settings-link:hover { color: #1dc9a4; }
 
         /* Settings Panel */
         .settings-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.5);
             z-index: 999;
             display: none;
+            backdrop-filter: blur(2px);
         }
         .settings-overlay.open { display: block; }
         .settings-panel {
             position: fixed;
             top: 0; right: 0;
-            width: 340px;
+            width: 360px;
             height: 100vh;
-            background: #1a1a2e;
-            border-left: 1px solid #2d2d44;
+            background: #202123;
+            border-left: 1px solid #2f2f2f;
             z-index: 1000;
             padding: 28px 24px;
             transform: translateX(100%);
-            transition: transform 0.3s ease;
+            transition: transform 0.25s ease;
             overflow-y: auto;
-            box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+            box-shadow: -12px 0 48px rgba(0,0,0,0.5);
         }
         .settings-panel.open { transform: translateX(0); }
         .settings-header {
@@ -780,27 +792,32 @@ app.get('/', (req, res) => {
             margin-bottom: 28px;
         }
         .settings-title {
-            color: #fff;
-            font-size: 18px;
-            font-weight: 700;
+            color: #ececec;
+            font-size: 17px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .settings-close-btn {
-            background: #16162a;
-            border: 1px solid #2d2d44;
-            color: #888;
-            font-size: 16px;
+            background: #2a2a2a;
+            border: 1px solid #3f3f3f;
+            color: #8e8ea0;
+            font-size: 14px;
             cursor: pointer;
             padding: 6px 10px;
             border-radius: 6px;
-            transition: all 0.2s;
+            transition: all 0.15s;
+            font-family: inherit;
+            line-height: 1;
         }
-        .settings-close-btn:hover { color: #fff; border-color: #667eea; }
+        .settings-close-btn:hover { color: #ececec; border-color: #666; }
         .settings-group {
             margin-bottom: 20px;
         }
         .settings-group label {
             display: block;
-            color: #aaa;
+            color: #c5c5d2;
             font-size: 13px;
             margin-bottom: 7px;
             font-weight: 500;
@@ -808,148 +825,159 @@ app.get('/', (req, res) => {
         .settings-group input[type="text"],
         .settings-group input[type="password"] {
             width: 100%;
-            padding: 11px 14px;
-            background: #16162a;
-            border: 1px solid #2d2d44;
-            border-radius: 8px;
-            color: #fff;
+            padding: 10px 13px;
+            background: #2a2a2a;
+            border: 1px solid #3f3f3f;
+            border-radius: 7px;
+            color: #ececec;
             font-size: 14px;
             font-family: inherit;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s;
         }
         .settings-group input:focus {
-            border-color: #f97316;
+            border-color: #ef7623;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+            box-shadow: 0 0 0 3px rgba(239, 118, 35, 0.12);
         }
         .settings-hint {
-            color: #555;
+            color: #6b6b6b;
             font-size: 11px;
             margin-top: 5px;
             line-height: 1.5;
         }
         .settings-save-btn {
             width: 100%;
-            padding: 13px;
-            background: linear-gradient(135deg, #f97316, #fb923c);
+            padding: 11px;
+            background: #ef7623;
             color: white;
             border: none;
             border-radius: 8px;
-            font-weight: 700;
+            font-weight: 600;
             font-size: 14px;
             cursor: pointer;
             margin-top: 8px;
-            transition: opacity 0.2s;
+            transition: background 0.15s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .settings-save-btn:hover { opacity: 0.9; }
+        .settings-save-btn:hover { background: #d96820; }
         .settings-divider {
             border: none;
-            border-top: 1px solid #2d2d44;
+            border-top: 1px solid #2f2f2f;
             margin: 24px 0;
         }
         .settings-instructions {
-            color: #666;
+            color: #6b6b6b;
             font-size: 12px;
             line-height: 1.7;
         }
-        .settings-instructions strong { color: #aaa; }
+        .settings-instructions strong { color: #8e8ea0; }
 
+        /* ===== SIDEBAR HISTORY ===== */
         .history-section {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 8px 8px 16px;
         }
         .history-title {
-            color: #888;
-            font-size: 12px;
+            color: #6b6b6b;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            padding: 0 8px;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+            padding: 8px 8px 4px;
         }
         .history-item {
-            padding: 12px;
-            margin-bottom: 6px;
-            background: #16162a;
+            padding: 10px 10px;
+            margin-bottom: 2px;
+            background: transparent;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.15s;
             border: 1px solid transparent;
             position: relative;
         }
         .history-item:hover {
-            background: #1e1e38;
-            border-color: #667eea;
+            background: #2a2a2a;
+            border-color: #3f3f3f;
         }
         .history-item:hover .delete-chat-btn {
             opacity: 1;
         }
         .history-item-title {
-            color: #fff;
-            font-size: 14px;
-            margin-bottom: 4px;
+            color: #ececec;
+            font-size: 13px;
+            margin-bottom: 2px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            padding-right: 30px;
+            padding-right: 28px;
+            font-weight: 400;
         }
         .history-item-preview {
-            color: #888;
-            font-size: 12px;
+            color: #6b6b6b;
+            font-size: 11px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
         .history-item-time {
-            color: #666;
-            font-size: 11px;
-            margin-top: 4px;
+            color: #4b4b4b;
+            font-size: 10px;
+            margin-top: 3px;
         }
         .delete-chat-btn {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #8b3a3a;
-            color: white;
+            top: 8px;
+            right: 8px;
+            background: transparent;
+            color: #6b6b6b;
             border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 4px 6px;
+            border-radius: 5px;
             font-size: 11px;
             cursor: pointer;
             opacity: 0;
-            transition: all 0.2s;
+            transition: all 0.15s;
             z-index: 10;
+            display: flex;
+            align-items: center;
         }
         .delete-chat-btn:hover {
-            background: #a94442;
+            background: rgba(239,68,68,0.15);
+            color: #ef4444;
         }
 
-        /* Main Content */
+        /* ===== MAIN CONTENT ===== */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: #0f0f23;
+            background: #212121;
+            min-width: 0;
         }
         .container {
             width: 100%;
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
-            background: #16162a;
-            border-radius: 0;
-            box-shadow: none;
+            background: #212121;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
         }
+
+        /* ===== HEADER ===== */
         .header {
-            background: #1a1a2e;
-            color: white;
-            padding: 20px 30px;
-            border-bottom: 1px solid #2d2d44;
+            background: #212121;
+            color: #ececec;
+            padding: 14px 24px;
+            border-bottom: 1px solid #2f2f2f;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -957,277 +985,376 @@ app.get('/', (req, res) => {
         .header-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+        }
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            background: #10a37f;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
         .header h1 {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
-            color: #fff;
+            color: #ececec;
+            letter-spacing: -0.01em;
         }
         .header-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
         .status-badge {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: rgba(74, 222, 128, 0.1);
-            border: 1px solid rgba(74, 222, 128, 0.3);
+            gap: 5px;
+            padding: 5px 11px;
+            background: rgba(16, 163, 127, 0.08);
+            border: 1px solid rgba(16, 163, 127, 0.25);
             border-radius: 20px;
             font-size: 12px;
-            color: #4ade80;
+            color: #10a37f;
         }
         .status-indicator {
             display: inline-block;
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: #4ade80;
-            animation: pulse 2s infinite;
+            background: #10a37f;
+            animation: glow 2.5s ease-in-out infinite;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        @keyframes glow {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,163,127,0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 3px rgba(16,163,127,0); }
         }
         .ai-models {
-            font-size: 11px;
-            color: #888;
+            font-size: 12px;
+            color: #6b6b6b;
         }
         .ai-models span {
-            color: #667eea;
+            color: #c5c5d2;
             font-weight: 500;
         }
+
+        /* ===== CHAT AREA ===== */
         .chat-area {
             flex: 1;
             overflow-y: auto;
-            padding: 30px;
-            background: #0f0f23;
+            padding: 0;
+            background: #212121;
         }
+        .chat-inner {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* ===== EMPTY STATE ===== */
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
-            color: #888;
+            min-height: 60vh;
+            color: #8e8ea0;
             text-align: center;
+            padding: 48px 24px;
+        }
+        .empty-logo {
+            width: 56px;
+            height: 56px;
+            background: #10a37f;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
         }
         .empty-state h2 {
-            font-size: 2.5rem;
-            margin-bottom: 12px;
-            color: #fff;
+            font-size: 1.75rem;
+            margin-bottom: 8px;
+            color: #ececec;
+            font-weight: 600;
+            letter-spacing: -0.02em;
         }
         .empty-state p {
-            font-size: 1.1rem;
-            margin-bottom: 30px;
-            color: #aaa;
+            font-size: 1rem;
+            margin-bottom: 36px;
+            color: #8e8ea0;
+            max-width: 360px;
+            line-height: 1.6;
         }
         .example-queries {
             text-align: left;
-            background: #1a1a2e;
-            padding: 24px;
-            border-radius: 16px;
-            border: 1px solid #2d2d44;
-            max-width: 600px;
+            max-width: 560px;
+            width: 100%;
         }
         .example-queries h3 {
-            font-size: 16px;
-            margin-bottom: 16px;
-            color: #fff;
-            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #6b6b6b;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
         }
         .example-queries ul {
             list-style: none;
             display: grid;
-            gap: 10px;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
         }
         .example-queries li {
             padding: 14px 16px;
-            background: #16162a;
-            border: 1px solid #2d2d44;
+            background: #2a2a2a;
+            border: 1px solid #3f3f3f;
             border-radius: 10px;
-            color: #667eea;
+            color: #c5c5d2;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
+            font-size: 13px;
+            transition: all 0.15s;
+            line-height: 1.4;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
         .example-queries li:hover {
-            background: #1e1e38;
-            border-color: #667eea;
-            transform: translateX(4px);
+            background: #333;
+            border-color: #555;
+            color: #ececec;
+        }
+        .example-queries li svg {
+            flex-shrink: 0;
+            margin-top: 1px;
+            opacity: 0.6;
+        }
+
+        /* ===== MESSAGES ===== */
+        .message-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 28px;
+            align-items: flex-start;
+        }
+        .message-row.user-row {
+            flex-direction: row-reverse;
+        }
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .msg-avatar.user-av {
+            background: #5d5dff;
+            color: white;
+        }
+        .msg-avatar.bot-av {
+            background: #10a37f;
+            color: white;
+        }
+        .msg-avatar.bot-av.openclaw-av {
+            background: #ef7623;
         }
         .message {
-            margin-bottom: 18px;
             padding: 14px 18px;
             border-radius: 14px;
             max-width: 85%;
             word-wrap: break-word;
-            white-space: pre-wrap;
-            line-height: 1.5;
-            animation: slideIn 0.3s ease-out;
+            line-height: 1.65;
+            animation: fadeUp 0.2s ease-out;
             position: relative;
+            font-size: 15px;
         }
         .message-actions {
             position: absolute;
             top: 8px;
-            right: 8px;
+            right: 10px;
             display: flex;
-            gap: 6px;
+            gap: 4px;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s;
         }
         .message:hover .message-actions {
             opacity: 1;
         }
         .message-action-btn {
-            background: rgba(0, 0, 0, 0.3);
-            color: #fff;
+            background: rgba(0, 0, 0, 0.25);
+            color: #c5c5d2;
             border: none;
-            padding: 6px 10px;
-            border-radius: 6px;
+            padding: 5px 9px;
+            border-radius: 5px;
             font-size: 11px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.15s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
         .message-action-btn:hover {
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.45);
+            color: white;
         }
         .user .message-action-btn {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
         }
         .user .message-action-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.25);
         }
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
         .user {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #2f2f2f;
+            color: #ececec;
             margin-left: auto;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            border: 1px solid #3f3f3f;
         }
         .bot {
-            background: #1a1a2e;
-            border: 1px solid #2d2d44;
-            color: #ddd;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            color: #ececec;
         }
-        .bot.gemini { border-left: 4px solid #4285f4; }
-        .bot.openclaw { border-left: 4px solid #f97316; }
+        .bot.gemini { border-left: 3px solid #10a37f; }
+        .bot.openclaw { border-left: 3px solid #ef7623; }
         .ai-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            margin-bottom: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px 3px 6px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-bottom: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
         }
         .ai-badge.gemini {
-            background: linear-gradient(135deg, #4285f4, #34a853);
-            color: white;
+            background: rgba(16,163,127,0.15);
+            color: #10a37f;
+            border: 1px solid rgba(16,163,127,0.3);
         }
         .ai-badge.openclaw {
-            background: linear-gradient(135deg, #f97316, #fb923c);
-            color: white;
+            background: rgba(239,118,35,0.15);
+            color: #ef7623;
+            border: 1px solid rgba(239,118,35,0.3);
         }
         .thinking {
-            background: #1e1e38;
-            border: 1px solid #667eea;
-            color: #667eea;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            color: #8e8ea0;
             font-style: italic;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 14px;
         }
         .spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #667eea;
-            border-top-color: transparent;
+            width: 15px;
+            height: 15px;
+            border: 2px solid #3f3f3f;
+            border-top-color: #10a37f;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
         .error {
-            background: #2e1a1a;
-            border: 1px solid #8b3a3a;
-            color: #ff6b6b;
-        }
-        .input-area {
-            padding: 20px 30px;
-            background: #1a1a2e;
-            border-top: 1px solid #2d2d44;
-            display: flex;
-            gap: 12px;
-        }
-        input {
-            flex: 1;
-            padding: 16px 20px;
-            background: #16162a;
-            border: 1px solid #2d2d44;
-            border-radius: 12px;
-            font-size: 15px;
-            font-family: inherit;
-            color: #fff;
-            transition: all 0.2s;
-        }
-        input::placeholder {
-            color: #666;
-        }
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-            background: #1a1a2e;
-        }
-        button {
-            padding: 14px 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 15px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        button:active:not(:disabled) {
-            transform: translateY(0);
-        }
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.25);
+            color: #f87171;
+            border-left: 3px solid #ef4444;
         }
         .routing-info {
             font-size: 11px;
-            color: #999;
-            margin-top: 6px;
+            color: #4b4b4b;
+            margin-top: 8px;
             font-style: italic;
         }
 
+        /* ===== INPUT AREA ===== */
+        .input-area {
+            padding: 16px 24px 20px;
+            background: #212121;
+            border-top: 1px solid #2f2f2f;
+        }
+        .input-wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #2f2f2f;
+            border: 1px solid #3f3f3f;
+            border-radius: 12px;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            padding: 4px 6px 4px 16px;
+        }
+        .input-wrap:focus-within {
+            border-color: #555;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+        }
+        input {
+            flex: 1;
+            padding: 10px 0;
+            background: transparent;
+            border: none;
+            font-size: 15px;
+            font-family: inherit;
+            color: #ececec;
+            outline: none;
+            min-width: 0;
+        }
+        input::placeholder {
+            color: #555;
+        }
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            padding: 0;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: inherit;
+        }
+        .send-btn:hover:not(:disabled) {
+            background: #0d8c6d;
+        }
+        .send-btn:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+        .send-btn:disabled {
+            background: #2f2f2f;
+            color: #555;
+            cursor: not-allowed;
+        }
+        .send-btn.thinking-state {
+            background: #3f3f3f;
+        }
         /* Markdown and code styling */
         .message pre {
-            background: #1e1e1e;
-            border: 1px solid #2d2d44;
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
             border-radius: 8px;
             padding: 16px;
             margin: 12px 0;
@@ -1240,11 +1367,11 @@ app.get('/', (req, res) => {
             line-height: 1.5;
         }
         .message p code {
-            background: #2d2d44;
+            background: rgba(255,255,255,0.06);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 13px;
-            color: #f97583;
+            color: #e07b53;
         }
         .message pre code {
             background: transparent;
@@ -1252,50 +1379,53 @@ app.get('/', (req, res) => {
             color: #d4d4d4;
         }
         .message h1, .message h2, .message h3 {
-            color: #fff;
-            margin: 16px 0 8px;
+            color: #ececec;
+            margin: 18px 0 8px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
         }
-        .message h1 { font-size: 1.5em; border-bottom: 2px solid #2d2d44; padding-bottom: 8px; }
-        .message h2 { font-size: 1.3em; }
-        .message h3 { font-size: 1.1em; }
+        .message h1 { font-size: 1.4em; border-bottom: 1px solid #3a3a3a; padding-bottom: 8px; }
+        .message h2 { font-size: 1.2em; }
+        .message h3 { font-size: 1.05em; }
+        .message p { margin: 8px 0; }
         .message ul, .message ol {
-            margin: 12px 0;
-            padding-left: 24px;
+            margin: 10px 0;
+            padding-left: 22px;
         }
         .message li {
-            margin: 6px 0;
-            line-height: 1.6;
+            margin: 5px 0;
+            line-height: 1.65;
         }
         .message blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 16px;
+            border-left: 3px solid #10a37f;
+            padding-left: 14px;
             margin: 12px 0;
-            color: #aaa;
+            color: #8e8ea0;
             font-style: italic;
         }
         .message a {
-            color: #667eea;
+            color: #10a37f;
             text-decoration: none;
-            border-bottom: 1px solid transparent;
-            transition: border-color 0.2s;
         }
-        .message a:hover {
-            border-bottom-color: #667eea;
-        }
+        .message a:hover { text-decoration: underline; }
         .message table {
             border-collapse: collapse;
             width: 100%;
-            margin: 12px 0;
+            margin: 14px 0;
+            font-size: 14px;
         }
         .message th, .message td {
-            border: 1px solid #2d2d44;
+            border: 1px solid #3a3a3a;
             padding: 8px 12px;
             text-align: left;
         }
         .message th {
-            background: #1a1a2e;
+            background: #1f1f1f;
             font-weight: 600;
+            color: #c5c5d2;
         }
+        .message td { color: #c5c5d2; }
+        .message tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
         .message img {
             max-width: 100%;
             border-radius: 8px;
@@ -1305,127 +1435,60 @@ app.get('/', (req, res) => {
             position: absolute;
             top: 8px;
             right: 8px;
-            background: #667eea;
-            color: white;
+            background: #3f3f3f;
+            color: #c5c5d2;
             border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
+            padding: 5px 10px;
+            border-radius: 5px;
             font-size: 11px;
             cursor: pointer;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        .message pre:hover .copy-code-btn {
-            opacity: 1;
-        }
-        .copy-code-btn:hover {
-            background: #7a8ff0;
-        }
-        /* Dark theme scrollbar */
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: #16162a; }
-        ::-webkit-scrollbar-thumb {
-            background: #2d2d44;
-            border-radius: 5px;
-        }
-        ::-webkit-scrollbar-thumb:hover { background: #3d3d54; }
+        .message pre:hover .copy-code-btn { opacity: 1; }
+        .copy-code-btn:hover { background: #555; color: white; }
 
-        /* Mobile responsive design */
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f3f;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Mobile */
         @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
+            body { flex-direction: column; }
             .sidebar {
                 width: 100%;
                 height: auto;
                 border-right: none;
-                border-bottom: 1px solid #2d2d44;
+                border-bottom: 1px solid #2f2f2f;
                 max-height: 200px;
                 overflow-y: auto;
             }
-            .sidebar-header {
-                padding: 12px;
-            }
-            .home-btn {
-                padding: 10px 16px;
-                font-size: 14px;
-            }
-            .history-section {
-                max-height: 120px;
-            }
-            .history-title {
-                padding: 8px 12px;
-                font-size: 11px;
-            }
-            .history-item {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            .main-content {
-                height: calc(100vh - 200px);
-            }
-            .header {
-                padding: 16px 20px;
-            }
-            .header h1 {
-                font-size: 1.3rem;
-            }
-            .chat-area {
-                padding: 16px;
-            }
-            .message {
-                max-width: 100%;
-                padding: 12px 16px;
-                font-size: 14px;
-            }
-            .input-area {
-                padding: 12px 16px;
-                gap: 8px;
-            }
-            input {
-                padding: 12px 16px;
-                font-size: 14px;
-            }
-            button {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
-            .empty-state h2 {
-                font-size: 1.8rem;
-            }
-            .empty-state p {
-                font-size: 1rem;
-            }
-            .example-queries {
-                max-width: 100%;
-                padding: 16px;
-            }
+            .sidebar-header { padding: 10px; }
+            .home-btn { padding: 9px 12px; font-size: 13px; }
+            .history-section { max-height: 120px; }
+            .main-content { height: calc(100vh - 200px); }
+            .header { padding: 12px 16px; }
+            .header h1 { font-size: 14px; }
+            .chat-inner { padding: 20px 16px; }
+            .message { max-width: 100%; padding: 12px 14px; font-size: 14px; }
+            .input-area { padding: 12px 16px 16px; }
+            .example-queries ul { grid-template-columns: 1fr; }
+            .empty-state h2 { font-size: 1.4rem; }
         }
-
-        /* Small mobile devices */
         @media (max-width: 480px) {
-            .header h1 {
-                font-size: 1.1rem;
-            }
-            .message {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-            .ai-badge {
-                font-size: 9px;
-                padding: 3px 8px;
-            }
-            input {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-            button {
-                padding: 10px 16px;
-                font-size: 13px;
-            }
-            .empty-state h2 {
-                font-size: 1.5rem;
-            }
+            .header h1 { font-size: 13px; }
+            .message { padding: 10px 12px; font-size: 13px; }
+            .ai-badge { font-size: 9px; padding: 2px 7px; }
+            .empty-state h2 { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -1434,9 +1497,8 @@ app.get('/', (req, res) => {
     <aside class="sidebar" role="complementary" aria-label="Chat history sidebar">
         <div class="sidebar-header">
             <button class="home-btn" onclick="goHome()" aria-label="Start new chat" title="New Chat (Ctrl+K)">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14"/>
                 </svg>
                 New Chat
             </button>
@@ -1450,13 +1512,15 @@ app.get('/', (req, res) => {
                         onclick="setAIMode('gemini')"
                         role="tab" aria-selected="true"
                         aria-label="Use Gemini AI for Q&amp;A">
-                    🔵 Gemini
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+                    Gemini
                 </button>
                 <button class="ai-mode-btn openclaw" id="mode-openclaw"
                         onclick="setAIMode('openclaw')"
                         role="tab" aria-selected="false"
                         aria-label="Use OpenClaw AI for automation">
-                    🟠 OpenClaw
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    OpenClaw
                 </button>
             </div>
         </div>
@@ -1464,15 +1528,16 @@ app.get('/', (req, res) => {
         <!-- OpenClaw Status (only shown in OpenClaw mode) -->
         <div class="openclaw-status" id="openclaw-status" style="display:none;" aria-live="polite">
             <div class="openclaw-status-dot checking" id="openclaw-status-dot" aria-hidden="true"></div>
-            <span id="openclaw-status-text" style="color:#888;">Checking...</span>
+            <span id="openclaw-status-text">Checking...</span>
             <button class="openclaw-settings-link" onclick="openSettings()" aria-label="Open OpenClaw settings">
-                ⚙ Settings
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                Settings
             </button>
         </div>
 
-        <!-- Chat History (below mode tabs as requested) -->
+        <!-- Chat History -->
         <nav class="history-section" aria-label="Previous conversations">
-            <h2 class="history-title">Chat History</h2>
+            <h2 class="history-title">Recents</h2>
             <div id="history-list" role="list">
                 <!-- History items will be added here -->
             </div>
@@ -1485,8 +1550,13 @@ app.get('/', (req, res) => {
     <!-- OpenClaw Settings Panel -->
     <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-label="OpenClaw Settings">
         <div class="settings-header">
-            <span class="settings-title">🟠 OpenClaw Settings</span>
-            <button class="settings-close-btn" onclick="closeSettings()" aria-label="Close settings">✕</button>
+            <span class="settings-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef7623" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                OpenClaw Settings
+            </span>
+            <button class="settings-close-btn" onclick="closeSettings()" aria-label="Close settings">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
         </div>
 
         <div class="settings-group">
@@ -1496,7 +1566,7 @@ app.get('/', (req, res) => {
                    autocomplete="off" />
             <div class="settings-hint">
                 Enter the URL of your OpenClaw VPS server.<br>
-                Example: <code style="color:#f97316">http://1.2.3.4:18789</code>
+                Example: <code style="color:#ef7623">http://1.2.3.4:18789</code>
             </div>
         </div>
 
@@ -1511,7 +1581,8 @@ app.get('/', (req, res) => {
         </div>
 
         <button class="settings-save-btn" onclick="saveOpenClawSettings()">
-            💾 Save &amp; Test Connection
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save &amp; Test Connection
         </button>
 
         <hr class="settings-divider">
@@ -1521,9 +1592,9 @@ app.get('/', (req, res) => {
             1. Start OpenClaw on your VPS server<br>
             2. Enter your VPS IP/URL above<br>
             3. Click "Save &amp; Test Connection"<br>
-            4. The status dot turns 🟢 green when ready<br><br>
+            4. The status dot turns green when ready<br><br>
             <strong>Default OpenClaw port:</strong> 18789<br>
-            <strong>Docs:</strong> <a href="https://docs.openclaw.ai" target="_blank" style="color:#f97316;">docs.openclaw.ai</a>
+            <strong>Docs:</strong> <a href="https://docs.openclaw.ai" target="_blank" style="color:#ef7623;">docs.openclaw.ai</a>
         </div>
     </div>
 
@@ -1532,7 +1603,10 @@ app.get('/', (req, res) => {
         <div class="container">
             <header class="header" role="banner">
                 <div class="header-left">
-                    <h1>🤖 AI Automation Assistant</h1>
+                    <div class="header-icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg>
+                    </div>
+                    <h1>AI Automation Assistant</h1>
                 </div>
                 <div class="header-right">
                     <div class="status-badge" role="status" aria-label="Connection status: Online">
@@ -1540,38 +1614,58 @@ app.get('/', (req, res) => {
                         <span>Online</span>
                     </div>
                     <div class="ai-models" aria-label="Active AI mode">
-                        <span id="header-ai-display">🔵 Gemini</span>
+                        <span id="header-ai-display">Gemini</span>
                     </div>
                 </div>
             </header>
         <div class="chat-area" id="chat" role="log" aria-live="polite" aria-label="Chat conversation">
+            <div class="chat-inner">
             <div class="empty-state">
-                <h2>👋 Welcome!</h2>
-                <p>I'm your AI automation assistant. Ask me anything!</p>
+                <div class="empty-logo" aria-hidden="true">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <h2>How can I help you?</h2>
+                <p>Ask me anything — I can answer questions, analyze data, and automate tasks using Gemini or OpenClaw.</p>
                 <div class="example-queries">
-                    <h3>Try asking:</h3>
+                    <h3>Try asking</h3>
                     <ul role="list">
-                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: Build me a sales report for Q1">📊 Build me a sales report for Q1</li>
-                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: Find the best CRM tools for small businesses">🔍 Find the best CRM tools for small businesses</li>
-                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: Calculate the ROI of our marketing campaign">📈 Calculate the ROI of our marketing campaign</li>
-                        <li onclick="setPrompt(this.textContent)" role="button" tabindex="0" aria-label="Example: What is machine learning">💡 What is machine learning?</li>
+                        <li onclick="setPrompt('Build me a sales report for Q1')" role="button" tabindex="0" aria-label="Example: Build me a sales report for Q1">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            Build me a sales report for Q1
+                        </li>
+                        <li onclick="setPrompt('Find the best CRM tools for small businesses')" role="button" tabindex="0" aria-label="Example: Find the best CRM tools for small businesses">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Find the best CRM tools for small businesses
+                        </li>
+                        <li onclick="setPrompt('Calculate the ROI of our marketing campaign')" role="button" tabindex="0" aria-label="Example: Calculate the ROI of our marketing campaign">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            Calculate the ROI of our marketing campaign
+                        </li>
+                        <li onclick="setPrompt('What is machine learning?')" role="button" tabindex="0" aria-label="Example: What is machine learning">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            What is machine learning?
+                        </li>
                     </ul>
                 </div>
             </div>
+            </div>
         </div>
         <div class="input-area" role="region" aria-label="Message input">
-            <form id="chat-form" onsubmit="return false;" style="display:flex;gap:12px;width:100%;">
-                <input
-                    type="text"
-                    id="input"
-                    placeholder="Type your message or question..."
-                    autocomplete="off"
-                    style="flex:1;"
-                    aria-label="Message input"
-                    aria-describedby="input-help"
-                >
-                <span id="input-help" class="sr-only">Press Enter to send message</span>
-                <button type="button" id="send-btn" aria-label="Send message">Send</button>
+            <form id="chat-form" onsubmit="return false;">
+                <div class="input-wrap">
+                    <input
+                        type="text"
+                        id="input"
+                        placeholder="Message AI Assistant..."
+                        autocomplete="off"
+                        aria-label="Message input"
+                        aria-describedby="input-help"
+                    >
+                    <span id="input-help" class="sr-only">Press Enter to send message</span>
+                    <button type="button" id="send-btn" class="send-btn" aria-label="Send message">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    </button>
+                </div>
             </form>
         </div>
         </div>
@@ -1663,7 +1757,7 @@ app.get('/', (req, res) => {
                 // Delete button
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-chat-btn';
-                deleteBtn.textContent = '🗑️';
+                deleteBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
                 deleteBtn.setAttribute('aria-label', 'Delete chat: ' + (chat.title || 'New Chat'));
                 deleteBtn.setAttribute('title', 'Delete chat');
                 deleteBtn.onclick = (e) => deleteChat(index, e);
@@ -1751,40 +1845,60 @@ app.get('/', (req, res) => {
             li.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    setPrompt(this.textContent);
+                    this.click();
                 }
             });
         });
+
+        function getChatInner() {
+            let inner = chat.querySelector('.chat-inner');
+            if (!inner) {
+                inner = document.createElement('div');
+                inner.className = 'chat-inner';
+                chat.appendChild(inner);
+            }
+            return inner;
+        }
 
         function addMsg(type, text, aiType = null, routingInfo = null) {
             const emptyState = chat.querySelector('.empty-state');
             if (emptyState) emptyState.remove();
 
+            const inner = getChatInner();
+
+            // Row wrapper (for avatar + bubble layout)
+            const row = document.createElement('div');
+            row.className = 'message-row' + (type === 'user' ? ' user-row' : '');
+
+            // Avatar
+            const avatar = document.createElement('div');
+            if (type === 'user') {
+                avatar.className = 'msg-avatar user-av';
+                avatar.setAttribute('aria-hidden', 'true');
+                avatar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            } else {
+                const isOC = type === 'bot' && aiType === 'openclaw';
+                avatar.className = 'msg-avatar bot-av' + (isOC ? ' openclaw-av' : '');
+                avatar.setAttribute('aria-hidden', 'true');
+                avatar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>';
+            }
+            row.appendChild(avatar);
+
+            // Message bubble
             const msg = document.createElement('div');
             msg.className = 'message ' + type;
-            msg.setAttribute('role', 'article');
-
-            // Set ARIA label based on message type
-            if (type === 'user') {
-                msg.setAttribute('aria-label', 'Your message');
-            } else if (type === 'bot') {
-                msg.setAttribute('aria-label', (aiType || 'AI') + ' response');
-            } else if (type === 'error') {
-                msg.setAttribute('aria-label', 'Error message');
-                msg.setAttribute('role', 'alert');
-            }
+            if (type === 'bot' && aiType) msg.className += ' ' + aiType;
+            msg.setAttribute('role', type === 'error' ? 'alert' : 'article');
+            if (type === 'bot') msg.setAttribute('aria-label', (aiType || 'AI') + ' response');
+            if (type === 'user') msg.setAttribute('aria-label', 'Your message');
+            if (type === 'error') msg.setAttribute('aria-label', 'Error message');
 
             if (type === 'bot' && aiType) {
-                msg.className += ' ' + aiType;
-
                 const badge = document.createElement('div');
                 badge.className = 'ai-badge ' + aiType;
-                badge.textContent = aiType === 'gemini' ? '🔵 Gemini' : '🟠 OpenClaw';
+                badge.textContent = aiType === 'gemini' ? 'Gemini' : 'OpenClaw';
                 badge.setAttribute('aria-label', 'Response from ' + aiType);
                 msg.appendChild(badge);
-
-                const br = document.createElement('br');
-                msg.appendChild(br);
             }
 
             // Render markdown for bot messages, plain text for user/error
@@ -1797,28 +1911,25 @@ app.get('/', (req, res) => {
                 if (typeof hljs !== 'undefined') {
                     msg.querySelectorAll('pre code').forEach((block) => {
                         hljs.highlightElement(block);
-
-                        // Add copy button to code blocks
                         const pre = block.parentElement;
                         if (pre.tagName === 'PRE') {
                             const copyBtn = document.createElement('button');
                             copyBtn.className = 'copy-code-btn';
-                            copyBtn.textContent = 'Copy';
+                            copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
                             copyBtn.onclick = () => {
                                 navigator.clipboard.writeText(block.textContent);
-                                copyBtn.textContent = 'Copied!';
-                                setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+                                copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Copied';
+                                setTimeout(() => { copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy'; }, 2000);
                             };
                             pre.appendChild(copyBtn);
                         }
                     });
                 }
             } else {
-                const textNode = document.createTextNode(text);
-                msg.appendChild(textNode);
+                msg.appendChild(document.createTextNode(text));
             }
 
-            // Add action buttons to all messages except thinking
+            // Copy action button (on hover)
             if (type !== 'thinking') {
                 const actions = document.createElement('div');
                 actions.className = 'message-actions';
@@ -1827,19 +1938,18 @@ app.get('/', (req, res) => {
 
                 const copyBtn = document.createElement('button');
                 copyBtn.className = 'message-action-btn';
-                copyBtn.textContent = '📋 Copy';
+                copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
                 copyBtn.setAttribute('aria-label', 'Copy message to clipboard');
                 copyBtn.onclick = () => {
                     navigator.clipboard.writeText(text);
-                    copyBtn.textContent = '✓ Copied';
+                    copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Copied';
                     copyBtn.setAttribute('aria-label', 'Message copied');
                     setTimeout(() => {
-                        copyBtn.textContent = '📋 Copy';
+                        copyBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
                         copyBtn.setAttribute('aria-label', 'Copy message to clipboard');
                     }, 2000);
                 };
                 actions.appendChild(copyBtn);
-
                 msg.appendChild(actions);
             }
 
@@ -1850,17 +1960,29 @@ app.get('/', (req, res) => {
                 msg.appendChild(info);
             }
 
-            chat.appendChild(msg);
+            row.appendChild(msg);
+            inner.appendChild(row);
             chat.scrollTop = chat.scrollHeight;
 
             // Save to current messages
             currentMessages.push({ type, text, aiType, routingInfo });
             saveCurrentChat();
 
-            return msg;
+            return row;
         }
 
         function addThinking() {
+            const inner = getChatInner();
+
+            const row = document.createElement('div');
+            row.className = 'message-row';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'msg-avatar bot-av';
+            avatar.setAttribute('aria-hidden', 'true');
+            avatar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>';
+            row.appendChild(avatar);
+
             const msg = document.createElement('div');
             msg.className = 'message thinking';
 
@@ -1868,12 +1990,13 @@ app.get('/', (req, res) => {
             spinner.className = 'spinner';
             msg.appendChild(spinner);
 
-            const text = document.createTextNode('Processing your request...');
-            msg.appendChild(text);
+            const txt = document.createTextNode('Thinking...');
+            msg.appendChild(txt);
 
-            chat.appendChild(msg);
+            row.appendChild(msg);
+            inner.appendChild(row);
             chat.scrollTop = chat.scrollHeight;
-            return msg;
+            return row;
         }
 
         // ============================================
@@ -1906,7 +2029,7 @@ app.get('/', (req, res) => {
             // Update header display
             const headerDisplay = document.getElementById('header-ai-display');
             if (headerDisplay) {
-                headerDisplay.textContent = mode === 'gemini' ? '🔵 Gemini' : '🟠 OpenClaw';
+                headerDisplay.textContent = mode === 'gemini' ? 'Gemini' : 'OpenClaw';
             }
 
             // Check connection when switching to OpenClaw
@@ -2008,7 +2131,7 @@ app.get('/', (req, res) => {
                 // Prevent double-submit immediately
                 if (sendBtn.disabled) return;
                 sendBtn.disabled = true;
-                sendBtn.textContent = 'Thinking...';
+                sendBtn.classList.add('thinking-state');
 
                 // Cancel previous request if exists
                 if (currentRequest) {
@@ -2056,12 +2179,12 @@ app.get('/', (req, res) => {
                 // Don't show error for aborted requests
                 if (error.name !== 'AbortError') {
                     const errText = error.message || 'Something went wrong. Please try again.';
-                    addMsg('error', errText.startsWith('⚠️') || errText.startsWith('🔒') || errText.startsWith('🟠') ? errText : '❌ Error: ' + errText);
+                    addMsg('error', errText);
                 }
             } finally {
                 currentRequest = null;
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Send';
+                sendBtn.classList.remove('thinking-state');
                 input.focus();
             }
         }
