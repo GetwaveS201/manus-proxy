@@ -39,6 +39,7 @@ const API_KEY = process.env.API_KEY || 'your-secure-api-key-here';
 const CORS_WHITELIST = [
   'http://localhost:3000',
   'http://localhost:5000',
+  'https://manus-proxy-1.onrender.com',
   'https://your-production-domain.com'
 ];
 
@@ -158,13 +159,16 @@ app.use(helmet({
 // CORS with whitelist
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, file://, etc.)
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
 
     // Allow file:// protocol for local testing
     if (typeof origin === 'string' && origin.startsWith('file://')) return callback(null, true);
 
-    // Allow same-origin requests (when page is served from same domain)
+    // Allow any onrender.com subdomain (same-origin on Render)
+    if (typeof origin === 'string' && origin.endsWith('.onrender.com')) return callback(null, true);
+
+    // Allow whitelisted domains
     if (CORS_WHITELIST.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
