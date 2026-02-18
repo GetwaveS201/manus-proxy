@@ -1,7 +1,7 @@
 {
   "name": "ai-automation-assistant",
   "version": "2.0.0",
-  "description": "🤖 A powerful dual-AI assistant with intelligent routing between Google Gemini and Anthropic Manus. Features a beautiful dark-themed interface with markdown support, accessibility features, and comprehensive chat management.",
+  "description": "🤖 A powerful dual-AI assistant with intelligent routing between Google Gemini and self-hosted OpenClaw. Features sidebar AI mode tabs, a beautiful dark-themed interface, markdown support, and comprehensive chat management.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -31,8 +31,8 @@
     "ai",
     "automation",
     "gemini",
-    "manus",
-    "anthropic",
+    "openclaw",
+    "self-hosted",
     "google",
     "chatbot",
     "assistant",

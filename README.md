@@ -6,24 +6,17 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen?style=for-the-badge&logo=node.js)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
-A sophisticated AI assistant that intelligently routes requests between **Google Gemini** (fast Q&A) and **Anthropic Manus** (browser automation) to provide the best possible response for every query.
-
-## ⚠️ SECURITY NOTICE
-
-**CRITICAL:** This repository has been cleaned of exposed API keys. If you cloned before [DATE], your local copy may contain exposed secrets in git history. Please:
-
-1. Delete your local clone
-2. Re-clone from GitHub
-3. Rotate any API keys that were exposed
+A sophisticated AI assistant that intelligently routes requests between **Google Gemini** (fast Q&A) and **OpenClaw** (your own self-hosted AI automation agent) to provide the best possible response for every query.
 
 ## ✨ Features
 
 ### 🎯 Intelligent AI Routing
 - **Smart Detection**: Automatically routes to the best AI for each task
-- **Gemini Integration**: Handles Q&A, explanations, calculations, and general knowledge
-- **Manus Integration**: Executes browser automation, email tasks, and complex workflows
+- **🔵 Gemini Integration**: Handles Q&A, explanations, calculations, and general knowledge
+- **🟠 OpenClaw Integration**: Your self-hosted AI agent for automation, emails, and complex workflows
+- **Sidebar Mode Tabs**: Manually switch between Gemini and OpenClaw with one click
 - **Confidence Scoring**: Score-based routing system (95%+ accuracy)
-- **Graceful Fallbacks**: Handles API quotas and errors elegantly
+- **Graceful Fallbacks**: If OpenClaw is unreachable, automatically falls back to Gemini
 
 ### 💬 Modern Chat Interface
 - **🎨 Beautiful Dark Theme**: Professional UI with purple accents
@@ -49,7 +42,10 @@ A sophisticated AI assistant that intelligently routes requests between **Google
 ### 🎨 UI/UX Features
 - Sidebar with searchable chat history
 - Message timestamps
-- AI badge indicators (Gemini 🔵 / Manus 🟣)
+- AI badge indicators (Gemini 🔵 / OpenClaw 🟠)
+- AI mode tabs in sidebar (switch between Gemini and OpenClaw)
+- OpenClaw connection status indicator (green/red dot)
+- OpenClaw settings panel (enter your VPS URL and token)
 - Loading states with animations
 - Example queries for quick start
 - Auto-scroll to latest messages
@@ -62,7 +58,7 @@ A sophisticated AI assistant that intelligently routes requests between **Google
 - Node.js 18+
 - API keys for:
   - [Gemini AI](https://ai.google.dev/)
-  - [Manus AI](https://manus.ai/)
+  - [OpenClaw](https://openclaw.ai/) running on your own VPS/server
 
 ### Installation
 
@@ -87,10 +83,12 @@ Copy `.env.example` to `.env` and fill in:
 
 ```bash
 GEMINI_API_KEY=your_gemini_key
-MANUS_API_KEY=your_manus_key
-APP_API_KEY=your_strong_random_key  # For API authentication
+OPENCLAW_URL=http://your-vps-ip:18789    # Your OpenClaw server URL
+OPENCLAW_TOKEN=your_openclaw_token       # Optional bearer token
 PORT=3000
 ```
+
+> **Note:** OpenClaw URL and token can also be set directly in the app's sidebar ⚙ Settings panel (saved in your browser).
 
 ### Running Locally
 
@@ -109,7 +107,12 @@ Send a message to the AI assistant (public endpoint, no authentication required)
 ```bash
 curl -X POST https://manus-proxy-1.onrender.com/chat \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "What is machine learning?"}'
+  -d '{
+    "prompt": "What is machine learning?",
+    "ai": "gemini",
+    "openclawUrl": "http://your-vps:18789",
+    "openclawToken": "optional-token"
+  }'
 ```
 
 **Success Response:**
@@ -122,25 +125,28 @@ curl -X POST https://manus-proxy-1.onrender.com/chat \
     "confidence": 95,
     "scores": {
       "gemini": 95,
-      "manus": 5
+      "openclaw": 5
     }
   }
 }
 ```
 
-**Error Response:**
-```json
-{
-  "error": "GEMINI_API_KEY_LEAKED",
-  "message": "🔒 Security Alert: The Gemini API key has been flagged..."
-}
+### `POST /ping-openclaw`
+Check if your OpenClaw instance is reachable.
+
+```bash
+curl -X POST https://manus-proxy-1.onrender.com/ping-openclaw \
+  -H "Content-Type: application/json" \
+  -d '{"openclawUrl": "http://your-vps:18789", "openclawToken": ""}'
 ```
+
+Response: `{"reachable": true}` or `{"reachable": false, "reason": "Connection refused"}`
 
 ### `GET /`
 Serves the frontend chat interface.
 
 ### `GET /health`
-Health check endpoint (returns 200 OK).
+Health check endpoint (requires API key header).
 
 ## Deployment
 
@@ -266,16 +272,17 @@ npm test  # Coming soon
 
 **Current Performance:**
 - ~90% queries use Gemini (free)
-- ~10% queries use Manus (paid)
-- Estimated savings: 90% vs Manus-only
+- ~10% queries use OpenClaw (your own self-hosted VPS — no per-query cost!)
+- **Massive savings** vs paid AI APIs — OpenClaw runs on your own infrastructure
 
-**Manus Pricing:**
-- ~$0.08-$1.50 per complex task
-- Recommended: $50-100 monthly budget
+**OpenClaw Cost:**
+- One-time VPS cost (e.g. $5-20/month for a server)
+- No per-query API fees
+- Full control over your data and privacy
 
 **Gemini Pricing:**
-- Free tier: 20 requests/day
-- Paid tier: 60 requests/minute (~$0.075 per 1M tokens)
+- Free tier: sufficient for most Q&A usage
+- Paid tier: ~$0.075 per 1M tokens if you exceed the free tier
 
 ## Troubleshooting
 
@@ -311,14 +318,14 @@ MIT
 
 - GitHub Issues: https://github.com/GetwaveS201/manus-proxy/issues
 - Render Dashboard: https://dashboard.render.com
-- Manus Docs: https://docs.manus.ai
+- OpenClaw Docs: https://docs.openclaw.ai
 - Gemini Docs: https://ai.google.dev/docs
 
 ## Acknowledgments
 
 Built with:
 - [Gemini AI](https://ai.google.dev/) - Fast conversational AI
-- [Manus AI](https://manus.ai/) - Autonomous agent platform
+- [OpenClaw](https://openclaw.ai/) - Self-hosted AI automation agent
 - [Express.js](https://expressjs.com/) - Web framework
 - [Render](https://render.com/) - Hosting platform
 

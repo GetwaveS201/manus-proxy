@@ -165,7 +165,7 @@ app.use(cors({
     if (typeof origin === 'string' && origin.startsWith('file://')) return callback(null, true);
 
     // Allow same-origin requests (when page is served from same domain)
-    if (CORS_WHITELIST.indexOf(origin) !== -1 || origin.includes('manus-proxy')) {
+    if (CORS_WHITELIST.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       log('WARN', `CORS blocked origin: ${origin}`);
@@ -2426,7 +2426,7 @@ function sleep(ms) {
  * Process task asynchronously
  * @param {string} taskId - Task ID
  * @param {string} prompt - User prompt
- * @param {string} ai - AI to use ('gemini' or 'manus')
+ * @param {string} ai - AI to use ('gemini' or 'openclaw')
  * @param {string} requestId - Request ID for logging
  */
 async function processTaskAsync(taskId, prompt, ai, requestId) {
@@ -2439,7 +2439,7 @@ async function processTaskAsync(taskId, prompt, ai, requestId) {
     if (ai === 'gemini') {
       response = await callGemini(prompt);
     } else {
-      response = await callManus(prompt);
+      response = await callOpenClaw(prompt, OPENCLAW_URL, OPENCLAW_TOKEN);
     }
 
     updateTask(taskId, {
@@ -2547,24 +2547,24 @@ app.listen(PORT, () => {
   console.log('');
   console.log('🤖 AI Services Status:');
   console.log(`   ${GEMINI_API_KEY ? '🟢' : '🔴'} Gemini: ${GEMINI_API_KEY ? 'Ready' : 'Not Configured'}`);
-  console.log(`   ${MANUS_API_KEY ? '🟢' : '🔴'} Manus: ${MANUS_API_KEY ? 'Ready' : 'Not Configured'}`);
+  console.log(`   🟠 OpenClaw: Proxy target → ${OPENCLAW_URL}`);
   console.log(`   ${RENDER_API_KEY ? '🟢' : '🔴'} Render: ${RENDER_API_KEY ? 'Ready' : 'Not Configured'}`);
   console.log(`   ${NOTION_API_KEY ? '🟢' : '🔴'} Notion: ${NOTION_API_KEY ? 'Ready' : 'Not Configured'}`);
   console.log('');
   console.log('🎯 Routing System:');
   console.log('   📊 Score-based routing (not keyword matching)');
   console.log('   🔵 Gemini: Fast Q&A, explanations');
-  console.log('   🟣 Manus: Execution tasks, complex analysis');
-  console.log('   ⚡ Execution verbs ALWAYS route to Manus');
+  console.log('   🟠 OpenClaw: Execution tasks, automation, complex analysis');
+  console.log('   ⚡ Execution verbs ALWAYS route to OpenClaw');
   console.log('');
   console.log('📡 API Endpoints:');
-  console.log('   POST /api/chat - Main chat endpoint');
-  console.log('   GET /api/task/:id - Check task status');
+  console.log('   POST /chat - Public chat endpoint');
+  console.log('   POST /ping-openclaw - OpenClaw connection check');
   console.log('   GET /health - Health check (requires auth)');
   console.log('');
   console.log('⏱️  Timeouts:');
   console.log('   Gemini: 30 seconds');
-  console.log('   Manus: 10 minutes');
+  console.log('   OpenClaw: 60 seconds');
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
