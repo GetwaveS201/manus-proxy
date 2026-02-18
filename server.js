@@ -143,6 +143,9 @@ setInterval(() => {
 
 const app = express();
 
+// Trust Render's proxy (required for express-rate-limit to work correctly)
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet({
   contentSecurityPolicy: {
@@ -407,9 +410,9 @@ async function callGemini(prompt, timeoutMs = 30000) {
   log('INFO', 'Calling Gemini API');
 
   const models = [
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-pro'
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-2.5-flash'
   ];
 
   let quotaError = false;
