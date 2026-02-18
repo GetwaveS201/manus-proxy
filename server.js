@@ -403,9 +403,9 @@ async function callGemini(prompt, timeoutMs = 30000) {
   log('INFO', 'Calling Gemini API');
 
   const models = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-pro'
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-pro'
   ];
 
   let quotaError = false;
@@ -2034,7 +2034,7 @@ app.get('/', (req, res) => {
                 if (thinkingMsg) thinkingMsg.remove();
 
                 if (!res.ok) {
-                    throw new Error(data.error || data.message || 'Request failed');
+                    throw new Error(data.error || data.message || 'Service temporarily unavailable. Please try again.');
                 }
 
                 const routingInfo = data.routing ?
@@ -2047,7 +2047,8 @@ app.get('/', (req, res) => {
                 if (thinkingMsg) thinkingMsg.remove();
                 // Don't show error for aborted requests
                 if (error.name !== 'AbortError') {
-                    addMsg('error', '❌ Error: ' + error.message);
+                    const errText = error.message || 'Something went wrong. Please try again.';
+                    addMsg('error', errText.startsWith('⚠️') || errText.startsWith('🔒') || errText.startsWith('🟠') ? errText : '❌ Error: ' + errText);
                 }
             } finally {
                 currentRequest = null;
@@ -2494,6 +2495,10 @@ function formatError(error) {
     'BOTH_APIS_EXHAUSTED': {
       status: 503,
       message: 'All AI services are temporarily unavailable. Please try again later.'
+    },
+    'GEMINI_FAILED': {
+      status: 503,
+      message: '⚠️ Gemini AI is temporarily unavailable. Please try again in a moment.'
     }
   };
 
