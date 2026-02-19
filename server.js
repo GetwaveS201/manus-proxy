@@ -640,6 +640,7 @@ app.get('/', (req, res) => {
             flex-direction: column;
             height: 100vh;
             flex-shrink: 0;
+            overflow: hidden;
         }
         .sidebar-header {
             padding: 16px 12px 12px;
@@ -880,7 +881,8 @@ app.get('/', (req, res) => {
         .history-section {
             flex: 1;
             overflow-y: auto;
-            padding: 8px 8px 16px;
+            padding: 8px 8px 8px;
+            min-height: 0;
         }
         .history-title {
             color: #6b6b6b;
