@@ -35,6 +35,64 @@ const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const API_KEY = process.env.API_KEY || 'your-secure-api-key-here';
 
+// ============================================
+// USER ACCOUNTS
+// ============================================
+
+const USERS_MAP = new Map();
+const TOKEN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+(function parseUsers() {
+  const raw = process.env.USERS || '';
+  if (!raw.trim()) {
+    // Backwards-compat fallback: any username, password = API_KEY value
+    USERS_MAP.set('__fallback__', API_KEY);
+    return;
+  }
+  raw.split(',').forEach(pair => {
+    const colon = pair.indexOf(':');
+    if (colon < 1) return;
+    const user = pair.slice(0, colon).trim().toLowerCase();
+    const pass = pair.slice(colon + 1).trim();
+    if (user && pass) USERS_MAP.set(user, pass);
+  });
+})();
+
+// ============================================
+// TOKEN HELPERS (HMAC-SHA256, no JWT library)
+// ============================================
+
+const TOKEN_SECRET = API_KEY;
+
+function createLoginToken(username) {
+  const issuedAt  = Date.now();
+  const expiresAt = issuedAt + TOKEN_EXPIRY_MS;
+  const payload   = Buffer.from(`${username}:${issuedAt}:${expiresAt}`).toString('base64url');
+  const hmac      = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
+  return `${payload}.${hmac}`;
+}
+
+function verifyLoginToken(token) {
+  if (!token || typeof token !== 'string') return { valid: false, reason: 'missing' };
+  const dot = token.lastIndexOf('.');
+  if (dot < 1) return { valid: false, reason: 'malformed' };
+  const payload  = token.slice(0, dot);
+  const hmac     = token.slice(dot + 1);
+  const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(hmac, 'hex'), Buffer.from(expected, 'hex')))
+      return { valid: false, reason: 'invalid_signature' };
+  } catch { return { valid: false, reason: 'invalid_signature' }; }
+  let decoded;
+  try { decoded = Buffer.from(payload, 'base64url').toString(); } catch { return { valid: false, reason: 'decode_error' }; }
+  const parts = decoded.split(':');
+  if (parts.length < 3) return { valid: false, reason: 'malformed_payload' };
+  const username  = parts[0];
+  const expiresAt = parseInt(parts[2], 10);
+  if (isNaN(expiresAt) || Date.now() > expiresAt) return { valid: false, reason: 'expired' };
+  return { valid: true, username };
+}
+
 // CORS whitelist (add your frontend domains)
 const CORS_WHITELIST = [
   'http://localhost:3000',
@@ -225,6 +283,15 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 app.use('/chat', limiter);
 
+// Strict rate limiter for login attempts: 10 per 15 min per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts. Please wait 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // ============================================
 // AUTHENTICATION MIDDLEWARE
 // ============================================
@@ -251,6 +318,26 @@ function requireApiKey(req, res, next) {
     });
   }
 
+  next();
+}
+
+/**
+ * Validates a Bearer login token issued by POST /login.
+ * Used on /chat (the frontend chat endpoint).
+ */
+function requireLogin(req, res, next) {
+  const authHeader = req.get('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
+    log('WARN', 'Missing login token', req.id);
+    return res.status(401).json({ error: 'Authentication required', message: 'Please log in to use the chat' });
+  }
+  const result = verifyLoginToken(token);
+  if (!result.valid) {
+    log('WARN', `Invalid login token: ${result.reason}`, req.id);
+    return res.status(401).json({ error: 'Session expired or invalid', message: 'Please log in again' });
+  }
+  req.authenticatedUser = result.username;
   next();
 }
 
@@ -2089,9 +2176,44 @@ app.get('/', (req, res) => {
             .ai-badge { font-size: 9px; padding: 2px 7px; }
             .empty-state h2 { font-size: 1.2rem; }
         }
+
+        /* ===== LOGIN OVERLAY ===== */
+        .login-overlay { position:fixed; inset:0; z-index:9999; background:#212121; display:flex; align-items:center; justify-content:center; font-family:'Söhne',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Ubuntu,sans-serif; }
+        .login-card { width:100%; max-width:360px; background:#1a1a1a; border:1px solid #2f2f2f; border-radius:14px; padding:36px 32px 32px; box-shadow:0 24px 80px rgba(0,0,0,.7); display:flex; flex-direction:column; align-items:center; }
+        .login-logo { width:48px; height:48px; background:#10a37f; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:18px; flex-shrink:0; }
+        .login-card h1 { font-size:17px; font-weight:600; color:#ececec; text-align:center; margin-bottom:24px; letter-spacing:-0.01em; }
+        .login-error { width:100%; font-size:12px; color:#f87171; background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.2); border-radius:7px; padding:0; max-height:0; overflow:hidden; transition:max-height .2s,padding .2s,margin-bottom .2s; text-align:center; box-sizing:border-box; }
+        .login-error.visible { padding:9px 12px; max-height:80px; margin-bottom:14px; }
+        .login-field { width:100%; margin-bottom:12px; }
+        .login-field input { width:100%; padding:10px 13px; background:#2a2a2a; border:1px solid #3f3f3f; border-radius:8px; color:#ececec; font-size:14px; font-family:inherit; box-sizing:border-box; outline:none; transition:border-color .15s,box-shadow .15s; }
+        .login-field input:focus { border-color:#10a37f; box-shadow:0 0 0 3px rgba(16,163,127,.12); }
+        .login-field input::placeholder { color:#4b4b4b; }
+        .login-submit-btn { width:100%; padding:11px; background:#10a37f; color:white; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; margin-top:6px; }
+        .login-submit-btn:hover:not(:disabled) { background:#0d9268; }
+        .login-submit-btn:disabled { opacity:.6; cursor:not-allowed; }
+        .logout-btn { background:none; border:none; color:#6b6b6b; cursor:pointer; padding:4px 6px; border-radius:5px; display:flex; align-items:center; flex-shrink:0; transition:color .15s,background .15s; }
+        .logout-btn:hover { color:#f87171; background:rgba(248,113,113,.1); }
     </style>
 </head>
 <body>
+    <!-- Login overlay — shown when not authenticated -->
+    <div id="login-overlay" class="login-overlay" style="display:none;">
+        <div class="login-card">
+            <div class="login-logo" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h1>AI Automation Assistant</h1>
+            <div class="login-error" id="login-error" role="alert" aria-live="polite"></div>
+            <div class="login-field">
+                <input type="text" id="login-username" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false" />
+            </div>
+            <div class="login-field">
+                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" />
+            </div>
+            <button class="login-submit-btn" id="login-btn" onclick="handleLogin()">Sign In</button>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar" role="complementary" aria-label="Chat history sidebar">
         <div class="sidebar-header">
@@ -2152,6 +2274,9 @@ app.get('/', (req, res) => {
                     <div class="account-plan">Free Plan</div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </button>
+            <button class="logout-btn" id="logout-btn" onclick="handleLogout()" aria-label="Sign out" title="Sign out" style="display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>
         </div>
     </aside>
@@ -2477,6 +2602,132 @@ app.get('/', (req, res) => {
         </div>
     </main>
     <script>
+        // ============================================
+        // AUTH LAYER — runs before anything else
+        // ============================================
+
+        const AUTH_TOKEN_KEY = 'auth_token';
+        const AUTH_USER_KEY  = 'auth_username';
+
+        function getAuthToken() {
+            try { return localStorage.getItem(AUTH_TOKEN_KEY) || null; } catch(e) { return null; }
+        }
+
+        function setAuthToken(token, username) {
+            try {
+                localStorage.setItem(AUTH_TOKEN_KEY, token);
+                if (username) localStorage.setItem(AUTH_USER_KEY, username);
+            } catch(e) { console.error('Failed to save auth token:', e); }
+        }
+
+        function clearAuthToken() {
+            try {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+                localStorage.removeItem(AUTH_USER_KEY);
+            } catch(e) {}
+            showLoginScreen();
+        }
+
+        function getAuthUsername() {
+            try { return localStorage.getItem(AUTH_USER_KEY) || 'User'; } catch(e) { return 'User'; }
+        }
+
+        function isAuthenticated() {
+            return !!getAuthToken();
+        }
+
+        function showLoginScreen() {
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            setTimeout(() => {
+                const u = document.getElementById('login-username');
+                if (u) u.focus();
+            }, 50);
+        }
+
+        function hideLoginScreen() {
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function setLoginError(msg) {
+            const el = document.getElementById('login-error');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.toggle('visible', !!msg);
+        }
+
+        async function handleLogin() {
+            const uInput = document.getElementById('login-username');
+            const pInput = document.getElementById('login-password');
+            const btn    = document.getElementById('login-btn');
+            if (!uInput || !pInput || !btn) return;
+
+            const username = uInput.value.trim();
+            const password = pInput.value;
+
+            if (!username) { setLoginError('Please enter your username.'); uInput.focus(); return; }
+            if (!password) { setLoginError('Please enter your password.'); pInput.focus(); return; }
+
+            btn.disabled    = true;
+            btn.textContent = 'Signing in...';
+            setLoginError('');
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success && data.token) {
+                    setAuthToken(data.token, data.username || username);
+                    // Seed display name from login username only if not already customised
+                    const existingName = localStorage.getItem('account_name');
+                    if (!existingName || existingName === 'User') {
+                        localStorage.setItem('account_name', data.username || username);
+                    }
+                    hideLoginScreen();
+                    if (typeof refreshAccountUI === 'function') refreshAccountUI();
+                } else if (res.status === 429) {
+                    setLoginError('Too many attempts. Please wait 15 minutes and try again.');
+                } else {
+                    setLoginError(data.error || 'Invalid username or password.');
+                    pInput.value = '';
+                    pInput.focus();
+                }
+            } catch(e) {
+                setLoginError('Network error. Please check your connection and try again.');
+                console.error('Login error:', e);
+            } finally {
+                btn.disabled    = false;
+                btn.textContent = 'Sign In';
+            }
+        }
+
+        function handleLogout() {
+            if (!confirm('Sign out of your account?')) return;
+            clearAuthToken();
+        }
+
+        // Enter key navigation in login form
+        document.getElementById('login-username')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('login-password')?.focus();
+        });
+        document.getElementById('login-password')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        // Gate: show login screen immediately if not authenticated
+        if (!isAuthenticated()) {
+            showLoginScreen();
+        }
+
+        // ============================================
+        // END AUTH LAYER
+        // ============================================
+
         const chat = document.getElementById('chat');
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
@@ -3027,7 +3278,10 @@ app.get('/', (req, res) => {
                 try {
                     const res = await fetch('/chat', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + (getAuthToken() || '')
+                        },
                         body: JSON.stringify({
                             prompt: userInput,
                             ai: currentAIMode,
@@ -3038,6 +3292,13 @@ app.get('/', (req, res) => {
                     });
                     clearTimeout(clientTimeout);
                     data = await res.json();
+
+                    // Session expired — force re-login
+                    if (res.status === 401) {
+                        if (thinkingMsg) thinkingMsg.remove();
+                        clearAuthToken();
+                        return;
+                    }
 
                     if (thinkingMsg) thinkingMsg.remove();
 
@@ -3143,6 +3404,9 @@ app.get('/', (req, res) => {
             if (el('settings-header-avatar'))  el('settings-header-avatar').textContent = initials;
             if (el('settings-header-name'))    el('settings-header-name').textContent   = name;
             if (el('profile-big-avatar'))      el('profile-big-avatar').textContent     = initials;
+            // Show logout button only when authenticated
+            const logoutBtn = el('logout-btn');
+            if (logoutBtn) logoutBtn.style.display = isAuthenticated() ? 'flex' : 'none';
         }
 
         function switchSettingsTab(tab) {
@@ -3265,7 +3529,42 @@ app.get('/', (req, res) => {
  * POST /chat
  * Body: { prompt: string, ai?: 'gemini'|'openclaw', openclawUrl?: string, openclawToken?: string }
  */
-app.post('/chat', async (req, res) => {
+// ============================================
+// LOGIN ENDPOINT
+// ============================================
+
+app.post('/login', loginLimiter, (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  const user = username.trim().toLowerCase();
+  let authenticated = false;
+  if (USERS_MAP.has('__fallback__')) {
+    // Fallback mode: any username, password must equal API_KEY
+    authenticated = (password === USERS_MAP.get('__fallback__'));
+  } else {
+    const storedPass = USERS_MAP.get(user);
+    if (storedPass !== undefined) {
+      try {
+        authenticated = crypto.timingSafeEqual(Buffer.from(password), Buffer.from(storedPass));
+      } catch { authenticated = false; }
+    }
+  }
+  if (!authenticated) {
+    log('WARN', `Failed login attempt for: ${user}`, req.id, { ip: req.ip });
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
+  const token = createLoginToken(user);
+  log('INFO', `Successful login: ${user}`, req.id);
+  res.json({ success: true, token, username: user });
+});
+
+// ============================================
+// CHAT ENDPOINT (login-protected)
+// ============================================
+
+app.post('/chat', requireLogin, async (req, res) => {
   const requestId = req.id;
 
   try {
