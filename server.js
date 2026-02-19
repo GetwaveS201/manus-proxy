@@ -502,7 +502,7 @@ async function callGemini(prompt, timeoutMs = 30000) {
  * @param {number} timeoutMs      - Request timeout in ms (default: 60s)
  * @returns {Promise<string>} AI response text
  */
-async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 60000) {
+async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 25000) {
   const url = openclawUrl || OPENCLAW_URL;
   const token = openclawToken || OPENCLAW_TOKEN;
 
@@ -566,7 +566,7 @@ async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 6000
 
     if (err.name === 'AbortError') {
       log('ERROR', `OpenClaw timeout after ${timeoutMs}ms`);
-      throw new Error('OPENCLAW_UNREACHABLE');
+      throw new Error('OPENCLAW_TIMEOUT');
     }
 
     // Re-throw known OpenClaw errors as-is
@@ -1454,12 +1454,44 @@ app.get('/', (req, res) => {
         .message pre:hover .copy-code-btn { opacity: 1; }
         .copy-code-btn:hover { background: #555; color: white; }
 
+        /* ===== TIMEOUT MESSAGE ===== */
+        .timeout-msg {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #f59e0b;
+        }
+        .retry-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: #2a2a2a;
+            border: 1px solid #3f3f3f;
+            border-radius: 7px;
+            color: #ececec;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .retry-btn:hover {
+            background: #333;
+            border-color: #10a37f;
+            color: #10a37f;
+        }
+        .retry-btn svg { color: inherit; }
+
         /* ===== ACCOUNT SECTION (sidebar bottom) ===== */
         .account-section {
             padding: 8px 10px 10px;
             border-top: 1px solid #2f2f2f;
             flex-shrink: 0;
             position: relative;
+            margin-top: auto;
         }
         .account-btn {
             width: 100%;
@@ -2367,6 +2399,41 @@ app.get('/', (req, res) => {
             return row;
         }
 
+        function addTimeoutMsg(originalPrompt) {
+            const inner = getChatInner();
+            const row = document.createElement('div');
+            row.className = 'message-row';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'msg-avatar bot-av';
+            avatar.setAttribute('aria-hidden', 'true');
+            avatar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>';
+            row.appendChild(avatar);
+
+            const msg = document.createElement('div');
+            msg.className = 'message error';
+            msg.innerHTML =
+                '<div class="timeout-msg">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;color:#f59e0b"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+                '<span>Request timed out. OpenClaw took too long to respond.</span>' +
+                '</div>' +
+                '<button class="retry-btn" onclick="retryPrompt(this, ' + JSON.stringify(JSON.stringify(originalPrompt)) + ')">'+
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>' +
+                'Retry</button>';
+            row.appendChild(msg);
+            inner.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function retryPrompt(btn, promptJson) {
+            const prompt = JSON.parse(promptJson);
+            // Remove the timeout message row
+            btn.closest('.message-row').remove();
+            // Put the prompt back in the input and resend
+            input.value = prompt;
+            handleSend();
+        }
+
         // ============================================
         // AI MODE MANAGEMENT
         // ============================================
@@ -2511,43 +2578,59 @@ app.get('/', (req, res) => {
 
                 thinkingMsg = addThinking();
 
-                // Create new AbortController
+                // Create new AbortController with 28s client-side timeout
                 currentRequest = new AbortController();
+                const clientTimeout = setTimeout(() => currentRequest.abort(), 28000);
 
-                const res = await fetch('/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        prompt: userInput,
-                        ai: currentAIMode,
-                        openclawUrl: getOpenClawSetting('url'),
-                        openclawToken: getOpenClawSetting('token')
-                    }),
-                    signal: currentRequest.signal
-                });
+                let data;
+                try {
+                    const res = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: userInput,
+                            ai: currentAIMode,
+                            openclawUrl: getOpenClawSetting('url'),
+                            openclawToken: getOpenClawSetting('token')
+                        }),
+                        signal: currentRequest.signal
+                    });
+                    clearTimeout(clientTimeout);
+                    data = await res.json();
 
-                const data = await res.json();
+                    if (thinkingMsg) thinkingMsg.remove();
 
-                if (thinkingMsg) thinkingMsg.remove();
+                    // Timeout response from server
+                    if (data.timeout || res.status === 504) {
+                        addTimeoutMsg(userInput);
+                        return;
+                    }
 
-                if (!res.ok) {
-                    throw new Error(data.error || data.message || 'Service temporarily unavailable. Please try again.');
+                    if (!res.ok) {
+                        throw new Error(data.error || data.message || 'Service temporarily unavailable. Please try again.');
+                    }
+
+                    const routingInfo = data.routing ?
+                        'Routed to ' + data.routing.ai.toUpperCase() + ' (confidence: ' + data.routing.confidence + ')' :
+                        null;
+
+                    addMsg('bot', data.response, data.ai, routingInfo);
+
+                } catch (fetchErr) {
+                    clearTimeout(clientTimeout);
+                    if (thinkingMsg) thinkingMsg.remove();
+                    if (fetchErr.name === 'AbortError') {
+                        // Client-side timeout fired
+                        addTimeoutMsg(userInput);
+                    } else {
+                        addMsg('error', fetchErr.message || 'Something went wrong. Please try again.');
+                    }
                 }
-
-                const routingInfo = data.routing ?
-                    'Routed to ' + data.routing.ai.toUpperCase() + ' (confidence: ' + data.routing.confidence + ')' :
-                    null;
-
-                addMsg('bot', data.response, data.ai, routingInfo);
 
             } catch (error) {
                 if (thinkingMsg) thinkingMsg.remove();
-                // Don't show error for aborted requests
                 if (error.name !== 'AbortError') {
-                    const errText = error.message || 'Something went wrong. Please try again.';
-                    addMsg('error', errText);
+                    addMsg('error', error.message || 'Something went wrong. Please try again.');
                 }
             } finally {
                 currentRequest = null;
@@ -2783,6 +2866,14 @@ app.post('/chat', async (req, res) => {
 
   } catch (error) {
     log('ERROR', `Chat error: ${error.message}`, requestId, { stack: error.stack });
+
+    if (error.message === 'OPENCLAW_TIMEOUT') {
+      return res.status(504).json({
+        error: 'OPENCLAW_TIMEOUT',
+        timeout: true,
+        requestId
+      });
+    }
 
     const { status, userMessage } = formatError(error);
 
@@ -3094,6 +3185,10 @@ function formatError(error) {
     'OPENCLAW_UNREACHABLE': {
       status: 503,
       message: '🟠 OpenClaw is not reachable. Please make sure OpenClaw is running on your server and check the URL in ⚙ Settings.'
+    },
+    'OPENCLAW_TIMEOUT': {
+      status: 504,
+      message: 'OPENCLAW_TIMEOUT'
     },
     'OPENCLAW_AUTH_FAILED': {
       status: 403,
