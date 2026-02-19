@@ -764,7 +764,7 @@ app.get('/', (req, res) => {
         }
         .openclaw-settings-link:hover { color: #1dc9a4; }
 
-        /* Settings Panel */
+        /* ===== FULL SETTINGS PANEL ===== */
         .settings-overlay {
             position: fixed;
             inset: 0;
@@ -777,71 +777,173 @@ app.get('/', (req, res) => {
         .settings-panel {
             position: fixed;
             top: 0; right: 0;
-            width: 360px;
+            width: 400px;
             height: 100vh;
-            background: #202123;
+            background: #1a1a1a;
             border-left: 1px solid #2f2f2f;
             z-index: 1000;
-            padding: 28px 24px;
+            padding: 0;
             transform: translateX(100%);
             transition: transform 0.25s ease;
-            overflow-y: auto;
-            box-shadow: -12px 0 48px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -12px 0 48px rgba(0,0,0,0.6);
         }
         .settings-panel.open { transform: translateX(0); }
+
+        /* Header */
         .settings-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 28px;
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid #2f2f2f;
+            flex-shrink: 0;
         }
-        .settings-title {
-            color: #ececec;
-            font-size: 17px;
-            font-weight: 600;
+        .settings-header-user {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
+        }
+        .settings-header-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #5d5dff, #7c7cff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+        .settings-header-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ececec;
+        }
+        .settings-header-sub {
+            font-size: 11px;
+            color: #6b6b6b;
+            margin-top: 1px;
         }
         .settings-close-btn {
             background: #2a2a2a;
             border: 1px solid #3f3f3f;
             color: #8e8ea0;
-            font-size: 14px;
             cursor: pointer;
-            padding: 6px 10px;
+            padding: 7px 10px;
             border-radius: 6px;
             transition: all 0.15s;
             font-family: inherit;
             line-height: 1;
+            display: flex;
+            align-items: center;
         }
         .settings-close-btn:hover { color: #ececec; border-color: #666; }
+
+        /* Tab nav */
+        .stabs {
+            display: flex;
+            gap: 2px;
+            padding: 10px 12px 0;
+            border-bottom: 1px solid #2f2f2f;
+            flex-shrink: 0;
+            background: #1a1a1a;
+        }
+        .stab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 8px 6px 10px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #6b6b6b;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+            margin-bottom: -1px;
+        }
+        .stab:hover { color: #c5c5d2; }
+        .stab.active {
+            color: #ececec;
+            border-bottom-color: #10a37f;
+        }
+
+        /* Tab content area */
+        .stab-content {
+            display: none;
+            padding: 20px 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .stab-content.active { display: block; }
+
+        .stab-section-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8e8ea0;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            margin-bottom: 16px;
+        }
+
+        /* Form elements */
         .settings-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         .settings-group label {
             display: block;
             color: #c5c5d2;
-            font-size: 13px;
-            margin-bottom: 7px;
+            font-size: 12px;
+            margin-bottom: 6px;
             font-weight: 500;
         }
         .settings-group input[type="text"],
-        .settings-group input[type="password"] {
+        .settings-group input[type="password"],
+        .settings-group textarea,
+        .settings-group select {
             width: 100%;
-            padding: 10px 13px;
+            padding: 9px 12px;
             background: #2a2a2a;
             border: 1px solid #3f3f3f;
             border-radius: 7px;
             color: #ececec;
-            font-size: 14px;
+            font-size: 13px;
             font-family: inherit;
             transition: border-color 0.15s;
+            box-sizing: border-box;
         }
-        .settings-group input:focus {
-            border-color: #ef7623;
+        .settings-group textarea {
+            resize: vertical;
+            min-height: 110px;
+            line-height: 1.5;
+        }
+        .settings-group select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            cursor: pointer;
+        }
+        .settings-group input:focus,
+        .settings-group textarea:focus,
+        .settings-group select:focus {
+            border-color: #10a37f;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(239, 118, 35, 0.12);
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.12);
         }
         .settings-hint {
             color: #6b6b6b;
@@ -849,36 +951,199 @@ app.get('/', (req, res) => {
             margin-top: 5px;
             line-height: 1.5;
         }
+
+        /* Slider */
+        .settings-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .settings-slider-row input[type="range"] {
+            flex: 1;
+            accent-color: #10a37f;
+            height: 4px;
+            cursor: pointer;
+            background: transparent;
+            padding: 0;
+            border: none;
+            box-shadow: none;
+        }
+        .settings-slider-row input[type="range"]:focus { box-shadow: none; }
+        .settings-slider-val {
+            min-width: 30px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 600;
+            color: #10a37f;
+        }
+
+        /* Save buttons */
         .settings-save-btn {
             width: 100%;
-            padding: 11px;
-            background: #ef7623;
+            padding: 10px;
+            background: #10a37f;
             color: white;
             border: none;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
-            margin-top: 8px;
+            margin-top: 4px;
             transition: background 0.15s;
             font-family: inherit;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 7px;
+        }
+        .settings-save-btn:hover { background: #0d9268; }
+        .settings-save-btn-sm {
+            padding: 8px 14px;
+            background: #2a2a2a;
+            color: #c5c5d2;
+            border: 1px solid #3f3f3f;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .settings-save-btn-sm:hover { background: #333; color: #ececec; border-color: #555; }
+        .settings-danger-btn {
+            width: 100%;
+            padding: 9px 12px;
+            background: transparent;
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.3);
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
             gap: 8px;
         }
-        .settings-save-btn:hover { background: #d96820; }
+        .settings-danger-btn:hover { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.5); }
+
         .settings-divider {
             border: none;
             border-top: 1px solid #2f2f2f;
-            margin: 24px 0;
+            margin: 18px 0;
         }
         .settings-instructions {
             color: #6b6b6b;
             font-size: 12px;
-            line-height: 1.7;
+            line-height: 1.8;
         }
         .settings-instructions strong { color: #8e8ea0; }
+
+        /* Profile avatar row */
+        .settings-avatar-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 14px;
+            background: #222;
+            border-radius: 10px;
+            border: 1px solid #2f2f2f;
+        }
+        .settings-big-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #5d5dff, #7c7cff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+        .settings-avatar-hint {
+            font-size: 12px;
+            color: #6b6b6b;
+            line-height: 1.5;
+        }
+
+        /* Test result */
+        .settings-test-result {
+            margin-top: 10px;
+            padding: 9px 12px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .settings-test-result.success {
+            background: rgba(16,163,127,0.1);
+            border: 1px solid rgba(16,163,127,0.3);
+            color: #10a37f;
+        }
+        .settings-test-result.error {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #f87171;
+        }
+
+        /* Connector cards */
+        .connector-card {
+            border: 1px solid #2f2f2f;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            background: #202020;
+        }
+        .connector-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 14px 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .connector-card-header:hover { background: #252525; }
+        .connector-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .gemini-icon  { background: rgba(16,163,127,0.15); color: #10a37f; }
+        .notion-icon  { background: rgba(255,255,255,0.06); color: #c5c5d2; }
+        .webhook-icon { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .connector-info { flex: 1; min-width: 0; }
+        .connector-name { font-size: 13px; font-weight: 600; color: #ececec; }
+        .connector-desc { font-size: 11px; color: #6b6b6b; margin-top: 2px; }
+        .connector-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: #6b6b6b;
+            flex-shrink: 0;
+        }
+        .connector-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #3f3f3f;
+        }
+        .connector-dot.connected { background: #10a37f; }
+        .connector-body {
+            padding: 0 14px 14px;
+            border-top: 1px solid #2a2a2a;
+        }
 
         /* ===== SIDEBAR HISTORY ===== */
         .history-section {
@@ -1845,16 +2110,16 @@ app.get('/', (req, res) => {
                 <button class="ai-mode-btn gemini active" id="mode-gemini"
                         onclick="setAIMode('gemini')"
                         role="tab" aria-selected="true"
-                        aria-label="Use Gemini AI for Q&amp;A">
+                        aria-label="Use Chat AI for Q&amp;A">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
-                    Gemini
+                    Chat
                 </button>
                 <button class="ai-mode-btn openclaw" id="mode-openclaw"
                         onclick="setAIMode('openclaw')"
                         role="tab" aria-selected="false"
-                        aria-label="Use OpenClaw AI for automation">
+                        aria-label="Use Agent AI for automation">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                    OpenClaw
+                    Agent
                 </button>
             </div>
         </div>
@@ -1879,127 +2144,261 @@ app.get('/', (req, res) => {
 
         <!-- Account Section (pinned to sidebar bottom) -->
         <div class="account-section">
-            <!-- Account popup menu (shown above the button) -->
-            <div class="account-menu" id="account-menu" role="menu" aria-label="Account menu">
-                <div class="account-menu-header">
-                    <div class="account-menu-avatar" id="account-menu-avatar">U</div>
-                    <div>
-                        <div class="account-menu-name" id="account-menu-name">User</div>
-                        <div class="account-menu-email">Local Account</div>
-                    </div>
-                </div>
-                <div class="account-menu-items">
-                    <button class="account-menu-item" onclick="openProfileModal(); closeAccountMenu();" role="menuitem">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                        Edit Profile
-                    </button>
-                    <button class="account-menu-item" onclick="openSettings(); closeAccountMenu();" role="menuitem">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                        OpenClaw Settings
-                    </button>
-                    <div class="account-menu-divider"></div>
-                    <button class="account-menu-item" onclick="clearAllHistory(); closeAccountMenu();" role="menuitem">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                        Clear All Chats
-                    </button>
-                    <div class="account-menu-divider"></div>
-                    <button class="account-menu-item danger" onclick="resetAccount(); closeAccountMenu();" role="menuitem">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        Reset Account
-                    </button>
-                </div>
-            </div>
-
-            <!-- Account button -->
-            <button class="account-btn" id="account-btn" onclick="toggleAccountMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+            <!-- Account button — clicking opens the full Settings panel -->
+            <button class="account-btn" id="account-btn" onclick="openSettings()" aria-label="Open Settings">
                 <div class="account-avatar" id="account-avatar">U</div>
                 <div class="account-info">
                     <div class="account-name" id="account-name">User</div>
                     <div class="account-plan">Free Plan</div>
                 </div>
-                <svg class="account-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
             </button>
         </div>
     </aside>
 
-    <!-- Profile Edit Modal -->
-    <div class="profile-overlay" id="profile-overlay" onclick="handleProfileOverlayClick(event)">
-        <div class="profile-modal" role="dialog" aria-modal="true" aria-label="Edit Profile">
-            <div class="profile-modal-header">
-                <span class="profile-modal-title">Edit Profile</span>
-                <button class="profile-modal-close" onclick="closeProfileModal()" aria-label="Close profile editor">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <div class="profile-modal-body">
-                <div class="profile-avatar-row">
-                    <div class="profile-big-avatar" id="profile-big-avatar">U</div>
-                    <div class="profile-avatar-hint">
-                        Your avatar is automatically<br>generated from your name initials.
-                    </div>
-                </div>
-                <div class="profile-field">
-                    <label for="profile-name-input">Display Name</label>
-                    <input type="text" id="profile-name-input" placeholder="Enter your name" maxlength="40" autocomplete="off" oninput="updateProfilePreview()" />
-                </div>
-                <button class="profile-save-btn" onclick="saveProfile()">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Settings Overlay -->
     <div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
 
-    <!-- OpenClaw Settings Panel -->
-    <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-label="OpenClaw Settings">
+    <!-- Full Settings Panel -->
+    <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
+
+        <!-- Panel Header -->
         <div class="settings-header">
-            <span class="settings-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef7623" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                OpenClaw Settings
-            </span>
+            <div class="settings-header-user">
+                <div class="settings-header-avatar" id="settings-header-avatar">U</div>
+                <div>
+                    <div class="settings-header-name" id="settings-header-name">User</div>
+                    <div class="settings-header-sub">Settings</div>
+                </div>
+            </div>
             <button class="settings-close-btn" onclick="closeSettings()" aria-label="Close settings">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
 
-        <div class="settings-group">
-            <label for="openclaw-url-input">OpenClaw Server URL</label>
-            <input type="text" id="openclaw-url-input"
-                   placeholder="http://your-vps-ip:18789"
-                   autocomplete="off" />
-            <div class="settings-hint">
-                Enter the URL of your OpenClaw VPS server.<br>
-                Example: <code style="color:#ef7623">http://1.2.3.4:18789</code>
+        <!-- Tab Nav -->
+        <div class="stabs">
+            <button class="stab active" id="stab-profile"    onclick="switchSettingsTab('profile')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Profile
+            </button>
+            <button class="stab" id="stab-system"   onclick="switchSettingsTab('system')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                System
+            </button>
+            <button class="stab" id="stab-agent"    onclick="switchSettingsTab('agent')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Agent
+            </button>
+            <button class="stab" id="stab-connectors" onclick="switchSettingsTab('connectors')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Connectors
+            </button>
+        </div>
+
+        <!-- TAB: Profile -->
+        <div class="stab-content active" id="stab-content-profile">
+            <div class="settings-avatar-row">
+                <div class="settings-big-avatar" id="profile-big-avatar">U</div>
+                <div class="settings-avatar-hint">Avatar auto-generated<br>from your display name.</div>
+            </div>
+            <div class="settings-group">
+                <label for="profile-name-input">Display Name</label>
+                <input type="text" id="profile-name-input" placeholder="Enter your name" maxlength="40" autocomplete="off" oninput="updateProfilePreview()" />
+            </div>
+            <div class="settings-group">
+                <label for="profile-plan-input">Plan</label>
+                <input type="text" id="profile-plan-input" placeholder="e.g. Free Plan" maxlength="30" autocomplete="off" />
+                <div class="settings-hint">Displayed below your name in the sidebar.</div>
+            </div>
+            <button class="settings-save-btn" onclick="saveProfile()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Profile
+            </button>
+            <hr class="settings-divider">
+            <div class="settings-group">
+                <label style="color:#8e8ea0;">Danger Zone</label>
+                <button class="settings-danger-btn" onclick="clearAllHistory()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    Clear All Chat History
+                </button>
+                <button class="settings-danger-btn" onclick="resetAccount()" style="margin-top:6px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Reset Account
+                </button>
             </div>
         </div>
 
-        <div class="settings-group">
-            <label for="openclaw-token-input">Bearer Token (optional)</label>
-            <input type="password" id="openclaw-token-input"
-                   placeholder="Leave blank if no auth required"
-                   autocomplete="off" />
-            <div class="settings-hint">
-                Your OpenClaw authentication token, if you configured one.
+        <!-- TAB: System Prompt -->
+        <div class="stab-content" id="stab-content-system">
+            <div class="settings-group">
+                <label for="system-prompt-input">System Prompt</label>
+                <textarea id="system-prompt-input" rows="8" placeholder="Enter a system prompt to customize how the AI responds. Leave blank to use the default behavior.&#10;&#10;Example: You are a helpful assistant for a software company. Always be concise and professional." autocomplete="off"></textarea>
+                <div class="settings-hint">This prompt is prepended to every conversation. It sets the AI's persona, tone, and focus area.</div>
+            </div>
+            <div class="settings-group">
+                <label for="chat-temp-input">Chat Temperature</label>
+                <div class="settings-slider-row">
+                    <input type="range" id="chat-temp-input" min="0" max="2" step="0.1" value="1" oninput="document.getElementById('chat-temp-val').textContent=this.value" />
+                    <span class="settings-slider-val" id="chat-temp-val">1.0</span>
+                </div>
+                <div class="settings-hint">Controls response creativity. 0 = deterministic, 2 = very creative.</div>
+            </div>
+            <div class="settings-group">
+                <label for="chat-lang-input">Response Language</label>
+                <select id="chat-lang-input">
+                    <option value="">Auto-detect (default)</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="ar">Arabic</option>
+                    <option value="hi">Hindi</option>
+                </select>
+                <div class="settings-hint">Force responses in a specific language.</div>
+            </div>
+            <button class="settings-save-btn" onclick="saveSystemSettings()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save System Settings
+            </button>
+        </div>
+
+        <!-- TAB: Agent (OpenClaw) -->
+        <div class="stab-content" id="stab-content-agent">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef7623" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Agent (OpenClaw) Connection
+            </div>
+            <div class="settings-group">
+                <label for="openclaw-url-input">Server URL</label>
+                <input type="text" id="openclaw-url-input" placeholder="http://your-vps-ip:18789" autocomplete="off" />
+                <div class="settings-hint">URL of your OpenClaw VPS. Example: <code style="color:#ef7623">http://1.2.3.4:18789</code></div>
+            </div>
+            <div class="settings-group">
+                <label for="openclaw-token-input">Bearer Token</label>
+                <input type="password" id="openclaw-token-input" placeholder="Leave blank if no auth required" autocomplete="off" />
+                <div class="settings-hint">Your OpenClaw authentication token (if configured).</div>
+            </div>
+            <button class="settings-save-btn" onclick="saveOpenClawSettings()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Save &amp; Test Connection
+            </button>
+            <div id="agent-test-result" class="settings-test-result" style="display:none;"></div>
+            <hr class="settings-divider">
+            <div class="stab-section-title" style="margin-top:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                How to connect
+            </div>
+            <div class="settings-instructions">
+                1. Start OpenClaw on your VPS server<br>
+                2. Enter your VPS IP/URL above<br>
+                3. Click "Save &amp; Test Connection"<br>
+                4. The status dot turns green when ready<br><br>
+                <strong>Default port:</strong> 18789<br>
+                <strong>Docs:</strong> <a href="https://docs.openclaw.ai" target="_blank" style="color:#ef7623;">docs.openclaw.ai</a>
             </div>
         </div>
 
-        <button class="settings-save-btn" onclick="saveOpenClawSettings()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save &amp; Test Connection
-        </button>
+        <!-- TAB: Connectors -->
+        <div class="stab-content" id="stab-content-connectors">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                API Connectors
+            </div>
 
-        <hr class="settings-divider">
+            <!-- Gemini -->
+            <div class="connector-card">
+                <div class="connector-card-header">
+                    <div class="connector-icon gemini-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                    </div>
+                    <div class="connector-info">
+                        <div class="connector-name">Gemini (Chat)</div>
+                        <div class="connector-desc">Google's Gemini AI for fast Q&amp;A and reasoning</div>
+                    </div>
+                    <div class="connector-status" id="gemini-connector-status">
+                        <span class="connector-dot connected"></span>
+                        <span class="connector-status-text">Active</span>
+                    </div>
+                </div>
+                <div class="connector-body">
+                    <div class="settings-group">
+                        <label for="gemini-api-key-input">API Key</label>
+                        <input type="password" id="gemini-api-key-input" placeholder="AIza..." autocomplete="off" />
+                        <div class="settings-hint">Get your key at <a href="https://aistudio.google.com/" target="_blank" style="color:#10a37f;">aistudio.google.com</a></div>
+                    </div>
+                    <div class="settings-group">
+                        <label for="gemini-model-input">Model</label>
+                        <select id="gemini-model-input">
+                            <option value="gemini-2.0-flash">gemini-2.0-flash (default)</option>
+                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                        </select>
+                    </div>
+                    <button class="settings-save-btn-sm" onclick="saveGeminiSettings()">Save Gemini Config</button>
+                </div>
+            </div>
 
-        <div class="settings-instructions">
-            <strong>How to connect:</strong><br>
-            1. Start OpenClaw on your VPS server<br>
-            2. Enter your VPS IP/URL above<br>
-            3. Click "Save &amp; Test Connection"<br>
-            4. The status dot turns green when ready<br><br>
-            <strong>Default OpenClaw port:</strong> 18789<br>
-            <strong>Docs:</strong> <a href="https://docs.openclaw.ai" target="_blank" style="color:#ef7623;">docs.openclaw.ai</a>
-        </div>
-    </div>
+            <!-- Notion -->
+            <div class="connector-card">
+                <div class="connector-card-header">
+                    <div class="connector-icon notion-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    </div>
+                    <div class="connector-info">
+                        <div class="connector-name">Notion</div>
+                        <div class="connector-desc">Connect your workspace to read and write pages</div>
+                    </div>
+                    <div class="connector-status" id="notion-connector-status">
+                        <span class="connector-dot"></span>
+                        <span class="connector-status-text">Not connected</span>
+                    </div>
+                </div>
+                <div class="connector-body">
+                    <div class="settings-group">
+                        <label for="notion-api-key-input">Integration Token</label>
+                        <input type="password" id="notion-api-key-input" placeholder="secret_..." autocomplete="off" />
+                        <div class="settings-hint">Create an integration at <a href="https://www.notion.so/my-integrations" target="_blank" style="color:#8e8ea0;">notion.so/my-integrations</a></div>
+                    </div>
+                    <button class="settings-save-btn-sm" onclick="saveNotionSettings()">Save Notion Config</button>
+                </div>
+            </div>
+
+            <!-- Webhook / Custom -->
+            <div class="connector-card">
+                <div class="connector-card-header">
+                    <div class="connector-icon webhook-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    </div>
+                    <div class="connector-info">
+                        <div class="connector-name">Webhook / Custom API</div>
+                        <div class="connector-desc">Send AI responses to any HTTP endpoint</div>
+                    </div>
+                    <div class="connector-status" id="webhook-connector-status">
+                        <span class="connector-dot"></span>
+                        <span class="connector-status-text">Not set</span>
+                    </div>
+                </div>
+                <div class="connector-body">
+                    <div class="settings-group">
+                        <label for="webhook-url-input">Webhook URL</label>
+                        <input type="text" id="webhook-url-input" placeholder="https://your-endpoint.com/hook" autocomplete="off" />
+                        <div class="settings-hint">POST requests will be sent with <code>{ prompt, response, mode }</code></div>
+                    </div>
+                    <div class="settings-group">
+                        <label for="webhook-secret-input">Secret Header (optional)</label>
+                        <input type="password" id="webhook-secret-input" placeholder="Bearer token or API key" autocomplete="off" />
+                    </div>
+                    <button class="settings-save-btn-sm" onclick="saveWebhookSettings()">Save Webhook Config</button>
+                </div>
+            </div>
+
+        </div><!-- /connectors -->
+
+    </div><!-- /settings-panel -->
 
     <!-- Main Content -->
     <main class="main-content" role="main">
@@ -2485,11 +2884,46 @@ app.get('/', (req, res) => {
             try { return localStorage.getItem('openclaw_' + key) || ''; } catch(e) { return ''; }
         }
 
-        function openSettings() {
-            const urlInput = document.getElementById('openclaw-url-input');
-            const tokenInput = document.getElementById('openclaw-token-input');
-            if (urlInput) urlInput.value = getOpenClawSetting('url') || 'http://your-vps-ip:18789';
-            if (tokenInput) tokenInput.value = getOpenClawSetting('token');
+        function openSettings(tab) {
+            // Populate all form fields from localStorage
+            const el = id => document.getElementById(id);
+
+            // Profile tab
+            if (el('settings-name-input')) el('settings-name-input').value = getDisplayName();
+            if (el('settings-plan-select')) {
+                const planLabel = localStorage.getItem('account_plan') || 'Free Plan';
+                const planVal = { 'Free Plan': 'free', 'Pro Plan': 'pro', 'Team Plan': 'team' }[planLabel] || 'free';
+                el('settings-plan-select').value = planVal;
+            }
+
+            // System tab
+            if (el('settings-system-prompt')) el('settings-system-prompt').value = localStorage.getItem('system_prompt') || '';
+            if (el('settings-temperature')) {
+                const temp = localStorage.getItem('chat_temperature') || '0.7';
+                el('settings-temperature').value = temp;
+                if (el('settings-temperature-val')) el('settings-temperature-val').textContent = temp;
+            }
+            if (el('settings-language')) el('settings-language').value = localStorage.getItem('chat_language') || 'en';
+
+            // Agent tab
+            if (el('openclaw-url-input')) el('openclaw-url-input').value = getOpenClawSetting('url') || 'http://your-vps-ip:18789';
+            if (el('openclaw-token-input')) el('openclaw-token-input').value = getOpenClawSetting('token');
+
+            // Connectors tab
+            if (el('gemini-api-key-input')) el('gemini-api-key-input').value = localStorage.getItem('gemini_api_key') || '';
+            if (el('gemini-model-select')) el('gemini-model-select').value = localStorage.getItem('gemini_model') || 'gemini-2.0-flash';
+            if (el('notion-token-input')) el('notion-token-input').value = localStorage.getItem('notion_api_key') || '';
+            if (el('webhook-url-input')) el('webhook-url-input').value = localStorage.getItem('webhook_url') || '';
+            if (el('webhook-secret-input')) el('webhook-secret-input').value = localStorage.getItem('webhook_secret') || '';
+
+            // Update connector status dots
+            updateConnectorStatus('notion', !!localStorage.getItem('notion_api_key'), 'Connected', 'Not connected');
+            updateConnectorStatus('webhook', !!localStorage.getItem('webhook_url'), 'Connected', 'Not configured');
+
+            // Switch to requested tab (default: profile)
+            switchSettingsTab(tab || 'profile');
+
+            // Open panel
             document.getElementById('settings-panel')?.classList.add('open');
             document.getElementById('settings-overlay')?.classList.add('open');
         }
@@ -2505,9 +2939,9 @@ app.get('/', (req, res) => {
             try {
                 localStorage.setItem('openclaw_url', url);
                 localStorage.setItem('openclaw_token', token);
-            } catch(e) { console.error('Failed to save OpenClaw settings:', e); }
-            closeSettings();
+            } catch(e) { console.error('Failed to save Agent settings:', e); }
             await checkOpenClawStatus();
+            showSettingsToast('Agent settings saved');
         }
 
         // ============================================
@@ -2675,98 +3109,66 @@ app.get('/', (req, res) => {
         input.focus();
 
         // ============================================
-        // ACCOUNT MANAGEMENT
+        // ACCOUNT & SETTINGS MANAGEMENT
         // ============================================
-
-        let accountMenuOpen = false;
 
         function getDisplayName() {
             return localStorage.getItem('account_name') || 'User';
         }
 
+        function getDisplayPlan() {
+            return localStorage.getItem('account_plan') || 'Free Plan';
+        }
+
         function getAvatarInitials(name) {
-            const parts = name.trim().split(/\s+/).filter(Boolean);
+            const parts = (name || 'U').trim().split(/\s+/).filter(Boolean);
             if (parts.length === 0) return 'U';
             if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
             return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
         }
 
         function refreshAccountUI() {
-            const name = getDisplayName();
+            const name     = getDisplayName();
+            const plan     = getDisplayPlan();
             const initials = getAvatarInitials(name);
-            // Sidebar button
-            document.getElementById('account-avatar').textContent = initials;
-            document.getElementById('account-name').textContent = name;
-            // Menu header
-            document.getElementById('account-menu-avatar').textContent = initials;
-            document.getElementById('account-menu-name').textContent = name;
-            // Profile modal big avatar
-            document.getElementById('profile-big-avatar').textContent = initials;
+            const el = id => document.getElementById(id);
+            if (el('account-avatar'))          el('account-avatar').textContent = initials;
+            if (el('account-name'))            el('account-name').textContent   = name;
+            const planEl = document.querySelector('.account-plan');
+            if (planEl) planEl.textContent = plan;
+            if (el('settings-header-avatar'))  el('settings-header-avatar').textContent = initials;
+            if (el('settings-header-name'))    el('settings-header-name').textContent   = name;
+            if (el('profile-big-avatar'))      el('profile-big-avatar').textContent     = initials;
         }
 
-        function toggleAccountMenu() {
-            const menu = document.getElementById('account-menu');
-            const btn  = document.getElementById('account-btn');
-            accountMenuOpen = !accountMenuOpen;
-            if (accountMenuOpen) {
-                menu.classList.add('open');
-                btn.classList.add('open');
-                btn.setAttribute('aria-expanded', 'true');
-            } else {
-                menu.classList.remove('open');
-                btn.classList.remove('open');
-                btn.setAttribute('aria-expanded', 'false');
-            }
+        function switchSettingsTab(tab) {
+            document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.stab-content').forEach(c => c.classList.toggle('active', c.id === 'stab-content-' + tab));
         }
 
-        function closeAccountMenu() {
-            const menu = document.getElementById('account-menu');
-            const btn  = document.getElementById('account-btn');
-            accountMenuOpen = false;
-            menu.classList.remove('open');
-            btn.classList.remove('open');
-            btn.setAttribute('aria-expanded', 'false');
-        }
-
-        // Close menu when clicking outside
-        document.addEventListener('click', function(e) {
-            const section = document.querySelector('.account-section');
-            if (accountMenuOpen && section && !section.contains(e.target)) {
-                closeAccountMenu();
-            }
-        });
-
-        function openProfileModal() {
-            const modal = document.getElementById('profile-overlay');
-            const nameInput = document.getElementById('profile-name-input');
-            const bigAvatar = document.getElementById('profile-big-avatar');
-            nameInput.value = getDisplayName();
-            bigAvatar.textContent = getAvatarInitials(nameInput.value);
-            modal.classList.add('open');
-            setTimeout(() => nameInput.focus(), 100);
-        }
-
-        function closeProfileModal() {
-            document.getElementById('profile-overlay').classList.remove('open');
-        }
-
-        function handleProfileOverlayClick(e) {
-            if (e.target === document.getElementById('profile-overlay')) {
-                closeProfileModal();
-            }
+        function updateConnectorStatus(id, connected, onLabel, offLabel) {
+            const dot  = document.getElementById(id + '-dot');
+            const text = document.getElementById(id + '-status-text');
+            if (dot)  dot.classList.toggle('connected', connected);
+            if (text) text.textContent = connected ? onLabel : offLabel;
         }
 
         function updateProfilePreview() {
-            const val = document.getElementById('profile-name-input').value;
-            document.getElementById('profile-big-avatar').textContent = getAvatarInitials(val || 'User');
+            const val = document.getElementById('settings-name-input')?.value || 'User';
+            const el = document.getElementById('profile-big-avatar');
+            if (el) el.textContent = getAvatarInitials(val);
         }
 
         function saveProfile() {
-            const nameInput = document.getElementById('profile-name-input');
-            const newName = nameInput.value.trim() || 'User';
+            const nameInput = document.getElementById('settings-name-input');
+            const planSelect = document.getElementById('settings-plan-select');
+            const newName = nameInput?.value.trim() || 'User';
+            const newPlan = planSelect?.value || 'free';
+            const planLabels = { free: 'Free Plan', pro: 'Pro Plan', team: 'Team Plan' };
             localStorage.setItem('account_name', newName);
+            localStorage.setItem('account_plan', planLabels[newPlan] || 'Free Plan');
             refreshAccountUI();
-            closeProfileModal();
+            showSettingsToast('Profile saved');
         }
 
         function clearAllHistory() {
@@ -2775,13 +3177,77 @@ app.get('/', (req, res) => {
             chatHistory = [];
             renderHistory();
             goHome();
+            showSettingsToast('Chat history cleared');
         }
 
         function resetAccount() {
-            if (!confirm('Reset your account? This will clear your name and all settings.')) return;
-            localStorage.removeItem('account_name');
+            if (!confirm('Reset all settings? This will clear your profile, settings and API keys.')) return;
+            ['account_name','account_plan','system_prompt','chat_temperature','chat_language',
+             'gemini_api_key','gemini_model','notion_api_key','webhook_url','webhook_secret',
+             'openclaw_url','openclaw_token','aiMode'].forEach(k => localStorage.removeItem(k));
             refreshAccountUI();
+            closeSettings();
+            showSettingsToast('Account reset');
         }
+
+        function saveSystemSettings() {
+            const prompt = document.getElementById('settings-system-prompt')?.value || '';
+            const temp   = document.getElementById('settings-temperature')?.value || '0.7';
+            const lang   = document.getElementById('settings-language')?.value || 'en';
+            localStorage.setItem('system_prompt', prompt);
+            localStorage.setItem('chat_temperature', temp);
+            localStorage.setItem('chat_language', lang);
+            showSettingsToast('System settings saved');
+        }
+
+        function saveGeminiSettings() {
+            const key   = document.getElementById('gemini-api-key-input')?.value.trim() || '';
+            const model = document.getElementById('gemini-model-select')?.value || 'gemini-2.0-flash';
+            localStorage.setItem('gemini_api_key', key);
+            localStorage.setItem('gemini_model', model);
+            updateConnectorStatus('gemini', !!key, 'Connected', 'Not connected');
+            showSettingsToast('Gemini settings saved');
+        }
+
+        function saveNotionSettings() {
+            const token = document.getElementById('notion-token-input')?.value.trim() || '';
+            localStorage.setItem('notion_api_key', token);
+            updateConnectorStatus('notion', !!token, 'Connected', 'Not connected');
+            showSettingsToast('Notion settings saved');
+        }
+
+        function saveWebhookSettings() {
+            const url    = document.getElementById('webhook-url-input')?.value.trim() || '';
+            const secret = document.getElementById('webhook-secret-input')?.value.trim() || '';
+            localStorage.setItem('webhook_url', url);
+            localStorage.setItem('webhook_secret', secret);
+            updateConnectorStatus('webhook', !!url, 'Connected', 'Not configured');
+            showSettingsToast('Webhook settings saved');
+        }
+
+        function showSettingsToast(msg) {
+            let toast = document.getElementById('settings-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'settings-toast';
+                toast.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);' +
+                    'background:#10a37f;color:#fff;padding:10px 22px;border-radius:8px;font-size:14px;' +
+                    'font-weight:500;z-index:9999;opacity:0;transition:opacity 0.25s;pointer-events:none;';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            clearTimeout(toast._t);
+            toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+        }
+
+        // Temperature slider live update
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.id === 'settings-temperature') {
+                const val = document.getElementById('settings-temperature-val');
+                if (val) val.textContent = e.target.value;
+            }
+        });
 
         // Initialize account UI on load
         refreshAccountUI();
