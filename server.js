@@ -22,6 +22,8 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('crypto');
+const fs     = require('fs');
+const path   = require('path');
 
 // ============================================
 // CONFIGURATION & ENVIRONMENT
@@ -57,6 +59,46 @@ const TOKEN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
     if (user && pass) USERS_MAP.set(user, pass);
   });
 })();
+
+// ============================================
+// FILE-BASED USER STORE
+// ============================================
+
+const USERS_FILE = process.env.USERS_FILE || path.join('/data', 'users.json');
+let userStore = { users: [], pending: [] };
+
+function loadUserStore() {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+      userStore = { users: parsed.users || [], pending: parsed.pending || [] };
+    }
+  } catch (e) { log('WARN', `Could not load users file: ${e.message}`); }
+}
+
+function saveUserStore() {
+  try {
+    const dir = path.dirname(USERS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(USERS_FILE, JSON.stringify(userStore, null, 2), 'utf8');
+  } catch (e) { log('ERROR', `Could not save users file: ${e.message}`); }
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}$${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  try {
+    const [salt, hash] = stored.split('$');
+    const candidate = crypto.scryptSync(password, salt, 64).toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(candidate, 'hex'));
+  } catch { return false; }
+}
+
+loadUserStore(); // Load on startup (log() is a function declaration — hoisted)
 
 // ============================================
 // TOKEN HELPERS (HMAC-SHA256, no JWT library)
@@ -288,6 +330,15 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: 'Too many login attempts. Please wait 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Rate limiter for signup requests: 5 per hour per IP
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many signup attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -2193,6 +2244,13 @@ app.get('/', (req, res) => {
         .login-submit-btn:disabled { opacity:.6; cursor:not-allowed; }
         .logout-btn { background:none; border:none; color:#6b6b6b; cursor:pointer; padding:4px 6px; border-radius:5px; display:flex; align-items:center; flex-shrink:0; transition:color .15s,background .15s; }
         .logout-btn:hover { color:#f87171; background:rgba(248,113,113,.1); }
+        /* Sign-up tab bar */
+        .login-tab-bar { display:flex; width:100%; gap:0; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid #2f2f2f; }
+        .login-tab { flex:1; padding:9px 0; background:#1a1a1a; color:#6b6b6b; border:none; cursor:pointer; font-size:13px; font-family:inherit; transition:background .15s,color .15s; }
+        .login-tab.active { background:#10a37f; color:white; font-weight:600; }
+        .login-success { width:100%; font-size:12px; color:#34d399; background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.2); border-radius:7px; padding:0; max-height:0; overflow:hidden; transition:max-height .2s,padding .2s,margin-bottom .2s; text-align:center; box-sizing:border-box; }
+        .login-success.visible { padding:9px 12px; max-height:80px; margin-bottom:14px; }
+        .login-card-hint { font-size:11px; color:#4b4b4b; text-align:center; margin-top:10px; width:100%; }
     </style>
 </head>
 <body>
@@ -2203,14 +2261,24 @@ app.get('/', (req, res) => {
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
             <h1>AI Automation Assistant</h1>
+            <div class="login-tab-bar">
+                <button class="login-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+                <button class="login-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
             <div class="login-error" id="login-error" role="alert" aria-live="polite"></div>
-            <div class="login-field">
-                <input type="text" id="login-username" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false" />
+            <div class="login-success" id="login-success" role="status" aria-live="polite"></div>
+            <div id="signin-fields">
+                <div class="login-field"><input type="text" id="login-username" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false" /></div>
+                <div class="login-field"><input type="password" id="login-password" placeholder="Password" autocomplete="current-password" /></div>
+                <button class="login-submit-btn" id="login-btn" onclick="handleLogin()">Sign In</button>
             </div>
-            <div class="login-field">
-                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" />
+            <div id="signup-fields" style="display:none;">
+                <div class="login-field"><input type="text" id="signup-username" placeholder="Username (3–20 chars, letters/numbers/_)" autocomplete="username" autocapitalize="none" spellcheck="false" /></div>
+                <div class="login-field"><input type="email" id="signup-email" placeholder="Email (optional)" autocomplete="email" /></div>
+                <div class="login-field"><input type="password" id="signup-password" placeholder="Password (min 8 characters)" autocomplete="new-password" /></div>
+                <button class="login-submit-btn" id="signup-btn" onclick="handleSignup()">Request Account</button>
+                <p class="login-card-hint">Your request will be reviewed by an admin before you can sign in.</p>
             </div>
-            <button class="login-submit-btn" id="login-btn" onclick="handleLogin()">Sign In</button>
         </div>
     </div>
 
@@ -2639,6 +2707,7 @@ app.get('/', (req, res) => {
         function showLoginScreen() {
             const overlay = document.getElementById('login-overlay');
             if (overlay) overlay.style.display = 'flex';
+            if (typeof switchAuthTab === 'function') switchAuthTab('signin');
             setTimeout(() => {
                 const u = document.getElementById('login-username');
                 if (u) u.focus();
@@ -2692,6 +2761,9 @@ app.get('/', (req, res) => {
                     if (typeof refreshAccountUI === 'function') refreshAccountUI();
                 } else if (res.status === 429) {
                     setLoginError('Too many attempts. Please wait 15 minutes and try again.');
+                } else if (res.status === 403) {
+                    setLoginError(data.error || 'Your account is pending admin approval.');
+                    pInput.value = '';
                 } else {
                     setLoginError(data.error || 'Invalid username or password.');
                     pInput.value = '';
@@ -2711,12 +2783,98 @@ app.get('/', (req, res) => {
             clearAuthToken();
         }
 
+        function setLoginSuccess(msg) {
+            const el = document.getElementById('login-success');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.toggle('visible', !!msg);
+        }
+
+        function switchAuthTab(tab) {
+            const signinFields = document.getElementById('signin-fields');
+            const signupFields = document.getElementById('signup-fields');
+            const tabSignin = document.getElementById('tab-signin');
+            const tabSignup = document.getElementById('tab-signup');
+            if (!signinFields || !signupFields) return;
+            setLoginError('');
+            setLoginSuccess('');
+            if (tab === 'signin') {
+                signinFields.style.display = '';
+                signupFields.style.display = 'none';
+                tabSignin?.classList.add('active');
+                tabSignup?.classList.remove('active');
+                setTimeout(() => document.getElementById('login-username')?.focus(), 50);
+            } else {
+                signinFields.style.display = 'none';
+                signupFields.style.display = '';
+                tabSignin?.classList.remove('active');
+                tabSignup?.classList.add('active');
+                setTimeout(() => document.getElementById('signup-username')?.focus(), 50);
+            }
+        }
+
+        async function handleSignup() {
+            const uInput = document.getElementById('signup-username');
+            const eInput = document.getElementById('signup-email');
+            const pInput = document.getElementById('signup-password');
+            const btn    = document.getElementById('signup-btn');
+            if (!uInput || !pInput || !btn) return;
+
+            const username = uInput.value.trim();
+            const email    = eInput?.value.trim() || '';
+            const password = pInput.value;
+
+            if (!username) { setLoginError('Please enter a username.'); uInput.focus(); return; }
+            if (!password) { setLoginError('Please enter a password.'); pInput.focus(); return; }
+
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            setLoginError('');
+            setLoginSuccess('');
+
+            try {
+                const res = await fetch('/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, email })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    setLoginSuccess(data.message || 'Request submitted! Waiting for admin approval.');
+                    uInput.value = '';
+                    if (eInput) eInput.value = '';
+                    pInput.value = '';
+                } else if (res.status === 429) {
+                    setLoginError('Too many attempts. Please wait before trying again.');
+                } else {
+                    setLoginError(data.error || 'Signup failed. Please try again.');
+                }
+            } catch(e) {
+                setLoginError('Network error. Please check your connection.');
+                console.error('Signup error:', e);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Request Account';
+            }
+        }
+
         // Enter key navigation in login form
         document.getElementById('login-username')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') document.getElementById('login-password')?.focus();
         });
         document.getElementById('login-password')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') handleLogin();
+        });
+
+        // Enter key navigation in signup form
+        document.getElementById('signup-username')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('signup-email')?.focus();
+        });
+        document.getElementById('signup-email')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('signup-password')?.focus();
+        });
+        document.getElementById('signup-password')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleSignup();
         });
 
         // Gate: show login screen immediately if not authenticated
@@ -3539,6 +3697,25 @@ app.post('/login', loginLimiter, (req, res) => {
     return res.status(400).json({ error: 'Username and password are required' });
   }
   const user = username.trim().toLowerCase();
+
+  // 1. Check file-based approved users (scrypt hashed)
+  const fileUser = userStore.users.find(u => u.username === user);
+  if (fileUser) {
+    if (!verifyPassword(password, fileUser.passwordHash)) {
+      log('WARN', `Failed login for: ${user}`, req.id, { ip: req.ip });
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    const token = createLoginToken(user);
+    log('INFO', `Successful login (file): ${user}`, req.id);
+    return res.json({ success: true, token, username: user });
+  }
+
+  // 2. Check pending requests — tell them to wait for admin approval
+  if (userStore.pending.some(u => u.username === user)) {
+    return res.status(403).json({ error: 'Your account is pending admin approval. Please wait.' });
+  }
+
+  // 3. Fallback: USERS_MAP (env var accounts)
   let authenticated = false;
   if (USERS_MAP.has('__fallback__')) {
     // Fallback mode: any username, password must equal API_KEY
@@ -3556,8 +3733,96 @@ app.post('/login', loginLimiter, (req, res) => {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
   const token = createLoginToken(user);
-  log('INFO', `Successful login: ${user}`, req.id);
+  log('INFO', `Successful login (env): ${user}`, req.id);
   res.json({ success: true, token, username: user });
+});
+
+// ============================================
+// SIGNUP ENDPOINT
+// ============================================
+
+app.post('/signup', signupLimiter, (req, res) => {
+  const { username, password, email } = req.body || {};
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  const user = username.trim().toLowerCase();
+
+  if (!/^[a-z0-9_]{3,20}$/.test(user)) {
+    return res.status(400).json({ error: 'Username must be 3–20 characters: letters, numbers, underscores only' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+
+  // Reject duplicate usernames across all stores
+  if (userStore.users.some(u => u.username === user) ||
+      userStore.pending.some(u => u.username === user) ||
+      USERS_MAP.has(user)) {
+    return res.status(409).json({ error: 'Username is already taken or pending review' });
+  }
+
+  const entry = { username: user, passwordHash: hashPassword(password), requestedAt: Date.now() };
+  if (email && typeof email === 'string') entry.email = email.trim().toLowerCase().slice(0, 200);
+
+  userStore.pending.push(entry);
+  saveUserStore();
+  log('INFO', `Signup request: ${user}`, req.id);
+  res.json({ success: true, message: 'Account request submitted! An admin will review it shortly.' });
+});
+
+// ============================================
+// ADMIN ENDPOINTS (X-Admin-Key: <API_KEY>)
+// ============================================
+
+function requireAdminKey(req, res, next) {
+  const key = req.get('X-Admin-Key') || req.query.key;
+  if (!key || key !== API_KEY) return res.status(401).json({ error: 'Admin access required' });
+  next();
+}
+
+// List pending signup requests
+app.get('/admin/pending', requireAdminKey, (req, res) => {
+  res.json({ pending: userStore.pending.map(u => ({
+    username: u.username, email: u.email || null, requestedAt: u.requestedAt
+  }))});
+});
+
+// Approve a pending user
+app.post('/admin/approve', requireAdminKey, (req, res) => {
+  const user = (req.body?.username || '').trim().toLowerCase();
+  if (!user) return res.status(400).json({ error: 'Username required' });
+  const idx = userStore.pending.findIndex(u => u.username === user);
+  if (idx === -1) return res.status(404).json({ error: 'No pending request for that username' });
+  const [entry] = userStore.pending.splice(idx, 1);
+  userStore.users.push({ username: entry.username, passwordHash: entry.passwordHash, createdAt: Date.now() });
+  saveUserStore();
+  log('INFO', `Admin approved: ${user}`, req.id);
+  res.json({ success: true, message: `${user} approved` });
+});
+
+// Reject a pending user
+app.post('/admin/reject', requireAdminKey, (req, res) => {
+  const user = (req.body?.username || '').trim().toLowerCase();
+  if (!user) return res.status(400).json({ error: 'Username required' });
+  const idx = userStore.pending.findIndex(u => u.username === user);
+  if (idx === -1) return res.status(404).json({ error: 'No pending request for that username' });
+  userStore.pending.splice(idx, 1);
+  saveUserStore();
+  log('INFO', `Admin rejected: ${user}`, req.id);
+  res.json({ success: true, message: `${user} rejected` });
+});
+
+// Delete an approved user
+app.post('/admin/delete-user', requireAdminKey, (req, res) => {
+  const user = (req.body?.username || '').trim().toLowerCase();
+  if (!user) return res.status(400).json({ error: 'Username required' });
+  const idx = userStore.users.findIndex(u => u.username === user);
+  if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  userStore.users.splice(idx, 1);
+  saveUserStore();
+  log('INFO', `Admin deleted user: ${user}`, req.id);
+  res.json({ success: true, message: `${user} deleted` });
 });
 
 // ============================================
