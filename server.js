@@ -2172,9 +2172,10 @@ app.get('/', (req, res) => {
         .login-submit-btn:hover:not(:disabled) { opacity: 0.88; }
         .login-submit-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
         .login-card-hint { font-size: 10px; color: var(--text-dim); text-align: center; margin-top: 10px; width: 100%; font-family: var(--mono); letter-spacing: 0.04em; }
-        /* login tab bar (signup hidden from UI but kept for backend compat) */
-        .login-tab-bar { display: none; }
-        .login-tab { display: none; }
+        /* login tab bar */
+        .login-tab-bar { display: flex; width: 100%; gap: 0; margin-bottom: 20px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-mid); }
+        .login-tab { flex: 1; padding: 9px 0; background: var(--bg-raised); color: var(--text-dim); border: none; cursor: pointer; font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; transition: background .15s, color .15s; }
+        .login-tab.active { background: var(--accent); color: #0a0a0b; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -2186,6 +2187,10 @@ app.get('/', (req, res) => {
             </div>
             <h1>AI Automation Assistant</h1>
             <div class="login-card-tagline">Think. Automate. Execute.</div>
+            <div class="login-tab-bar">
+                <button class="login-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+                <button class="login-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
             <div class="login-error" id="login-error" role="alert" aria-live="polite"></div>
             <div class="login-success" id="login-success" role="status" aria-live="polite"></div>
             <div id="signin-fields">
