@@ -2202,8 +2202,7 @@ app.get('/', (req, res) => {
                 <div class="login-field"><input type="text" id="signup-username" placeholder="Username (3–20 chars, letters/numbers/_)" autocomplete="username" autocapitalize="none" spellcheck="false" /></div>
                 <div class="login-field"><input type="email" id="signup-email" placeholder="Email (optional)" autocomplete="email" /></div>
                 <div class="login-field"><input type="password" id="signup-password" placeholder="Password (min 8 characters)" autocomplete="new-password" /></div>
-                <button class="login-submit-btn" id="signup-btn" onclick="handleSignup()">Request Account</button>
-                <p class="login-card-hint">Your request will be reviewed by an admin before you can sign in.</p>
+                <button class="login-submit-btn" id="signup-btn" onclick="handleSignup()">Create Account</button>
             </div>
         </div>
     </div>
@@ -2766,7 +2765,7 @@ app.get('/', (req, res) => {
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    setLoginSuccess(data.message || 'Request submitted! Waiting for admin approval.');
+                    setLoginSuccess(data.message || 'Account created! You can now sign in.');
                     uInput.value = '';
                     if (eInput) eInput.value = '';
                     pInput.value = '';
@@ -2780,7 +2779,7 @@ app.get('/', (req, res) => {
                 console.error('Signup error:', e);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Request Account';
+                btn.textContent = 'Create Account';
             }
         }
 
@@ -3694,7 +3693,7 @@ app.post('/signup', signupLimiter, (req, res) => {
   userStore.pending.push(entry);
   saveUserStore();
   log('INFO', `Signup request: ${user}`, req.id);
-  res.json({ success: true, message: 'Account request submitted! An admin will review it shortly.' });
+  res.json({ success: true, message: 'Account created! You can now sign in.' });
 });
 
 // ============================================
