@@ -521,7 +521,10 @@ async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 2500
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-openclaw-agent-id': 'main'
+  };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -3059,7 +3062,10 @@ app.post('/ping-openclaw', async (req, res) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-openclaw-agent-id': 'main'
+    };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const response = await fetch(`${url.replace(/\/$/, '')}/v1/chat/completions`, {
