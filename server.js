@@ -2203,12 +2203,16 @@ app.get('/', (req, res) => {
                 <div class="settings-avatar-hint">Avatar auto-generated<br>from your display name.</div>
             </div>
             <div class="settings-group">
-                <label for="profile-name-input">Display Name</label>
-                <input type="text" id="profile-name-input" placeholder="Enter your name" maxlength="40" autocomplete="off" oninput="updateProfilePreview()" />
+                <label for="settings-name-input">Display Name</label>
+                <input type="text" id="settings-name-input" placeholder="Enter your name" maxlength="40" autocomplete="off" oninput="updateProfilePreview()" />
             </div>
             <div class="settings-group">
-                <label for="profile-plan-input">Plan</label>
-                <input type="text" id="profile-plan-input" placeholder="e.g. Free Plan" maxlength="30" autocomplete="off" />
+                <label for="settings-plan-select">Plan</label>
+                <select id="settings-plan-select">
+                    <option value="free">Free Plan</option>
+                    <option value="pro">Pro Plan</option>
+                    <option value="team">Team Plan</option>
+                </select>
                 <div class="settings-hint">Displayed below your name in the sidebar.</div>
             </div>
             <button class="settings-save-btn" onclick="saveProfile()">
@@ -2270,17 +2274,17 @@ app.get('/', (req, res) => {
         <div class="stab-content" id="stab-content-agent">
             <div class="stab-section-title">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef7623" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                Agent (OpenClaw) Connection
+                Agent Connection
             </div>
             <div class="settings-group">
                 <label for="openclaw-url-input">Server URL</label>
                 <input type="text" id="openclaw-url-input" placeholder="http://your-vps-ip:18789" autocomplete="off" />
-                <div class="settings-hint">URL of your OpenClaw VPS. Example: <code style="color:#ef7623">http://1.2.3.4:18789</code></div>
+                <div class="settings-hint">URL of your Agent VPS. Example: <code style="color:#ef7623">http://1.2.3.4:18789</code></div>
             </div>
             <div class="settings-group">
                 <label for="openclaw-token-input">Bearer Token</label>
                 <input type="password" id="openclaw-token-input" placeholder="Leave blank if no auth required" autocomplete="off" />
-                <div class="settings-hint">Your OpenClaw authentication token (if configured).</div>
+                <div class="settings-hint">Your Agent authentication token (if configured).</div>
             </div>
             <button class="settings-save-btn" onclick="saveOpenClawSettings()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -2293,7 +2297,7 @@ app.get('/', (req, res) => {
                 How to connect
             </div>
             <div class="settings-instructions">
-                1. Start OpenClaw on your VPS server<br>
+                1. Start your Agent on your VPS server<br>
                 2. Enter your VPS IP/URL above<br>
                 3. Click "Save &amp; Test Connection"<br>
                 4. The status dot turns green when ready<br><br>
@@ -2316,8 +2320,8 @@ app.get('/', (req, res) => {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
                     </div>
                     <div class="connector-info">
-                        <div class="connector-name">Gemini (Chat)</div>
-                        <div class="connector-desc">Google's Gemini AI for fast Q&amp;A and reasoning</div>
+                        <div class="connector-name">Chat (Gemini)</div>
+                        <div class="connector-desc">Google Gemini AI — powers the Chat mode</div>
                     </div>
                     <div class="connector-status" id="gemini-connector-status">
                         <span class="connector-dot connected"></span>
@@ -2331,14 +2335,14 @@ app.get('/', (req, res) => {
                         <div class="settings-hint">Get your key at <a href="https://aistudio.google.com/" target="_blank" style="color:#10a37f;">aistudio.google.com</a></div>
                     </div>
                     <div class="settings-group">
-                        <label for="gemini-model-input">Model</label>
-                        <select id="gemini-model-input">
+                        <label for="gemini-model-select">Model</label>
+                        <select id="gemini-model-select">
                             <option value="gemini-2.0-flash">gemini-2.0-flash (default)</option>
                             <option value="gemini-1.5-pro">gemini-1.5-pro</option>
                             <option value="gemini-1.5-flash">gemini-1.5-flash</option>
                         </select>
                     </div>
-                    <button class="settings-save-btn-sm" onclick="saveGeminiSettings()">Save Gemini Config</button>
+                    <button class="settings-save-btn-sm" onclick="saveGeminiSettings()">Save Chat Config</button>
                 </div>
             </div>
 
@@ -2427,7 +2431,7 @@ app.get('/', (req, res) => {
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </div>
                 <h2>How can I help you?</h2>
-                <p>Ask me anything — I can answer questions, analyze data, and automate tasks using Gemini or OpenClaw.</p>
+                <p>Ask me anything — I can answer questions, analyze data, and automate tasks using Chat or Agent mode.</p>
                 <div class="example-queries">
                     <h3>Try asking</h3>
                     <ul role="list">
@@ -2698,7 +2702,7 @@ app.get('/', (req, res) => {
             if (type === 'bot' && aiType) {
                 const badge = document.createElement('div');
                 badge.className = 'ai-badge ' + aiType;
-                badge.textContent = aiType === 'gemini' ? 'Gemini' : 'OpenClaw';
+                badge.textContent = aiType === 'gemini' ? '🔵 Chat' : '🟠 Agent';
                 badge.setAttribute('aria-label', 'Response from ' + aiType);
                 msg.appendChild(badge);
             }
@@ -2817,7 +2821,7 @@ app.get('/', (req, res) => {
             msg.innerHTML =
                 '<div class="timeout-msg">' +
                 '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;color:#f59e0b"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-                '<span>Request timed out. OpenClaw took too long to respond.</span>' +
+                '<span>Request timed out. The AI took too long to respond.</span>' +
                 '</div>' +
                 '<button class="retry-btn" onclick="retryPrompt(this, ' + JSON.stringify(JSON.stringify(originalPrompt)) + ')">'+
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>' +
@@ -2866,7 +2870,7 @@ app.get('/', (req, res) => {
             // Update header display
             const headerDisplay = document.getElementById('header-ai-display');
             if (headerDisplay) {
-                headerDisplay.textContent = mode === 'gemini' ? 'Gemini' : 'OpenClaw';
+                headerDisplay.textContent = mode === 'gemini' ? 'Chat' : 'Agent';
             }
 
             // Check connection when switching to OpenClaw
@@ -2970,7 +2974,7 @@ app.get('/', (req, res) => {
 
                 if (data.reachable) {
                     dot.className = 'openclaw-status-dot online';
-                    text.textContent = 'OpenClaw connected';
+                    text.textContent = 'Agent connected';
                     text.style.color = '#4ade80';
                 } else {
                     dot.className = 'openclaw-status-dot offline';
