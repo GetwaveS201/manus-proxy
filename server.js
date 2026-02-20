@@ -640,12 +640,13 @@ async function callGemini(prompt, timeoutMs = 30000) {
  * @param {number} timeoutMs      - Request timeout in ms (default: 60s)
  * @returns {Promise<string>} AI response text
  */
-async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 25000) {
-  const url = openclawUrl || OPENCLAW_URL;
-  const token = openclawToken || OPENCLAW_TOKEN;
+async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 25000, isAdmin = false) {
+  // Non-admin users must supply their own credentials — never fall back to env vars
+  const url   = openclawUrl   || (isAdmin ? OPENCLAW_URL   : '');
+  const token = openclawToken || (isAdmin ? OPENCLAW_TOKEN : '');
 
   if (!url) {
-    throw new Error('OPENCLAW_NOT_CONFIGURED');
+    throw new Error(isAdmin ? 'OPENCLAW_NOT_CONFIGURED' : 'OPENCLAW_CREDENTIALS_REQUIRED');
   }
 
   // Basic SSRF guard: only allow http/https URLs
@@ -3789,13 +3790,21 @@ app.post('/chat', requireLogin, async (req, res) => {
     let response;
     let actualAI = routing.ai;
 
+    const isAdmin = USERS_MAP.has(req.authenticatedUser) || USERS_MAP.has('__fallback__');
+
     try {
       if (routing.ai === 'gemini') {
         response = await callGemini(prompt);
       } else {
-        response = await callOpenClaw(prompt, openclawUrl, openclawToken);
+        response = await callOpenClaw(prompt, openclawUrl, openclawToken, 25000, isAdmin);
       }
     } catch (error) {
+      if (error.message === 'OPENCLAW_CREDENTIALS_REQUIRED') {
+        return res.status(403).json({
+          error: 'Agent credentials required',
+          message: 'Please configure your own Agent URL and Bearer Token in Settings → Agent Connection.'
+        });
+      }
       // Intelligent fallback: if OpenClaw is unreachable, try Gemini
       if (error.message === 'OPENCLAW_UNREACHABLE' && routing.ai === 'openclaw') {
         log('WARN', 'OpenClaw unreachable, trying Gemini fallback', requestId);
@@ -4008,13 +4017,14 @@ app.get('/health', requireApiKey, (req, res) => {
  * POST /ping-openclaw
  * Body: { openclawUrl?: string, openclawToken?: string }
  */
-app.post('/ping-openclaw', async (req, res) => {
+app.post('/ping-openclaw', requireLogin, async (req, res) => {
   const { openclawUrl, openclawToken } = req.body || {};
-  const url   = openclawUrl   || OPENCLAW_URL;
-  const token = openclawToken || OPENCLAW_TOKEN;
+  const isAdmin = USERS_MAP.has(req.authenticatedUser) || USERS_MAP.has('__fallback__');
+  const url   = openclawUrl   || (isAdmin ? OPENCLAW_URL   : '');
+  const token = openclawToken || (isAdmin ? OPENCLAW_TOKEN : '');
 
   if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-    return res.json({ reachable: false, reason: 'No valid URL configured' });
+    return res.json({ reachable: false, reason: 'No Agent URL configured. Add your own in Settings → Agent Connection.' });
   }
 
   try {
