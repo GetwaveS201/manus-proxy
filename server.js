@@ -3687,12 +3687,12 @@ app.post('/signup', signupLimiter, (req, res) => {
     return res.status(409).json({ error: 'Username is already taken or pending review' });
   }
 
-  const entry = { username: user, passwordHash: hashPassword(password), requestedAt: Date.now() };
+  const entry = { username: user, passwordHash: hashPassword(password), createdAt: Date.now(), role: 'user' };
   if (email && typeof email === 'string') entry.email = email.trim().toLowerCase().slice(0, 200);
 
-  userStore.pending.push(entry);
+  userStore.users.push(entry);
   saveUserStore();
-  log('INFO', `Signup request: ${user}`, req.id);
+  log('INFO', `Signup: new account created: ${user}`, req.id);
   res.json({ success: true, message: 'Account created! You can now sign in.' });
 });
 
