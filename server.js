@@ -3899,10 +3899,10 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         let invoiceFileName = '';
 
         const ESCALATION_LEVELS = [
-            { maxDays: 30,  label: 'Friendly Reminder',   cls: 'friendly', tone: 'friendly reminder — polite, assume it was an oversight, no pressure' },
-            { maxDays: 60,  label: 'Firm / Professional', cls: 'firm',     tone: 'firm and professional — acknowledge prior contact, set a clear payment deadline' },
-            { maxDays: 90,  label: 'Urgent / Serious',    cls: 'urgent',   tone: 'urgent and serious — express concern, mention potential suspension of services' },
-            { maxDays: 9999,label: 'Final Notice / Legal',cls: 'final',    tone: 'final notice — state this is the last attempt before referring to collections or legal action' }
+            { maxDays: 30,  label: 'Friendly Reminder',   cls: 'friendly', tone: 'friendly reminder: polite, assume it was an oversight, no pressure' },
+            { maxDays: 60,  label: 'Firm / Professional', cls: 'firm',     tone: 'firm and professional: acknowledge prior contact, set a clear payment deadline' },
+            { maxDays: 90,  label: 'Urgent / Serious',    cls: 'urgent',   tone: 'urgent and serious: express concern, mention potential suspension of services' },
+            { maxDays: 9999,label: 'Final Notice / Legal',cls: 'final',    tone: 'final notice: state this is the last attempt before referring to collections or legal action' }
         ];
 
         function getEscalationLevel(days) {
@@ -3945,7 +3945,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             invoiceFileName = file.name;
             const nameEl = document.getElementById('invoice-file-name');
             const generateBtn = document.getElementById('invoice-generate-btn');
-            if (nameEl) nameEl.textContent = '\u2713 Loaded: ' + file.name;
+            if (nameEl) nameEl.textContent = 'Loaded: ' + file.name;
 
             const ext = file.name.split('.').pop().toLowerCase();
             const isImage = ['png','jpg','jpeg','webp'].includes(ext);
@@ -3953,7 +3953,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             const reader = new FileReader();
             reader.onload = function(ev) {
                 if (isImage) {
-                    invoiceFileContent = '[IMAGE INVOICE: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB) — user uploaded an invoice image from their billing software. Generate the follow-up email based on the escalation level and any context provided.]';
+                    invoiceFileContent = '[IMAGE INVOICE: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB) - user uploaded an invoice image from their billing software. Generate the follow-up email based on the escalation level and any context provided.]';
                 } else if (ext === 'pdf') {
                     invoiceFileContent = '[PDF INVOICE: ' + file.name + ']\n\n' + (ev.target.result || '').substring(0, 8000);
                 } else {
@@ -3991,7 +3991,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 thinkingEl = document.createElement('div');
                 thinkingEl.className = 'tool-output-thinking';
                 thinkingEl.id = 'invoice-thinking';
-                thinkingEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating email\u2026';
+                thinkingEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating email...';
                 outputEl.appendChild(thinkingEl);
             } else { thinkingEl.style.display = 'flex'; }
 
@@ -4049,7 +4049,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 thinkingEl = document.createElement('div');
                 thinkingEl.className = 'tool-output-thinking';
                 thinkingEl.id = 'adj-thinking';
-                thinkingEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating email\u2026';
+                thinkingEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating email...';
                 outputEl.appendChild(thinkingEl);
             } else { thinkingEl.style.display = 'flex'; }
 
