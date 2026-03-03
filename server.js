@@ -3955,9 +3955,9 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 if (isImage) {
                     invoiceFileContent = '[IMAGE INVOICE: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB) - user uploaded an invoice image from their billing software. Generate the follow-up email based on the escalation level and any context provided.]';
                 } else if (ext === 'pdf') {
-                    invoiceFileContent = '[PDF INVOICE: ' + file.name + ']\n\n' + (ev.target.result || '').substring(0, 8000);
+                    invoiceFileContent = '[PDF INVOICE: ' + file.name + '] ' + (ev.target.result || '').substring(0, 8000);
                 } else {
-                    invoiceFileContent = '[INVOICE FILE: ' + file.name + ']\n\n' + (ev.target.result || '').substring(0, 12000);
+                    invoiceFileContent = '[INVOICE FILE: ' + file.name + '] ' + (ev.target.result || '').substring(0, 12000);
                 }
                 if (generateBtn) generateBtn.disabled = false;
             };
