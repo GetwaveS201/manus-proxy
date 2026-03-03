@@ -843,9 +843,9 @@ app.get('/', (req, res) => {
             flex-direction: column;
             height: 100vh;
             flex-shrink: 0;
-            overflow: visible;
+            overflow: hidden;
             position: relative;
-            z-index: 10;
+            z-index: 1;
         }
         .sidebar-header {
             padding: 14px 10px 10px;
@@ -2185,9 +2185,9 @@ app.get('/', (req, res) => {
         .login-tab.active { background: var(--accent); color: #0a0a0b; font-weight: 600; }
 
         /* ===== SIDEBAR TOOL NAV ===== */
-        .sidebar-tools-section { padding: 6px 6px 4px; border-bottom: 1px solid var(--border); }
+        .sidebar-tools-section { padding: 6px 6px 4px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .sidebar-tools-label { color: var(--text-dim); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; padding: 4px 6px 3px; font-family: var(--mono); }
-        .tool-nav-btn { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 9px; margin-bottom: 2px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--text-mid); font-size: 11px; font-weight: 500; font-family: var(--mono); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.12s; text-align: left; position: relative; z-index: 20; pointer-events: all; }
+        .tool-nav-btn { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 9px; margin-bottom: 2px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--text-mid); font-size: 11px; font-weight: 500; font-family: var(--mono); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.12s; text-align: left; }
         .tool-nav-btn:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text); }
         .tool-nav-btn.active { background: var(--accent-lo); border-color: rgba(212,150,42,.25); color: var(--accent); }
         .tool-nav-btn svg { flex-shrink: 0; }
