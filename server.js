@@ -324,6 +324,8 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 app.use('/chat', limiter);
+app.use('/generate-invoice-followup', limiter);
+app.use('/generate-adjuster-followup', limiter);
 
 // Strict rate limiter for login attempts: 10 per 15 min per IP
 const loginLimiter = rateLimit({
@@ -2086,6 +2088,10 @@ app.get('/', (req, res) => {
             from { opacity: 0; transform: translateY(12px) scale(0.98); }
             to   { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
         .login-logo {
             width: 44px; height: 44px;
             background: linear-gradient(135deg, var(--accent) 0%, #8a5a10 100%);
@@ -2177,6 +2183,66 @@ app.get('/', (req, res) => {
         .login-tab-bar { display: flex; width: 100%; gap: 0; margin-bottom: 20px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-mid); }
         .login-tab { flex: 1; padding: 9px 0; background: var(--bg-raised); color: var(--text-dim); border: none; cursor: pointer; font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; transition: background .15s, color .15s; }
         .login-tab.active { background: var(--accent); color: #0a0a0b; font-weight: 600; }
+
+        /* ===== SIDEBAR TOOL NAV ===== */
+        .sidebar-tools-section { padding: 6px 6px 4px; border-bottom: 1px solid var(--border); }
+        .sidebar-tools-label { color: var(--text-dim); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; padding: 4px 6px 3px; font-family: var(--mono); }
+        .tool-nav-btn { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 9px; margin-bottom: 2px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--text-mid); font-size: 11px; font-weight: 500; font-family: var(--mono); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.12s; text-align: left; }
+        .tool-nav-btn:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text); }
+        .tool-nav-btn.active { background: var(--accent-lo); border-color: rgba(212,150,42,.25); color: var(--accent); }
+        .tool-nav-btn svg { flex-shrink: 0; }
+
+        /* ===== TOOL VIEWS ===== */
+        .tool-view { display: none; flex: 1; flex-direction: column; height: 100vh; background: var(--bg); min-width: 0; overflow: hidden; }
+        .tool-view.active { display: flex; }
+        .tool-header { background: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 11px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .tool-header-left { display: flex; align-items: center; gap: 9px; }
+        .tool-header-icon { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent) 0%, #8a5a10 100%); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 10px var(--accent-glow); }
+        .tool-header h1 { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-mid); letter-spacing: 0.06em; text-transform: uppercase; }
+        .tool-body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; max-width: 760px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+
+        /* Drop zone */
+        .drop-zone { border: 2px dashed var(--border-mid); border-radius: var(--radius); padding: 36px 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-raised); position: relative; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: var(--accent-lo); }
+        .drop-zone-icon { margin: 0 auto 10px; width: 38px; height: 38px; background: var(--bg-hover); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
+        .drop-zone-title { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text-mid); letter-spacing: 0.05em; margin-bottom: 4px; text-transform: uppercase; }
+        .drop-zone-hint { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.03em; }
+        .drop-zone-filename { margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 500; }
+        .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+        /* Tool form fields */
+        .tool-field-group { display: flex; flex-direction: column; gap: 14px; }
+        .tool-field { display: flex; flex-direction: column; gap: 5px; }
+        .tool-field label { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--text-mid); letter-spacing: 0.07em; text-transform: uppercase; }
+        .tool-field input[type="text"],
+        .tool-field input[type="number"],
+        .tool-field input[type="date"],
+        .tool-field textarea { width: 100%; padding: 9px 12px; background: var(--bg-raised); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: var(--sans); transition: border-color 0.15s; box-sizing: border-box; }
+        .tool-field input:focus, .tool-field textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-lo); }
+        .tool-field textarea { resize: vertical; min-height: 90px; font-family: var(--sans); line-height: 1.5; }
+        .tool-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        /* Escalation badge */
+        .escalation-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 3px; font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+        .escalation-badge.friendly { background: var(--green-lo); color: var(--green); border: 1px solid rgba(45,184,125,.25); }
+        .escalation-badge.firm { background: var(--accent-lo); color: var(--accent); border: 1px solid rgba(212,150,42,.25); }
+        .escalation-badge.urgent { background: var(--orange-lo); color: var(--orange); border: 1px solid rgba(224,112,51,.25); }
+        .escalation-badge.final { background: var(--red-lo); color: var(--red); border: 1px solid rgba(224,85,85,.25); }
+
+        /* Generate button */
+        .tool-generate-btn { width: 100%; padding: 11px; background: var(--accent); color: #0a0a0b; border: none; border-radius: var(--radius-sm); font-weight: 700; font-size: 12px; font-family: var(--mono); letter-spacing: 0.07em; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
+        .tool-generate-btn:hover:not(:disabled) { opacity: 0.88; }
+        .tool-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Output area */
+        .tool-output { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: none; }
+        .tool-output.visible { display: block; }
+        .tool-output-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-raised); }
+        .tool-output-label { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+        .tool-copy-btn { background: var(--bg-hover); border: 1px solid var(--border-mid); color: var(--text-mid); font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.12s; }
+        .tool-copy-btn:hover { color: var(--text); border-color: var(--border-hi); }
+        .tool-output-body { padding: 16px 18px; font-family: var(--sans); font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; word-break: break-word; max-height: 500px; overflow-y: auto; }
+        .tool-output-thinking { padding: 18px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 10px; letter-spacing: 0.04em; }
     </style>
 </head>
 <body>
@@ -2250,6 +2316,19 @@ app.get('/', (req, res) => {
             </button>
         </div>
 
+        <!-- Tool Nav -->
+        <div class="sidebar-tools-section">
+            <div class="sidebar-tools-label">Tools</div>
+            <button class="tool-nav-btn" id="tool-nav-invoices" onclick="showToolView('invoices')" aria-label="Open Invoice Follow-up tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Invoice Follow-up
+            </button>
+            <button class="tool-nav-btn" id="tool-nav-adjusters" onclick="showToolView('adjusters')" aria-label="Open Adjuster Follow-up tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Adjuster Follow-up
+            </button>
+        </div>
+
         <!-- Chat History -->
         <nav class="history-section" aria-label="Previous conversations">
             <h2 class="history-title">Recents</h2>
@@ -2297,21 +2376,29 @@ app.get('/', (req, res) => {
 
         <!-- Tab Nav -->
         <div class="stabs">
-            <button class="stab active" id="stab-profile"    onclick="switchSettingsTab('profile')">
+            <button class="stab active" id="stab-profile" data-tab="profile" onclick="switchSettingsTab('profile')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                 Profile
             </button>
-            <button class="stab" id="stab-system"   onclick="switchSettingsTab('system')">
+            <button class="stab" id="stab-system" data-tab="system" onclick="switchSettingsTab('system')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 System
             </button>
-            <button class="stab" id="stab-agent"    onclick="switchSettingsTab('agent')">
+            <button class="stab" id="stab-agent" data-tab="agent" onclick="switchSettingsTab('agent')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 Agent
             </button>
-            <button class="stab" id="stab-connectors" onclick="switchSettingsTab('connectors')">
+            <button class="stab" id="stab-connectors" data-tab="connectors" onclick="switchSettingsTab('connectors')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                 Connectors
+            </button>
+            <button class="stab" id="stab-invoices" data-tab="invoices" onclick="switchSettingsTab('invoices')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+                Invoices
+            </button>
+            <button class="stab" id="stab-adjusters" data-tab="adjusters" onclick="switchSettingsTab('adjusters')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Adjusters
             </button>
         </div>
 
@@ -2521,6 +2608,52 @@ app.get('/', (req, res) => {
 
         </div><!-- /connectors -->
 
+        <!-- TAB: Invoices -->
+        <div class="stab-content" id="stab-content-invoices">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Invoice Follow-up Prompt
+            </div>
+            <div class="settings-group">
+                <label for="invoice-system-prompt">Custom System Prompt</label>
+                <textarea id="invoice-system-prompt" rows="12" placeholder="You are a professional accounts receivable specialist for a construction company. Generate a follow-up email for an overdue invoice.
+
+Adjust tone based on escalation level:
+- Friendly Reminder (1-30 days): Polite, assume oversight
+- Firm / Professional (31-60 days): Firm, set deadline
+- Urgent / Serious (61-90 days): Serious, mention service suspension
+- Final Notice (90+ days): Final warning, reference legal/collections
+
+Format: Subject line, greeting, body, sign-off."></textarea>
+                <div class="settings-hint">Customize with your company name, contact details, and preferred tone. Escalation level is added automatically based on days overdue.</div>
+            </div>
+            <button class="settings-save-btn" onclick="saveInvoicePrompt()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Invoice Prompt
+            </button>
+        </div><!-- /invoices -->
+
+        <!-- TAB: Adjusters -->
+        <div class="stab-content" id="stab-content-adjusters">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Adjuster Follow-up Prompt
+            </div>
+            <div class="settings-group">
+                <label for="adjuster-system-prompt">Custom System Prompt</label>
+                <textarea id="adjuster-system-prompt" rows="12" placeholder="You are a professional claims coordinator for a construction company. Generate a follow-up email to an insurance adjuster.
+
+Reference the claim number and date of last contact. Request a clear status update and specific timeline. Mention project impact if appropriate.
+
+Format: Subject line, greeting, body, professional sign-off."></textarea>
+                <div class="settings-hint">Customize with your company name, contact info, and any standard language you want included in every adjuster email.</div>
+            </div>
+            <button class="settings-save-btn" onclick="saveAdjusterPrompt()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Adjuster Prompt
+            </button>
+        </div><!-- /adjusters -->
+
     </div><!-- /settings-panel -->
 
     <!-- Main Content -->
@@ -2595,6 +2728,135 @@ app.get('/', (req, res) => {
         </div>
         </div>
     </main>
+
+    <!-- ===== TOOL VIEW: Invoice Follow-up ===== -->
+    <div class="tool-view" id="tool-view-invoices" role="main" aria-label="Invoice Follow-up Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <div class="tool-header-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <h1>Invoice Follow-up</h1>
+            </div>
+            <button class="tool-nav-btn" style="width:auto;padding:6px 14px;margin:0;" onclick="showToolView('chat')" aria-label="Back to chat">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M19 12H5M5 12l7 7M5 12l7-7"/></svg>
+                Back to Chat
+            </button>
+        </div>
+        <div class="tool-body">
+
+            <!-- Days overdue + escalation badge -->
+            <div class="tool-field-row" style="align-items:end;">
+                <div class="tool-field">
+                    <label for="invoice-days-input">Days Past Due</label>
+                    <input type="number" id="invoice-days-input" placeholder="e.g. 45" min="0" max="999" oninput="updateEscalationBadge()" />
+                </div>
+                <div id="escalation-badge-wrap" style="padding-bottom:2px;"></div>
+            </div>
+
+            <!-- Drop zone -->
+            <div class="drop-zone" id="invoice-drop-zone"
+                 ondragover="handleInvoiceDragOver(event)"
+                 ondragleave="handleInvoiceDragLeave(event)"
+                 ondrop="handleInvoiceFileDrop(event)">
+                <input type="file" id="invoice-file-input" accept=".csv,.pdf,.txt,.xlsx,.png,.jpg,.jpeg,.webp" onchange="handleInvoiceFileSelect(event)" aria-label="Upload invoice file" />
+                <div class="drop-zone-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                </div>
+                <div class="drop-zone-title">Drop invoice file here</div>
+                <div class="drop-zone-hint">CSV, PDF, TXT, or image exports from QuickBooks, FreshBooks, etc.</div>
+                <div class="drop-zone-filename" id="invoice-file-name"></div>
+            </div>
+
+            <!-- Optional notes -->
+            <div class="tool-field">
+                <label for="invoice-notes-input">Additional Context (optional)</label>
+                <textarea id="invoice-notes-input" placeholder="Client name, project name, invoice number, any special circumstances..." rows="3"></textarea>
+            </div>
+
+            <!-- Generate button -->
+            <button class="tool-generate-btn" id="invoice-generate-btn" onclick="generateInvoiceFollowup()" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Generate Follow-up Email
+            </button>
+
+            <!-- Output -->
+            <div class="tool-output" id="invoice-output">
+                <div class="tool-output-header">
+                    <span class="tool-output-label">Generated Email</span>
+                    <button class="tool-copy-btn" onclick="copyToolOutput('invoice-output-body')" aria-label="Copy to clipboard">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="tool-output-body" id="invoice-output-body"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: Adjuster Follow-up ===== -->
+    <div class="tool-view" id="tool-view-adjusters" role="main" aria-label="Adjuster Follow-up Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <div class="tool-header-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h1>Adjuster Follow-up</h1>
+            </div>
+            <button class="tool-nav-btn" style="width:auto;padding:6px 14px;margin:0;" onclick="showToolView('chat')" aria-label="Back to chat">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M19 12H5M5 12l7 7M5 12l7-7"/></svg>
+                Back to Chat
+            </button>
+        </div>
+        <div class="tool-body">
+
+            <div class="tool-field-row">
+                <div class="tool-field">
+                    <label for="adj-name-input">Adjuster Name</label>
+                    <input type="text" id="adj-name-input" placeholder="John Smith" autocomplete="off" />
+                </div>
+                <div class="tool-field">
+                    <label for="adj-company-input">Insurance Company</label>
+                    <input type="text" id="adj-company-input" placeholder="State Farm" autocomplete="off" />
+                </div>
+            </div>
+
+            <div class="tool-field-row">
+                <div class="tool-field">
+                    <label for="adj-claim-input">Claim Number</label>
+                    <input type="text" id="adj-claim-input" placeholder="CLM-2024-001234" autocomplete="off" />
+                </div>
+                <div class="tool-field">
+                    <label for="adj-lastcontact-input">Date of Last Contact</label>
+                    <input type="date" id="adj-lastcontact-input" />
+                </div>
+            </div>
+
+            <div class="tool-field">
+                <label for="adj-status-input">Status / Notes</label>
+                <textarea id="adj-status-input" placeholder="Describe the current situation — what was discussed, what's pending, any promises made, how this is affecting the project..." rows="4"></textarea>
+            </div>
+
+            <button class="tool-generate-btn" id="adj-generate-btn" onclick="generateAdjusterFollowup()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Generate Follow-up Email
+            </button>
+
+            <div class="tool-output" id="adjuster-output">
+                <div class="tool-output-header">
+                    <span class="tool-output-label">Generated Email</span>
+                    <button class="tool-copy-btn" onclick="copyToolOutput('adjuster-output-body')" aria-label="Copy to clipboard">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="tool-output-body" id="adjuster-output-body"></div>
+            </div>
+
+        </div>
+    </div>
+
     <script>
         // ============================================
         // AUTH LAYER — runs before anything else
@@ -3259,6 +3521,10 @@ app.get('/', (req, res) => {
             updateConnectorStatus('notion', !!localStorage.getItem('notion_api_key'), 'Connected', 'Not connected');
             updateConnectorStatus('webhook', !!localStorage.getItem('webhook_url'), 'Connected', 'Not configured');
 
+            // Tool prompt tabs
+            if (el('invoice-system-prompt')) el('invoice-system-prompt').value = localStorage.getItem('invoice_system_prompt') || '';
+            if (el('adjuster-system-prompt')) el('adjuster-system-prompt').value = localStorage.getItem('adjuster_system_prompt') || '';
+
             // Switch to requested tab (default: profile)
             switchSettingsTab(tab || 'profile');
 
@@ -3536,7 +3802,8 @@ app.get('/', (req, res) => {
             if (!confirm('Reset all settings? This will clear your profile, settings and API keys.')) return;
             ['account_name','account_plan','system_prompt','chat_temperature','chat_language',
              'gemini_api_key','gemini_model','notion_api_key','webhook_url','webhook_secret',
-             'openclaw_url','openclaw_token','aiMode'].forEach(k => localStorage.removeItem(k));
+             'openclaw_url','openclaw_token','aiMode',
+             'invoice_system_prompt','adjuster_system_prompt'].forEach(k => localStorage.removeItem(k));
             refreshAccountUI();
             closeSettings();
             showSettingsToast('Account reset');
@@ -3603,6 +3870,238 @@ app.get('/', (req, res) => {
 
         // Initialize account UI on load
         refreshAccountUI();
+
+        // ============================================
+        // TOOL VIEW MANAGEMENT
+        // ============================================
+
+        function showToolView(viewId) {
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) mainContent.style.display = viewId === 'chat' ? '' : 'none';
+
+            document.querySelectorAll('.tool-view').forEach(v => v.classList.remove('active'));
+
+            if (viewId !== 'chat') {
+                const target = document.getElementById('tool-view-' + viewId);
+                if (target) target.classList.add('active');
+            }
+
+            document.querySelectorAll('.tool-nav-btn').forEach(b => {
+                b.classList.toggle('active', b.id === 'tool-nav-' + viewId);
+            });
+        }
+
+        // ============================================
+        // INVOICE FOLLOW-UP TOOL
+        // ============================================
+
+        let invoiceFileContent = '';
+        let invoiceFileName = '';
+
+        const ESCALATION_LEVELS = [
+            { maxDays: 30,  label: 'Friendly Reminder',   cls: 'friendly', tone: 'friendly reminder — polite, assume it was an oversight, no pressure' },
+            { maxDays: 60,  label: 'Firm / Professional', cls: 'firm',     tone: 'firm and professional — acknowledge prior contact, set a clear payment deadline' },
+            { maxDays: 90,  label: 'Urgent / Serious',    cls: 'urgent',   tone: 'urgent and serious — express concern, mention potential suspension of services' },
+            { maxDays: 9999,label: 'Final Notice / Legal',cls: 'final',    tone: 'final notice — state this is the last attempt before referring to collections or legal action' }
+        ];
+
+        function getEscalationLevel(days) {
+            return ESCALATION_LEVELS.find(l => days <= l.maxDays) || ESCALATION_LEVELS[3];
+        }
+
+        function updateEscalationBadge() {
+            const days = parseInt(document.getElementById('invoice-days-input')?.value, 10);
+            const wrap = document.getElementById('escalation-badge-wrap');
+            if (!wrap) return;
+            if (isNaN(days) || days < 0) { wrap.innerHTML = ''; return; }
+            const level = getEscalationLevel(days);
+            wrap.innerHTML = '<span class="escalation-badge ' + level.cls + '">' + level.label + '</span>';
+            const btn = document.getElementById('invoice-generate-btn');
+            if (btn && invoiceFileContent) btn.disabled = false;
+        }
+
+        function handleInvoiceDragOver(e) {
+            e.preventDefault();
+            document.getElementById('invoice-drop-zone')?.classList.add('drag-over');
+        }
+
+        function handleInvoiceDragLeave(e) {
+            document.getElementById('invoice-drop-zone')?.classList.remove('drag-over');
+        }
+
+        function handleInvoiceFileDrop(e) {
+            e.preventDefault();
+            document.getElementById('invoice-drop-zone')?.classList.remove('drag-over');
+            const file = e.dataTransfer?.files?.[0];
+            if (file) processInvoiceFile(file);
+        }
+
+        function handleInvoiceFileSelect(e) {
+            const file = e.target?.files?.[0];
+            if (file) processInvoiceFile(file);
+        }
+
+        function processInvoiceFile(file) {
+            invoiceFileName = file.name;
+            const nameEl = document.getElementById('invoice-file-name');
+            const generateBtn = document.getElementById('invoice-generate-btn');
+            if (nameEl) nameEl.textContent = '\u2713 Loaded: ' + file.name;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            const isImage = ['png','jpg','jpeg','webp'].includes(ext);
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                if (isImage) {
+                    invoiceFileContent = '[IMAGE INVOICE: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB) — user uploaded an invoice image from their billing software. Generate the follow-up email based on the escalation level and any context provided.]';
+                } else if (ext === 'pdf') {
+                    invoiceFileContent = '[PDF INVOICE: ' + file.name + ']\n\n' + (ev.target.result || '').substring(0, 8000);
+                } else {
+                    invoiceFileContent = '[INVOICE FILE: ' + file.name + ']\n\n' + (ev.target.result || '').substring(0, 12000);
+                }
+                if (generateBtn) generateBtn.disabled = false;
+            };
+            reader.onerror = function() {
+                if (nameEl) nameEl.textContent = 'Error reading file. Try a CSV or TXT export.';
+            };
+            if (isImage) {
+                reader.readAsDataURL(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        async function generateInvoiceFollowup() {
+            if (!invoiceFileContent) { alert('Please upload an invoice file first.'); return; }
+
+            const days = parseInt(document.getElementById('invoice-days-input')?.value, 10);
+            const notes = document.getElementById('invoice-notes-input')?.value.trim() || '';
+            const outputEl = document.getElementById('invoice-output');
+            const outputBody = document.getElementById('invoice-output-body');
+            const generateBtn = document.getElementById('invoice-generate-btn');
+
+            const level = isNaN(days) ? ESCALATION_LEVELS[0] : getEscalationLevel(days);
+
+            if (outputEl) outputEl.classList.add('visible');
+            if (outputBody) { outputBody.style.display = 'none'; outputBody.textContent = ''; }
+
+            // Show thinking
+            let thinkingEl = document.getElementById('invoice-thinking');
+            if (!thinkingEl) {
+                thinkingEl = document.createElement('div');
+                thinkingEl.className = 'tool-output-thinking';
+                thinkingEl.id = 'invoice-thinking';
+                thinkingEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating email\u2026';
+                outputEl.appendChild(thinkingEl);
+            } else { thinkingEl.style.display = 'flex'; }
+
+            if (generateBtn) generateBtn.disabled = true;
+
+            try {
+                const customPrompt = localStorage.getItem('invoice_system_prompt') || '';
+                const res = await fetch('/generate-invoice-followup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (getAuthToken() || '') },
+                    body: JSON.stringify({ invoiceContent: invoiceFileContent, fileName: invoiceFileName, daysOverdue: isNaN(days) ? 0 : days, escalationTone: level.tone, additionalNotes: notes, customSystemPrompt: customPrompt })
+                });
+                thinkingEl.style.display = 'none';
+                if (outputBody) outputBody.style.display = '';
+                if (res.status === 401) { clearAuthToken(); return; }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || data.error || 'Generation failed');
+                if (outputBody) outputBody.textContent = data.response;
+            } catch(err) {
+                if (thinkingEl) thinkingEl.style.display = 'none';
+                if (outputBody) { outputBody.style.display = ''; outputBody.innerHTML = '<span style="color:var(--red)">Error: ' + (err.message || 'Unknown error') + '</span>'; }
+            } finally {
+                if (generateBtn) generateBtn.disabled = false;
+            }
+        }
+
+        function saveInvoicePrompt() {
+            const prompt = document.getElementById('invoice-system-prompt')?.value || '';
+            localStorage.setItem('invoice_system_prompt', prompt);
+            showSettingsToast('Invoice prompt saved');
+        }
+
+        // ============================================
+        // ADJUSTER FOLLOW-UP TOOL
+        // ============================================
+
+        async function generateAdjusterFollowup() {
+            const name        = document.getElementById('adj-name-input')?.value.trim() || '';
+            const company     = document.getElementById('adj-company-input')?.value.trim() || '';
+            const claim       = document.getElementById('adj-claim-input')?.value.trim() || '';
+            const lastContact = document.getElementById('adj-lastcontact-input')?.value || '';
+            const status      = document.getElementById('adj-status-input')?.value.trim() || '';
+
+            if (!name && !claim) { alert('Please enter at least the adjuster name or claim number.'); return; }
+
+            const outputEl   = document.getElementById('adjuster-output');
+            const outputBody = document.getElementById('adjuster-output-body');
+            const generateBtn= document.getElementById('adj-generate-btn');
+
+            if (outputEl) outputEl.classList.add('visible');
+            if (outputBody) { outputBody.style.display = 'none'; outputBody.textContent = ''; }
+
+            let thinkingEl = document.getElementById('adj-thinking');
+            if (!thinkingEl) {
+                thinkingEl = document.createElement('div');
+                thinkingEl.className = 'tool-output-thinking';
+                thinkingEl.id = 'adj-thinking';
+                thinkingEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating email\u2026';
+                outputEl.appendChild(thinkingEl);
+            } else { thinkingEl.style.display = 'flex'; }
+
+            if (generateBtn) generateBtn.disabled = true;
+
+            try {
+                const customPrompt = localStorage.getItem('adjuster_system_prompt') || '';
+                const res = await fetch('/generate-adjuster-followup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (getAuthToken() || '') },
+                    body: JSON.stringify({ adjusterName: name, company, claimNumber: claim, lastContactDate: lastContact, statusNotes: status, customSystemPrompt: customPrompt })
+                });
+                thinkingEl.style.display = 'none';
+                if (outputBody) outputBody.style.display = '';
+                if (res.status === 401) { clearAuthToken(); return; }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || data.error || 'Generation failed');
+                if (outputBody) outputBody.textContent = data.response;
+            } catch(err) {
+                if (thinkingEl) thinkingEl.style.display = 'none';
+                if (outputBody) { outputBody.style.display = ''; outputBody.innerHTML = '<span style="color:var(--red)">Error: ' + (err.message || 'Unknown error') + '</span>'; }
+            } finally {
+                if (generateBtn) generateBtn.disabled = false;
+            }
+        }
+
+        function saveAdjusterPrompt() {
+            const prompt = document.getElementById('adjuster-system-prompt')?.value || '';
+            localStorage.setItem('adjuster_system_prompt', prompt);
+            showSettingsToast('Adjuster prompt saved');
+        }
+
+        // ============================================
+        // SHARED TOOL UTILITIES
+        // ============================================
+
+        function copyToolOutput(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const text = el.textContent || '';
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => showSettingsToast('Copied to clipboard')).catch(() => fallbackCopy(text));
+            } else { fallbackCopy(text); }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showSettingsToast('Copied to clipboard'); } catch(e) {}
+            ta.remove();
+        }
     </script>
 </body>
 </html>`);
@@ -4060,6 +4559,95 @@ app.post('/ping-openclaw', requireLogin, async (req, res) => {
   } catch (err) {
     const reason = err.name === 'AbortError' ? 'Timeout (5s)' : 'Connection refused';
     return res.json({ reachable: false, reason });
+  }
+});
+
+// ============================================
+// INVOICE FOLLOW-UP ENDPOINT
+// ============================================
+
+const DEFAULT_INVOICE_SYSTEM_PROMPT = `You are a professional accounts receivable specialist for a construction company.
+Generate a follow-up email for an overdue invoice based on the invoice data provided.
+Adjust the tone based on the escalation level specified.
+Be concise, professional, and include a clear call to action.
+Format as a ready-to-send email with: Subject line, greeting, body paragraphs, and a professional sign-off.`;
+
+app.post('/generate-invoice-followup', requireLogin, async (req, res) => {
+  const requestId = req.id;
+  try {
+    const { invoiceContent, fileName, daysOverdue, escalationTone, additionalNotes, customSystemPrompt } = req.body || {};
+    if (!invoiceContent || typeof invoiceContent !== 'string') {
+      return res.status(400).json({ error: 'Invoice content is required' });
+    }
+    const systemPrompt = (customSystemPrompt && customSystemPrompt.trim()) ? customSystemPrompt.trim() : DEFAULT_INVOICE_SYSTEM_PROMPT;
+    const daysStr = (typeof daysOverdue === 'number' && daysOverdue > 0) ? `${daysOverdue} days past due` : 'overdue (exact days not provided)';
+    const prompt = [
+      systemPrompt,
+      '',
+      '---',
+      `ESCALATION LEVEL: ${escalationTone || 'professional'}`,
+      `DAYS OVERDUE: ${daysStr}`,
+      `FILE: ${fileName || 'invoice'}`,
+      '---',
+      'INVOICE DATA:',
+      invoiceContent.substring(0, 15000),
+      additionalNotes ? `\nADDITIONAL CONTEXT:\n${additionalNotes}` : '',
+      '---',
+      'Generate the follow-up email now:'
+    ].filter(Boolean).join('\n');
+
+    log('INFO', `Invoice follow-up: ${daysStr}, tone: ${escalationTone}`, requestId);
+    const response = await callGemini(prompt, 45000);
+    res.json({ response, ai: 'gemini' });
+  } catch (error) {
+    log('ERROR', `Invoice follow-up error: ${error.message}`, requestId);
+    const { status, userMessage } = formatError(error);
+    res.status(status).json({ error: userMessage, requestId });
+  }
+});
+
+// ============================================
+// ADJUSTER FOLLOW-UP ENDPOINT
+// ============================================
+
+const DEFAULT_ADJUSTER_SYSTEM_PROMPT = `You are a professional claims coordinator for a construction company.
+Generate a polite but persistent follow-up email to an insurance adjuster.
+Reference the claim number and the date of last contact.
+Request a clear status update and a specific timeline for resolution.
+Mention the impact the delay is having on the construction project if appropriate.
+Keep the tone professional but firm.
+Format as a ready-to-send email with: Subject line, greeting, body paragraphs, and a professional sign-off.`;
+
+app.post('/generate-adjuster-followup', requireLogin, async (req, res) => {
+  const requestId = req.id;
+  try {
+    const { adjusterName, company, claimNumber, lastContactDate, statusNotes, customSystemPrompt } = req.body || {};
+    if (!adjusterName && !claimNumber) {
+      return res.status(400).json({ error: 'Adjuster name or claim number is required' });
+    }
+    const systemPrompt = (customSystemPrompt && customSystemPrompt.trim()) ? customSystemPrompt.trim() : DEFAULT_ADJUSTER_SYSTEM_PROMPT;
+    const daysSince = lastContactDate ? Math.floor((Date.now() - new Date(lastContactDate).getTime()) / 86400000) : null;
+    const prompt = [
+      systemPrompt,
+      '',
+      '---',
+      'CLAIM DETAILS:',
+      adjusterName    ? `Adjuster Name: ${adjusterName}` : '',
+      company         ? `Insurance Company: ${company}` : '',
+      claimNumber     ? `Claim Number: ${claimNumber}` : '',
+      lastContactDate ? `Last Contact: ${lastContactDate}${daysSince !== null ? ` (${daysSince} days ago)` : ''}` : '',
+      statusNotes     ? `Status / Notes: ${statusNotes}` : '',
+      '---',
+      'Generate the follow-up email now:'
+    ].filter(Boolean).join('\n');
+
+    log('INFO', `Adjuster follow-up: claim ${claimNumber || 'N/A'}`, requestId);
+    const response = await callGemini(prompt, 30000);
+    res.json({ response, ai: 'gemini' });
+  } catch (error) {
+    log('ERROR', `Adjuster follow-up error: ${error.message}`, requestId);
+    const { status, userMessage } = formatError(error);
+    res.status(status).json({ error: userMessage, requestId });
   }
 });
 
