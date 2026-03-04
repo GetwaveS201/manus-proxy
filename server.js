@@ -24,6 +24,8 @@ const helmet = require('helmet');
 const crypto = require('crypto');
 const fs     = require('fs');
 const path   = require('path');
+const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 // ============================================
 // CONFIGURATION & ENVIRONMENT
@@ -36,6 +38,13 @@ const OPENCLAW_TOKEN = process.env.OPENCLAW_TOKEN  || '';
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const API_KEY = process.env.API_KEY || 'your-secure-api-key-here';
+
+// Email (SMTP) config from env vars
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
 
 // ============================================
 // USER ACCOUNTS
@@ -84,6 +93,82 @@ function saveUserStore() {
   } catch (e) { log('ERROR', `Could not save users file: ${e.message}`); }
 }
 
+// ============================================
+// INVOICE DATA STORE
+// ============================================
+
+const INVOICES_FILE = process.env.INVOICES_FILE || path.join('/data', 'invoices.json');
+let invoiceStore = [];
+
+function loadInvoiceStore() {
+  try {
+    if (fs.existsSync(INVOICES_FILE)) {
+      invoiceStore = JSON.parse(fs.readFileSync(INVOICES_FILE, 'utf8')) || [];
+    }
+  } catch (e) { log('WARN', `Could not load invoices file: ${e.message}`); }
+}
+
+function saveInvoiceStore() {
+  try {
+    const dir = path.dirname(INVOICES_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoiceStore, null, 2), 'utf8');
+  } catch (e) { log('ERROR', `Could not save invoices file: ${e.message}`); }
+}
+
+// ============================================
+// AUTOMATIONS CONFIG STORE
+// ============================================
+
+const AUTOMATIONS_FILE = process.env.AUTOMATIONS_FILE || path.join('/data', 'automations.json');
+let automationsConfig = {
+  overdueFollowup: { enabled: false, hour: 9, minute: 0, ccEmail: '' }
+};
+
+function loadAutomationsConfig() {
+  try {
+    if (fs.existsSync(AUTOMATIONS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(AUTOMATIONS_FILE, 'utf8'));
+      automationsConfig = Object.assign(automationsConfig, parsed);
+    }
+  } catch (e) { log('WARN', `Could not load automations config: ${e.message}`); }
+}
+
+function saveAutomationsConfig() {
+  try {
+    const dir = path.dirname(AUTOMATIONS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(AUTOMATIONS_FILE, JSON.stringify(automationsConfig, null, 2), 'utf8');
+  } catch (e) { log('ERROR', `Could not save automations config: ${e.message}`); }
+}
+
+// ============================================
+// EMAIL HELPER
+// ============================================
+
+function createTransporter() {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS }
+  });
+}
+
+async function sendMail({ to, subject, text, html }) {
+  const transporter = createTransporter();
+  if (!transporter) throw new Error('EMAIL_NOT_CONFIGURED');
+  const info = await transporter.sendMail({
+    from: `"AI Work Agent" <${SMTP_FROM}>`,
+    to, subject,
+    text: text || '',
+    html: html || text || ''
+  });
+  log('INFO', `Email sent to ${to}: ${info.messageId}`);
+  return info;
+}
+
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -99,6 +184,8 @@ function verifyPassword(password, stored) {
 }
 
 loadUserStore(); // Load on startup (log() is a function declaration — hoisted)
+loadInvoiceStore();
+loadAutomationsConfig();
 
 // ============================================
 // TOKEN HELPERS (HMAC-SHA256, no JWT library)
@@ -750,6 +837,7 @@ app.get('/', (req, res) => {
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -2343,6 +2431,66 @@ app.get('/', (req, res) => {
         .safety-log-entry { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 8px; font-family: var(--mono); font-size: 12px; display: flex; align-items: center; gap: 12px; }
         .safety-log-date { color: var(--accent); font-weight: 600; }
         .safety-log-score { color: var(--text-mid); }
+
+        /* ===== AGENT ACTION BAR (send email / download PDF) ===== */
+        .agent-action-bar { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .agent-action-btn { display: flex; align-items: center; gap: 7px; padding: 9px 16px; background: var(--bg-raised); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); color: var(--text-mid); font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+        .agent-action-btn:hover { background: var(--bg-hover); border-color: var(--border-hi); color: var(--text); }
+        .agent-action-btn.primary { background: var(--green-lo); border-color: rgba(16,185,129,.3); color: var(--green); }
+        .agent-action-btn.primary:hover { background: var(--green); color: #fff; border-color: var(--green); }
+        .agent-action-btn.pdf { background: var(--accent-lo); border-color: rgba(139,92,246,.3); color: var(--accent); }
+        .agent-action-btn.pdf:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .agent-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Send email inline form */
+        .send-email-form { background: var(--bg-raised); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 10px; display: none; }
+        .send-email-form.visible { display: block; }
+        .send-email-form label { font-family: var(--mono); font-size: 10px; color: var(--text-mid); letter-spacing: 0.07em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .send-email-form input { width: 100%; padding: 8px 11px; background: var(--bg-hover); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: var(--sans); box-sizing: border-box; margin-bottom: 10px; }
+        .send-email-form input:focus { border-color: var(--accent); outline: none; }
+        .send-email-row { display: flex; gap: 8px; }
+
+        /* Invoice tracker */
+        .invoice-tracker { margin-bottom: 18px; }
+        .invoice-tracker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .invoice-tracker-title { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-mid); }
+        .invoice-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+        .invoice-item { display: flex; align-items: center; gap: 10px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: border-color 0.12s; }
+        .invoice-item:hover { border-color: var(--border-hi); background: var(--bg-hover); }
+        .invoice-item.selected { border-color: var(--accent); background: var(--accent-lo); }
+        .inv-number { color: var(--accent); font-weight: 600; min-width: 80px; }
+        .inv-client { color: var(--text); flex: 1; }
+        .inv-amount { color: var(--text-mid); min-width: 70px; text-align: right; }
+        .inv-status { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; }
+        .inv-status.overdue { background: var(--red-lo); color: var(--red); }
+        .inv-status.pending { background: var(--orange-lo); color: var(--orange); }
+        .inv-status.paid { background: var(--green-lo); color: var(--green); }
+        .inv-status.draft { background: var(--bg-hover); color: var(--text-dim); }
+        .inv-del-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px 5px; border-radius: 3px; font-size: 13px; flex-shrink: 0; }
+        .inv-del-btn:hover { color: var(--red); background: var(--red-lo); }
+
+        /* Add invoice form */
+        .add-invoice-form { background: var(--bg-raised); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 14px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .sub-add-form { background: var(--bg-raised); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 14px; display: none; }
+        .sub-add-form.visible { display: block; }
+
+        /* Automations settings */
+        .automation-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; }
+        .automation-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .automation-card-title { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
+        .automation-card-status { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; }
+        .automation-card-status.on { background: var(--green-lo); color: var(--green); }
+        .automation-card-status.off { background: var(--bg-hover); color: var(--text-dim); }
+        .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--bg-hover); border-radius: 20px; transition: 0.2s; }
+        .toggle-slider:before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: var(--text-dim); border-radius: 50%; transition: 0.2s; }
+        .toggle-switch input:checked + .toggle-slider { background: var(--green); }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); background: #fff; }
+        .email-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .email-status-dot.ok { background: var(--green); }
+        .email-status-dot.err { background: var(--red); }
     </style>
 </head>
 <body>
@@ -2531,6 +2679,10 @@ app.get('/', (req, res) => {
             <button class="stab" id="stab-changeorders" data-tab="changeorders" onclick="switchSettingsTab('changeorders')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
                 Change Orders
+            </button>
+            <button class="stab" id="stab-automations" data-tab="automations" onclick="switchSettingsTab('automations')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M21 12h-2M5 12H3M19.07 19.07l-1.41-1.41M5.34 5.34L3.93 3.93M12 3V1M12 23v-2"/></svg>
+                Automations
             </button>
         </div>
 
@@ -2820,6 +2972,55 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             </button>
         </div><!-- /changeorders -->
 
+        <!-- TAB: Automations -->
+        <div class="stab-content" id="stab-content-automations">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M21 12h-2M5 12H3"/></svg>
+                AI Workflow Automations
+            </div>
+
+            <!-- Email status -->
+            <div class="automation-card">
+                <div class="automation-card-header">
+                    <span class="automation-card-title">Email Connection</span>
+                    <span id="email-status-badge" class="automation-card-status off">Not Configured</span>
+                </div>
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 8px;">Set <code>SMTP_HOST</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, and <code>SMTP_FROM</code> environment variables on your Render server to enable email sending. Automations require email to be configured.</p>
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:0;">From: <span id="email-from-display" style="color:var(--accent);">Not set</span></p>
+            </div>
+
+            <!-- Overdue invoice auto follow-up -->
+            <div class="automation-card">
+                <div class="automation-card-header">
+                    <span class="automation-card-title">Daily Overdue Invoice Follow-Up</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span id="overdue-followup-status" class="automation-card-status off">OFF</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="overdue-followup-toggle" onchange="saveAutomationConfig()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">AI automatically generates and sends follow-up emails to clients with overdue invoices (from your Invoice Tracker). Runs once daily at the scheduled time.</p>
+                <div class="tool-field-row" style="margin-bottom:12px;">
+                    <div class="tool-field">
+                        <label>Run Time (Hour, 24h)</label>
+                        <input type="number" id="auto-hour" placeholder="9" min="0" max="23" value="9" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                    <div class="tool-field">
+                        <label>CC Email (optional)</label>
+                        <input type="email" id="auto-cc-email" placeholder="you@yourcompany.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                </div>
+                <button class="settings-save-btn" onclick="saveAutomationConfig()" style="width:auto;padding:9px 20px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                    Save Automation Settings
+                </button>
+                <div id="auto-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
+            </div>
+
+        </div><!-- /automations -->
+
     </div><!-- /settings-panel -->
 
     <!-- Main Content -->
@@ -2911,6 +3112,47 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         </div>
         <div class="tool-body">
 
+            <!-- Saved Invoice Tracker -->
+            <div class="invoice-tracker">
+                <div class="invoice-tracker-header">
+                    <span class="invoice-tracker-title">Saved Invoices (<span id="inv-list-count">0</span>)</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="add-line-btn" onclick="toggleAddInvoiceForm()" style="padding:5px 12px;font-size:10px;">+ Add Invoice</button>
+                        <button class="add-line-btn" onclick="loadInvoiceList()" style="padding:5px 12px;font-size:10px;">&#8635; Refresh</button>
+                    </div>
+                </div>
+                <!-- Add invoice inline form -->
+                <div class="add-invoice-form" id="add-invoice-form" style="display:none;">
+                    <div class="tool-field-row" style="margin-bottom:10px;">
+                        <div class="tool-field"><label>Client Name</label><input type="text" id="inv-new-client" placeholder="Mike Johnson"></div>
+                        <div class="tool-field"><label>Client Email</label><input type="email" id="inv-new-email" placeholder="mike@example.com"></div>
+                    </div>
+                    <div class="tool-field-row" style="margin-bottom:10px;">
+                        <div class="tool-field"><label>Invoice #</label><input type="text" id="inv-new-number" placeholder="INV-001"></div>
+                        <div class="tool-field"><label>Amount ($)</label><input type="number" id="inv-new-amount" placeholder="5000" min="0"></div>
+                    </div>
+                    <div class="tool-field-row" style="margin-bottom:10px;">
+                        <div class="tool-field"><label>Due Date</label><input type="date" id="inv-new-due"></div>
+                        <div class="tool-field"><label>Status</label>
+                            <select id="inv-new-status" style="padding:9px 12px;background:var(--bg-raised);border:1px solid var(--border-mid);border-radius:var(--radius-sm);color:var(--text);font-size:13px;">
+                                <option value="pending">Pending</option>
+                                <option value="overdue">Overdue</option>
+                                <option value="paid">Paid</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="tool-generate-btn" style="padding:8px 16px;font-size:12px;width:auto;" onclick="saveInvoiceEntry()">Save Invoice</button>
+                        <button class="add-line-btn" onclick="toggleAddInvoiceForm()">Cancel</button>
+                    </div>
+                </div>
+                <!-- Invoice list -->
+                <div class="invoice-list" id="inv-list">
+                    <div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:10px 0;">No saved invoices yet. Add one above.</div>
+                </div>
+            </div>
+
             <!-- Days overdue + escalation badge -->
             <div class="tool-field-row" style="align-items:end;">
                 <div class="tool-field">
@@ -2929,7 +3171,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 <div class="drop-zone-icon" aria-hidden="true">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
                 </div>
-                <div class="drop-zone-title">Drop invoice file here</div>
+                <div class="drop-zone-title">Drop invoice file here or select a saved invoice above</div>
                 <div class="drop-zone-hint">CSV, PDF, TXT, or image exports from QuickBooks, FreshBooks, etc.</div>
                 <div class="drop-zone-filename" id="invoice-file-name"></div>
             </div>
@@ -2947,7 +3189,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             </button>
 
             <!-- Output -->
-            <div class="tool-output" id="invoice-output">
+            <div class="tool-output" id="invoice-output" style="display:none;">
                 <div class="tool-output-header">
                     <span class="tool-output-label">Generated Email</span>
                     <button class="tool-copy-btn" onclick="copyToolOutput('invoice-output-body')" aria-label="Copy to clipboard">
@@ -2956,6 +3198,32 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     </button>
                 </div>
                 <div class="tool-output-body" id="invoice-output-body"></div>
+                <!-- Agent action bar -->
+                <div class="agent-action-bar" style="padding:0 18px 14px;">
+                    <button class="agent-action-btn primary" onclick="toggleSendEmailForm('invoice')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Send Email
+                    </button>
+                    <button class="agent-action-btn pdf" onclick="downloadPDF('invoice-output-body', 'Invoice Follow-up Email')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Download PDF
+                    </button>
+                </div>
+                <!-- Send email form -->
+                <div class="send-email-form" id="invoice-send-form" style="margin:0 18px 14px;">
+                    <label>Recipient Email</label>
+                    <input type="email" id="invoice-email-to" placeholder="client@example.com">
+                    <label>Subject</label>
+                    <input type="text" id="invoice-email-subject" placeholder="Invoice Follow-Up">
+                    <div class="send-email-row">
+                        <button class="agent-action-btn primary" style="flex:1;" onclick="sendEmailFromTool('invoice')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            <span id="invoice-send-btn-label">Send Now</span>
+                        </button>
+                        <button class="agent-action-btn" onclick="toggleSendEmailForm('invoice')">Cancel</button>
+                    </div>
+                    <div id="invoice-send-status" style="margin-top:8px;font-family:var(--mono);font-size:11px;display:none;"></div>
+                </div>
             </div>
 
         </div>
@@ -3009,7 +3277,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 Generate Follow-up Email
             </button>
 
-            <div class="tool-output" id="adjuster-output">
+            <div class="tool-output" id="adjuster-output" style="display:none;">
                 <div class="tool-output-header">
                     <span class="tool-output-label">Generated Email</span>
                     <button class="tool-copy-btn" onclick="copyToolOutput('adjuster-output-body')" aria-label="Copy to clipboard">
@@ -3018,6 +3286,30 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     </button>
                 </div>
                 <div class="tool-output-body" id="adjuster-output-body"></div>
+                <div class="agent-action-bar" style="padding:0 18px 14px;">
+                    <button class="agent-action-btn primary" onclick="toggleSendEmailForm('adjuster')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Send Email
+                    </button>
+                    <button class="agent-action-btn pdf" onclick="downloadPDF('adjuster-output-body', 'Adjuster Follow-up Email')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Download PDF
+                    </button>
+                </div>
+                <div class="send-email-form" id="adjuster-send-form" style="margin:0 18px 14px;">
+                    <label>Adjuster Email</label>
+                    <input type="email" id="adjuster-email-to" placeholder="adjuster@insurance.com">
+                    <label>Subject</label>
+                    <input type="text" id="adjuster-email-subject" placeholder="Claim Follow-Up">
+                    <div class="send-email-row">
+                        <button class="agent-action-btn primary" style="flex:1;" onclick="sendEmailFromTool('adjuster')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            <span id="adjuster-send-btn-label">Send Now</span>
+                        </button>
+                        <button class="agent-action-btn" onclick="toggleSendEmailForm('adjuster')">Cancel</button>
+                    </div>
+                    <div id="adjuster-send-status" style="margin-top:8px;font-family:var(--mono);font-size:11px;display:none;"></div>
+                </div>
             </div>
 
         </div>
@@ -3110,6 +3402,12 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     </button>
                 </div>
                 <div class="tool-output-body" id="est-output-body"></div>
+                <div class="agent-action-bar" style="padding:0 18px 14px;">
+                    <button class="agent-action-btn pdf" onclick="downloadPDF('est-output-body', 'Estimate')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Download PDF
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -3188,6 +3486,12 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     </button>
                 </div>
                 <div class="tool-output-body" id="co-output-body"></div>
+                <div class="agent-action-bar" style="padding:0 18px 14px;">
+                    <button class="agent-action-btn pdf" onclick="downloadPDF('co-output-body', 'Change Order')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Download PDF
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -5278,6 +5582,296 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             try { document.execCommand('copy'); showSettingsToast('Copied to clipboard'); } catch(e) {}
             ta.remove();
         }
+
+        // ============================================
+        // PDF DOWNLOAD
+        // ============================================
+        function downloadPDF(elementId, title) {
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            var text = el.textContent || el.innerText || '';
+            if (!text.trim()) { showSettingsToast('Nothing to download yet'); return; }
+            try {
+                var jsPDF = window.jspdf && window.jspdf.jsPDF;
+                if (!jsPDF) { showSettingsToast('PDF library not loaded'); return; }
+                var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                var margin = 20;
+                var pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+                var pageHeight = doc.internal.pageSize.getHeight() - margin * 2;
+                var y = margin;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.setTextColor(40, 40, 40);
+                doc.text(title, margin, y);
+                y += 8;
+                doc.setDrawColor(139, 92, 246);
+                doc.setLineWidth(0.5);
+                doc.line(margin, y, margin + pageWidth, y);
+                y += 7;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(60, 60, 60);
+                var lines = doc.splitTextToSize(text, pageWidth);
+                var lineH = 5;
+                lines.forEach(function(line) {
+                    if (y + lineH > margin + pageHeight) { doc.addPage(); y = margin; }
+                    doc.text(line, margin, y);
+                    y += lineH;
+                });
+                var stamp = new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'});
+                doc.setFontSize(8);
+                doc.setTextColor(160, 160, 160);
+                doc.text('Generated by AI Work Agent ' + stamp, margin, doc.internal.pageSize.getHeight() - 8);
+                var filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_' + Date.now() + '.pdf';
+                doc.save(filename);
+                showSettingsToast('PDF downloaded');
+            } catch(e) {
+                showSettingsToast('PDF error: ' + e.message);
+            }
+        }
+
+        // ============================================
+        // SEND EMAIL (from tool output)
+        // ============================================
+        function toggleSendEmailForm(tool) {
+            var form = document.getElementById(tool + '-send-form');
+            if (!form) return;
+            form.classList.toggle('visible');
+        }
+
+        async function sendEmailFromTool(tool) {
+            var to = (document.getElementById(tool + '-email-to') || {}).value || '';
+            var subject = (document.getElementById(tool + '-email-subject') || {}).value || '';
+            var bodyEl = document.getElementById(tool + '-output-body');
+            var body = bodyEl ? (bodyEl.textContent || bodyEl.innerText || '') : '';
+            var btnLabel = document.getElementById(tool + '-send-btn-label');
+            var statusEl = document.getElementById(tool + '-send-status');
+
+            if (!to || !subject || !body.trim()) {
+                showSettingsToast('Fill in recipient email and subject');
+                return;
+            }
+            if (btnLabel) btnLabel.textContent = 'Sending...';
+            if (statusEl) { statusEl.style.display = ''; statusEl.textContent = 'Sending...'; statusEl.style.color = 'var(--text-dim)'; }
+
+            var token = getAuthToken();
+            try {
+                var resp = await fetch('/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ to: to, subject: subject, body: body })
+                });
+                var data = await resp.json();
+                if (resp.ok && data.success) {
+                    if (statusEl) { statusEl.textContent = 'Email sent to ' + to; statusEl.style.color = 'var(--green)'; }
+                    showSettingsToast('Email sent to ' + to);
+                    if (btnLabel) btnLabel.textContent = 'Sent!';
+                    setTimeout(function() { if (btnLabel) btnLabel.textContent = 'Send Now'; }, 3000);
+                } else {
+                    var msg = data.error || 'Failed to send';
+                    if (statusEl) { statusEl.textContent = msg; statusEl.style.color = 'var(--red)'; }
+                    showSettingsToast(msg);
+                    if (btnLabel) btnLabel.textContent = 'Send Now';
+                }
+            } catch(e) {
+                if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--red)'; }
+                if (btnLabel) btnLabel.textContent = 'Send Now';
+            }
+        }
+
+        // ============================================
+        // INVOICE TRACKER (persistent, server-side)
+        // ============================================
+        var savedInvoices = [];
+
+        function loadInvoiceList() {
+            var token = getAuthToken();
+            if (!token) return;
+            fetch('/api/invoices', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    savedInvoices = data.invoices || [];
+                    renderInvoiceList();
+                }).catch(function() {});
+        }
+
+        function renderInvoiceList() {
+            var list = document.getElementById('inv-list');
+            var count = document.getElementById('inv-list-count');
+            if (!list) return;
+            if (count) count.textContent = savedInvoices.length;
+            if (savedInvoices.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:10px 0;">No saved invoices yet. Add one above.</div>';
+                return;
+            }
+            var today = Date.now();
+            list.innerHTML = '';
+            savedInvoices.forEach(function(inv) {
+                var daysOverdue = inv.dueDate ? Math.floor((today - new Date(inv.dueDate).getTime()) / 86400000) : 0;
+                var item = document.createElement('div');
+                item.className = 'invoice-item';
+                item.dataset.id = inv.id;
+                var statusClass = inv.status === 'overdue' ? 'overdue' : inv.status === 'paid' ? 'paid' : inv.status === 'draft' ? 'draft' : 'pending';
+                var daysLabel = inv.status === 'overdue' && daysOverdue > 0 ? ' (' + daysOverdue + 'd overdue)' : '';
+                item.innerHTML = '<span class="inv-number">' + inv.invoiceNumber + '</span>' +
+                    '<span class="inv-client">' + inv.clientName + '</span>' +
+                    '<span class="inv-amount">$' + (inv.amount || 0).toLocaleString() + '</span>' +
+                    '<span class="inv-status ' + statusClass + '">' + inv.status + daysLabel + '</span>' +
+                    '<button class="inv-del-btn" title="Delete">x</button>';
+                item.querySelector('.inv-del-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteInvoiceEntry(inv.id);
+                });
+                item.addEventListener('click', function() {
+                    selectInvoiceForFollowup(inv, daysOverdue);
+                });
+                list.appendChild(item);
+            });
+        }
+
+        function toggleAddInvoiceForm() {
+            var form = document.getElementById('add-invoice-form');
+            if (!form) return;
+            form.style.display = form.style.display === 'none' ? '' : 'none';
+        }
+
+        async function saveInvoiceEntry() {
+            var token = getAuthToken();
+            if (!token) return;
+            var clientName = (document.getElementById('inv-new-client') || {}).value || '';
+            var clientEmail = (document.getElementById('inv-new-email') || {}).value || '';
+            var invoiceNumber = (document.getElementById('inv-new-number') || {}).value || '';
+            var amount = (document.getElementById('inv-new-amount') || {}).value || 0;
+            var dueDate = (document.getElementById('inv-new-due') || {}).value || '';
+            var status = (document.getElementById('inv-new-status') || {}).value || 'pending';
+            if (!clientName || !invoiceNumber) { showSettingsToast('Client name and invoice # required'); return; }
+            try {
+                var resp = await fetch('/api/invoices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ clientName: clientName, clientEmail: clientEmail, invoiceNumber: invoiceNumber, amount: amount, dueDate: dueDate, status: status })
+                });
+                if (resp.ok) {
+                    showSettingsToast('Invoice saved');
+                    toggleAddInvoiceForm();
+                    ['inv-new-client','inv-new-email','inv-new-number','inv-new-amount','inv-new-due'].forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    loadInvoiceList();
+                } else {
+                    var d = await resp.json();
+                    showSettingsToast(d.error || 'Save failed');
+                }
+            } catch(e) { showSettingsToast('Error: ' + e.message); }
+        }
+
+        async function deleteInvoiceEntry(id) {
+            var token = getAuthToken();
+            if (!token) return;
+            try {
+                var resp = await fetch('/api/invoices/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resp.ok) { loadInvoiceList(); showSettingsToast('Invoice removed'); }
+            } catch(e) {}
+        }
+
+        function selectInvoiceForFollowup(inv, daysOverdue) {
+            document.querySelectorAll('.invoice-item').forEach(function(el) { el.classList.remove('selected'); });
+            var item = document.querySelector('[data-id="' + inv.id + '"]');
+            if (item) item.classList.add('selected');
+            var daysInput = document.getElementById('invoice-days-input');
+            if (daysInput && daysOverdue > 0) { daysInput.value = daysOverdue; updateEscalationBadge(); }
+            var notes = document.getElementById('invoice-notes-input');
+            if (notes) notes.value = 'Invoice: ' + inv.invoiceNumber + ' | Client: ' + inv.clientName + ' | Amount: $' + (inv.amount || 0).toLocaleString() + (inv.clientEmail ? ' | Email: ' + inv.clientEmail : '') + (inv.dueDate ? ' | Due: ' + inv.dueDate : '');
+            var genBtn = document.getElementById('invoice-generate-btn');
+            if (genBtn) genBtn.disabled = false;
+            var emailToInput = document.getElementById('invoice-email-to');
+            if (emailToInput && inv.clientEmail) emailToInput.value = inv.clientEmail;
+            var subjectInput = document.getElementById('invoice-email-subject');
+            if (subjectInput) subjectInput.value = 'Invoice Follow-Up: ' + inv.invoiceNumber;
+            showSettingsToast('Invoice selected — click Generate to draft email');
+        }
+
+        // ============================================
+        // AUTOMATIONS SETTINGS
+        // ============================================
+        async function loadAutomationsSettings() {
+            var token = getAuthToken();
+            if (!token) return;
+            try {
+                var resp = await fetch('/api/automations', { headers: { 'Authorization': 'Bearer ' + token } });
+                var data = await resp.json();
+                var badge = document.getElementById('email-status-badge');
+                var fromEl = document.getElementById('email-from-display');
+                var emailStatus = await fetch('/api/email-status', { headers: { 'Authorization': 'Bearer ' + token } });
+                var emailData = await emailStatus.json();
+                if (badge) {
+                    badge.textContent = emailData.configured ? 'Configured' : 'Not Configured';
+                    badge.className = 'automation-card-status ' + (emailData.configured ? 'on' : 'off');
+                }
+                if (fromEl) fromEl.textContent = emailData.from || 'Not set';
+                var cfg = data.automations && data.automations.overdueFollowup;
+                if (cfg) {
+                    var toggle = document.getElementById('overdue-followup-toggle');
+                    var statusBadge = document.getElementById('overdue-followup-status');
+                    var hourInput = document.getElementById('auto-hour');
+                    var ccInput = document.getElementById('auto-cc-email');
+                    if (toggle) toggle.checked = !!cfg.enabled;
+                    if (statusBadge) { statusBadge.textContent = cfg.enabled ? 'ON' : 'OFF'; statusBadge.className = 'automation-card-status ' + (cfg.enabled ? 'on' : 'off'); }
+                    if (hourInput) hourInput.value = cfg.hour || 9;
+                    if (ccInput) ccInput.value = cfg.ccEmail || '';
+                }
+            } catch(e) {}
+        }
+
+        async function saveAutomationConfig() {
+            var token = getAuthToken();
+            if (!token) return;
+            var enabled = (document.getElementById('overdue-followup-toggle') || {}).checked || false;
+            var hour = parseInt((document.getElementById('auto-hour') || {}).value) || 9;
+            var ccEmail = (document.getElementById('auto-cc-email') || {}).value || '';
+            var statusEl = document.getElementById('auto-save-status');
+            var statusBadge = document.getElementById('overdue-followup-status');
+            if (statusBadge) { statusBadge.textContent = enabled ? 'ON' : 'OFF'; statusBadge.className = 'automation-card-status ' + (enabled ? 'on' : 'off'); }
+            try {
+                var resp = await fetch('/api/automations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ overdueFollowup: { enabled: enabled, hour: hour, ccEmail: ccEmail } })
+                });
+                var data = await resp.json();
+                if (resp.ok && data.success) {
+                    if (statusEl) { statusEl.style.display = ''; statusEl.textContent = 'Saved. Automation ' + (enabled ? 'active — runs daily at ' + hour + ':00.' : 'disabled.'); statusEl.style.color = 'var(--green)'; }
+                    showSettingsToast('Automation settings saved');
+                } else {
+                    if (statusEl) { statusEl.style.display = ''; statusEl.textContent = data.error || 'Save failed'; statusEl.style.color = 'var(--red)'; }
+                }
+            } catch(e) {
+                if (statusEl) { statusEl.style.display = ''; statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--red)'; }
+            }
+        }
+
+        // Load invoice list and automations when tools are shown
+        (function() {
+            var origOnToolViewShown = _onToolViewShown;
+            _onToolViewShown = function(viewId) {
+                origOnToolViewShown(viewId);
+                if (viewId === 'invoices') loadInvoiceList();
+            };
+        })();
+
+        // Patch openSettings to also load automations tab data
+        (function() {
+            var origOpenSettings = openSettings;
+            openSettings = function() {
+                origOpenSettings.apply(this, arguments);
+                loadAutomationsSettings();
+            };
+        })();
+
     </script>
 </body>
 </html>`);
@@ -5931,6 +6525,193 @@ Generate a complete, professional change order document.`;
     res.status(status).json({ error: userMessage, requestId });
   }
 });
+
+// ============================================
+// SEND EMAIL ENDPOINT
+// ============================================
+
+app.post('/send-email', requireLogin, async (req, res) => {
+  const requestId = req.id;
+  try {
+    const { to, subject, body } = req.body || {};
+    if (!to || !subject || !body) {
+      return res.status(400).json({ error: 'to, subject, and body are required' });
+    }
+    // Basic email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      return res.status(400).json({ error: 'Invalid recipient email address' });
+    }
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+      return res.status(503).json({ error: 'Email not configured. Add SMTP_HOST, SMTP_USER, SMTP_PASS environment variables.' });
+    }
+    await sendMail({ to, subject, text: body, html: body.replace(/\n/g, '<br>') });
+    log('INFO', `Email sent to ${to} by ${req.authenticatedUser}`, requestId);
+    res.json({ success: true, message: `Email sent to ${to}` });
+  } catch (err) {
+    log('ERROR', `Send email error: ${err.message}`, requestId);
+    if (err.message === 'EMAIL_NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'Email not configured on this server.' });
+    }
+    res.status(500).json({ error: 'Failed to send email: ' + err.message });
+  }
+});
+
+// ============================================
+// INVOICE TRACKER ENDPOINTS
+// ============================================
+
+app.get('/api/invoices', requireLogin, (req, res) => {
+  res.json({ invoices: invoiceStore });
+});
+
+app.post('/api/invoices', requireLogin, (req, res) => {
+  const { id, clientName, clientEmail, invoiceNumber, amount, dueDate, status, notes } = req.body || {};
+  if (!clientName || !invoiceNumber) {
+    return res.status(400).json({ error: 'clientName and invoiceNumber are required' });
+  }
+  const existing = id ? invoiceStore.findIndex(i => i.id === id) : -1;
+  const entry = {
+    id: id || crypto.randomUUID(),
+    clientName: String(clientName).slice(0, 200),
+    clientEmail: String(clientEmail || '').slice(0, 200),
+    invoiceNumber: String(invoiceNumber).slice(0, 100),
+    amount: parseFloat(amount) || 0,
+    dueDate: dueDate || '',
+    status: ['pending', 'overdue', 'paid', 'draft'].includes(status) ? status : 'pending',
+    notes: String(notes || '').slice(0, 1000),
+    createdAt: existing >= 0 ? (invoiceStore[existing].createdAt || Date.now()) : Date.now(),
+    updatedAt: Date.now(),
+    lastFollowUp: existing >= 0 ? invoiceStore[existing].lastFollowUp : null
+  };
+  if (existing >= 0) {
+    invoiceStore[existing] = entry;
+  } else {
+    invoiceStore.push(entry);
+  }
+  saveInvoiceStore();
+  res.json({ success: true, invoice: entry });
+});
+
+app.delete('/api/invoices/:id', requireLogin, (req, res) => {
+  const { id } = req.params;
+  const before = invoiceStore.length;
+  invoiceStore = invoiceStore.filter(i => i.id !== id);
+  if (invoiceStore.length === before) return res.status(404).json({ error: 'Invoice not found' });
+  saveInvoiceStore();
+  res.json({ success: true });
+});
+
+// ============================================
+// AUTOMATIONS CONFIG ENDPOINTS
+// ============================================
+
+app.get('/api/automations', requireLogin, (req, res) => {
+  res.json({
+    automations: automationsConfig,
+    emailConfigured: !!(SMTP_HOST && SMTP_USER && SMTP_PASS)
+  });
+});
+
+app.post('/api/automations', requireLogin, (req, res) => {
+  const { overdueFollowup } = req.body || {};
+  if (overdueFollowup) {
+    automationsConfig.overdueFollowup = {
+      enabled: !!overdueFollowup.enabled,
+      hour: Math.min(23, Math.max(0, parseInt(overdueFollowup.hour) || 9)),
+      minute: Math.min(59, Math.max(0, parseInt(overdueFollowup.minute) || 0)),
+      ccEmail: String(overdueFollowup.ccEmail || '').slice(0, 200)
+    };
+  }
+  saveAutomationsConfig();
+  scheduleAutomations(); // reschedule with new config
+  res.json({ success: true, automations: automationsConfig });
+});
+
+// ============================================
+// EMAIL STATUS ENDPOINT
+// ============================================
+
+app.get('/api/email-status', requireLogin, (req, res) => {
+  res.json({ configured: !!(SMTP_HOST && SMTP_USER && SMTP_PASS), from: SMTP_FROM || '' });
+});
+
+// ============================================
+// AUTOMATION ENGINE
+// ============================================
+
+let activeCronJobs = [];
+
+async function runOverdueFollowup() {
+  log('INFO', 'Running automated overdue invoice follow-up');
+  const today = Date.now();
+  const overdue = invoiceStore.filter(inv => {
+    if (inv.status !== 'overdue') return false;
+    if (!inv.clientEmail) return false;
+    // Don't re-send if followed up in last 6 days
+    if (inv.lastFollowUp && (today - inv.lastFollowUp) < 6 * 24 * 60 * 60 * 1000) return false;
+    return true;
+  });
+
+  if (overdue.length === 0) {
+    log('INFO', 'No overdue invoices needing follow-up');
+    return;
+  }
+
+  log('INFO', `Found ${overdue.length} overdue invoices to follow up`);
+
+  for (const inv of overdue) {
+    try {
+      const daysPastDue = inv.dueDate
+        ? Math.floor((today - new Date(inv.dueDate).getTime()) / 86400000)
+        : 30;
+      const tone = daysPastDue > 90 ? 'final notice with explicit reference to potential legal action'
+        : daysPastDue > 60 ? 'urgent and serious'
+        : daysPastDue > 30 ? 'firm but professional'
+        : 'friendly reminder';
+
+      const prompt = `You are a professional accounts receivable specialist for a construction company.
+Generate a follow-up email for invoice ${inv.invoiceNumber} from ${inv.clientName} for $${inv.amount.toFixed(2)}.
+The invoice is ${daysPastDue} days past due. Use a ${tone} tone.
+Format as a ready-to-send email with Subject line, greeting, body, and professional sign-off.
+Keep it concise and include a clear call to action to pay immediately.`;
+
+      const emailBody = await callGemini(prompt, 30000);
+      const subjectMatch = emailBody.match(/^Subject:\s*(.+)$/mi);
+      const subject = subjectMatch ? subjectMatch[1].trim() : `Invoice Follow-Up: ${inv.invoiceNumber}`;
+      const body = emailBody.replace(/^Subject:.*$/mi, '').trim();
+
+      const toList = [inv.clientEmail];
+      if (automationsConfig.overdueFollowup.ccEmail) toList.push(automationsConfig.overdueFollowup.ccEmail);
+
+      await sendMail({ to: toList.join(','), subject, text: body, html: body.replace(/\n/g, '<br>') });
+
+      // Update lastFollowUp
+      const idx = invoiceStore.findIndex(i => i.id === inv.id);
+      if (idx >= 0) invoiceStore[idx].lastFollowUp = today;
+      log('INFO', `Auto follow-up sent for invoice ${inv.invoiceNumber} to ${inv.clientEmail}`);
+    } catch (err) {
+      log('ERROR', `Auto follow-up failed for invoice ${inv.invoiceNumber}: ${err.message}`);
+    }
+  }
+  saveInvoiceStore();
+}
+
+function scheduleAutomations() {
+  // Cancel existing jobs
+  activeCronJobs.forEach(job => job.stop());
+  activeCronJobs = [];
+
+  const { overdueFollowup } = automationsConfig;
+  if (overdueFollowup.enabled && SMTP_HOST && SMTP_USER) {
+    const pattern = `${overdueFollowup.minute} ${overdueFollowup.hour} * * *`;
+    const job = cron.schedule(pattern, runOverdueFollowup, { timezone: 'America/New_York' });
+    activeCronJobs.push(job);
+    log('INFO', `Scheduled overdue follow-up cron: ${pattern}`);
+  }
+}
+
+// Start automations after startup
+setTimeout(scheduleAutomations, 3000);
 
 /**
  * 404 handler
