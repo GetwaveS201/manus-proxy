@@ -4638,11 +4638,38 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             estimateRows.forEach(function(row) {
                 var total = (parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0);
                 var tr = document.createElement('tr');
-                tr.innerHTML = '<td><input type="text" value="' + escapeAttr(row.desc) + '" placeholder="Item description" oninput="updateEstimateRow(' + row.id + ', \'desc\', this.value)"></td>' +
-                    '<td><input type="number" value="' + row.qty + '" min="0" step="0.01" style="width:60px" oninput="updateEstimateRow(' + row.id + ', \'qty\', this.value)"></td>' +
-                    '<td><input type="number" value="' + row.price + '" min="0" step="0.01" style="width:80px" oninput="updateEstimateRow(' + row.id + ', \'price\', this.value)"></td>' +
-                    '<td style="font-family:var(--mono)">$' + total.toFixed(2) + '</td>' +
-                    '<td><button class="del-row-btn" onclick="deleteEstimateRow(' + row.id + ')">x</button></td>';
+
+                var tdDesc = document.createElement('td');
+                var inDesc = document.createElement('input');
+                inDesc.type = 'text'; inDesc.value = row.desc || ''; inDesc.placeholder = 'Item description';
+                (function(rid) { inDesc.addEventListener('input', function() { updateEstimateRow(rid, 'desc', this.value); }); })(row.id);
+                tdDesc.appendChild(inDesc);
+
+                var tdQty = document.createElement('td');
+                var inQty = document.createElement('input');
+                inQty.type = 'number'; inQty.value = row.qty; inQty.min = '0'; inQty.step = '0.01'; inQty.style.width = '60px';
+                (function(rid) { inQty.addEventListener('input', function() { updateEstimateRow(rid, 'qty', this.value); }); })(row.id);
+                tdQty.appendChild(inQty);
+
+                var tdPrice = document.createElement('td');
+                var inPrice = document.createElement('input');
+                inPrice.type = 'number'; inPrice.value = row.price; inPrice.min = '0'; inPrice.step = '0.01'; inPrice.style.width = '80px';
+                (function(rid) { inPrice.addEventListener('input', function() { updateEstimateRow(rid, 'price', this.value); }); })(row.id);
+                tdPrice.appendChild(inPrice);
+
+                var tdTotal = document.createElement('td');
+                tdTotal.style.fontFamily = 'var(--mono)';
+                tdTotal.id = 'est-row-total-' + row.id;
+                tdTotal.textContent = '$' + total.toFixed(2);
+
+                var tdDel = document.createElement('td');
+                var btnDel = document.createElement('button');
+                btnDel.className = 'del-row-btn'; btnDel.textContent = 'x';
+                (function(rid) { btnDel.addEventListener('click', function() { deleteEstimateRow(rid); }); })(row.id);
+                tdDel.appendChild(btnDel);
+
+                tr.appendChild(tdDesc); tr.appendChild(tdQty); tr.appendChild(tdPrice);
+                tr.appendChild(tdTotal); tr.appendChild(tdDel);
                 tbody.appendChild(tr);
             });
             updateEstimateTotal();
@@ -4651,16 +4678,10 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         function updateEstimateRow(id, field, value) {
             var row = estimateRows.find(function(r) { return r.id === id; });
             if (row) { row[field] = value; }
+            var total = row ? (parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0) : 0;
+            var totalCell = document.getElementById('est-row-total-' + id);
+            if (totalCell) totalCell.textContent = '$' + total.toFixed(2);
             updateEstimateTotal();
-            var tbody = document.getElementById('est-line-body');
-            if (!tbody) return;
-            var rows = tbody.querySelectorAll('tr');
-            var idx = estimateRows.findIndex(function(r) { return r.id === id; });
-            if (rows[idx]) {
-                var total = (parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0);
-                var cells = rows[idx].querySelectorAll('td');
-                if (cells[3]) cells[3].textContent = '$' + total.toFixed(2);
-            }
         }
 
         function deleteEstimateRow(id) {
@@ -4993,10 +5014,16 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var lb = document.createElement('div');
             lb.className = 'photo-lightbox';
             lb.id = 'photo-lightbox-overlay';
-            lb.innerHTML = '<button class="photo-lightbox-close" onclick="this.closest(\'.photo-lightbox\').remove()">&times;</button>' +
-                '<img src="' + photo.url + '" alt="' + escapeAttr(photo.name) + '">' +
-                '<div class="photo-lightbox-caption">' + escapeAttr(photo.name) + (photo.tag ? ' &bull; ' + escapeAttr(photo.tag) : '') + ' &bull; ' + escapeAttr(photo.time) + '</div>';
-            lb.onclick = function(e) { if (e.target === lb) lb.remove(); };
+            var closeBtn = document.createElement('button');
+            closeBtn.className = 'photo-lightbox-close'; closeBtn.textContent = '\u00D7';
+            closeBtn.addEventListener('click', function() { lb.remove(); });
+            var lbImg = document.createElement('img');
+            lbImg.src = photo.url; lbImg.alt = photo.name || '';
+            var lbCap = document.createElement('div');
+            lbCap.className = 'photo-lightbox-caption';
+            lbCap.textContent = (photo.name || '') + (photo.tag ? ' \u2022 ' + photo.tag : '') + ' \u2022 ' + (photo.time || '');
+            lb.appendChild(closeBtn); lb.appendChild(lbImg); lb.appendChild(lbCap);
+            lb.addEventListener('click', function(e) { if (e.target === lb) lb.remove(); });
             document.body.appendChild(lb);
         }
 
@@ -5075,18 +5102,32 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 var div = document.createElement('div');
                 div.className = 'safety-category' + (cat.open ? ' open' : '');
                 div.id = 'safety-cat-' + cat.id;
-                var itemsHtml = cat.items.map(function(item, idx) {
+
+                var header = document.createElement('div');
+                header.className = 'safety-category-header';
+                var titleSpan = document.createElement('span'); titleSpan.className = 'safety-cat-title'; titleSpan.textContent = cat.title;
+                var countSpan = document.createElement('span'); countSpan.className = 'safety-cat-count'; countSpan.textContent = checkedCount + '/' + cat.items.length;
+                var chevron = document.createElement('span'); chevron.className = 'safety-cat-chevron'; chevron.textContent = '\u25BC';
+                header.appendChild(titleSpan); header.appendChild(countSpan); header.appendChild(chevron);
+                (function(catId) { header.addEventListener('click', function() { toggleSafetyCat(catId); }); })(cat.id);
+
+                var itemsDiv = document.createElement('div');
+                itemsDiv.className = 'safety-items';
+
+                cat.items.forEach(function(itemText, idx) {
                     var key = cat.id + '_' + idx;
                     var isChecked = !!safetyData.checks[key];
-                    return '<div class="safety-item' + (isChecked ? ' checked' : '') + '" id="safety-item-' + key + '">' +
-                        '<input type="checkbox"' + (isChecked ? ' checked' : '') + ' onchange="toggleSafetyItem(\'' + cat.id + '\',' + idx + ',this.checked)">' +
-                        '<span class="safety-item-text">' + escapeAttr(item) + '</span></div>';
-                }).join('');
-                div.innerHTML = '<div class="safety-category-header" onclick="toggleSafetyCat(\'' + cat.id + '\')">' +
-                    '<span class="safety-cat-title">' + escapeAttr(cat.title) + '</span>' +
-                    '<span class="safety-cat-count">' + checkedCount + '/' + cat.items.length + '</span>' +
-                    '<span class="safety-cat-chevron">&#9660;</span></div>' +
-                    '<div class="safety-items">' + itemsHtml + '</div>';
+                    var itemDiv = document.createElement('div');
+                    itemDiv.className = 'safety-item' + (isChecked ? ' checked' : '');
+                    itemDiv.id = 'safety-item-' + key;
+                    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = isChecked;
+                    (function(catId, itemIdx) { cb.addEventListener('change', function() { toggleSafetyItem(catId, itemIdx, this.checked); }); })(cat.id, idx);
+                    var span = document.createElement('span'); span.className = 'safety-item-text'; span.textContent = itemText;
+                    itemDiv.appendChild(cb); itemDiv.appendChild(span);
+                    itemsDiv.appendChild(itemDiv);
+                });
+
+                div.appendChild(header); div.appendChild(itemsDiv);
                 container.appendChild(div);
             });
         }
