@@ -326,6 +326,8 @@ app.use('/api/', limiter);
 app.use('/chat', limiter);
 app.use('/generate-invoice-followup', limiter);
 app.use('/generate-adjuster-followup', limiter);
+app.use('/generate-estimate', limiter);
+app.use('/generate-change-order', limiter);
 
 // Strict rate limiter for login attempts: 10 per 15 min per IP
 const loginLimiter = rateLimit({
@@ -2250,6 +2252,97 @@ app.get('/', (req, res) => {
         .tool-copy-btn:hover { color: var(--text); border-color: var(--border-hi); }
         .tool-output-body { padding: 16px 18px; font-family: var(--sans); font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; word-break: break-word; max-height: 500px; overflow-y: auto; }
         .tool-output-thinking { padding: 18px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 10px; letter-spacing: 0.04em; }
+
+        /* ===== ESTIMATE & CHANGE ORDER TOOLS ===== */
+        .line-items-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--mono); }
+        .line-items-table th { background: var(--bg-raised); color: var(--text-mid); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        .line-items-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+        .line-items-table td input { width: 100%; background: transparent; border: none; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; padding: 2px 0; }
+        .line-items-table td input:focus { border-bottom: 1px solid var(--accent); }
+        .line-items-table .del-row-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px 6px; border-radius: 3px; font-size: 14px; line-height: 1; }
+        .line-items-table .del-row-btn:hover { color: var(--red); background: var(--red-lo); }
+        .add-line-btn { background: var(--accent-lo); border: 1px dashed var(--border-mid); color: var(--accent); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding: 7px 14px; border-radius: var(--radius-sm); cursor: pointer; margin-top: 8px; transition: all 0.15s; }
+        .add-line-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .estimate-total-row { display: flex; justify-content: flex-end; align-items: center; gap: 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-mid); font-family: var(--mono); font-size: 13px; color: var(--text-mid); }
+        .estimate-total-row strong { color: var(--text); font-size: 16px; }
+        .co-status-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; }
+        .co-status-pending  { background: var(--orange-lo); color: var(--orange); border: 1px solid rgba(245,158,11,.3); }
+        .co-status-approved { background: var(--green-lo); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+        .co-status-rejected { background: var(--red-lo); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+
+        /* ===== SUBCONTRACTOR TOOL ===== */
+        .sub-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .sub-table th { background: var(--bg-raised); color: var(--text-mid); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .sub-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+        .sub-table tr:last-child td { border-bottom: none; }
+        .sub-table .sub-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 12px; }
+        .sub-status-active { background: var(--green-lo); color: var(--green); }
+        .sub-status-inactive { background: var(--bg-raised); color: var(--text-dim); }
+        .sub-action-btn { background: var(--accent-lo); border: 1px solid var(--border-mid); color: var(--accent); font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 4px; cursor: pointer; margin-right: 4px; transition: all 0.12s; }
+        .sub-action-btn:hover { background: var(--accent); color: #fff; }
+        .sub-action-btn.danger:hover { background: var(--red); border-color: var(--red); color: #fff; }
+        .sub-add-form { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; display: none; gap: 12px; flex-direction: column; }
+        .sub-add-form.visible { display: flex; }
+        .sub-add-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .sub-add-form .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .tool-action-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .tool-action-bar-title { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-mid); }
+
+        /* ===== MATERIALS CHECKLIST TOOL ===== */
+        .mat-add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+        .mat-add-row input { flex: 1; }
+        .mat-add-row select { background: var(--bg-raised); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; outline: none; }
+        .mat-add-row select:focus { border-color: var(--accent); }
+        .mat-list { display: flex; flex-direction: column; gap: 6px; max-height: 380px; overflow-y: auto; }
+        .mat-item { display: flex; align-items: center; gap: 10px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; transition: all 0.12s; }
+        .mat-item.checked { opacity: 0.55; }
+        .mat-item.checked .mat-item-name { text-decoration: line-through; color: var(--text-dim); }
+        .mat-item input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+        .mat-item-name { flex: 1; font-family: var(--sans); font-size: 13px; color: var(--text); }
+        .mat-item-cat { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 10px; background: var(--accent-lo); color: var(--accent); flex-shrink: 0; }
+        .mat-item-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 3px; transition: all 0.12s; }
+        .mat-item-del:hover { color: var(--red); background: var(--red-lo); }
+        .mat-progress { margin-bottom: 14px; }
+        .mat-progress-bar { height: 4px; background: var(--bg-raised); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+        .mat-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); border-radius: 2px; transition: width 0.3s ease; }
+        .mat-progress-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.05em; }
+
+        /* ===== PHOTO LOG TOOL ===== */
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+        .photo-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; cursor: pointer; transition: all 0.15s; }
+        .photo-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+        .photo-card img { width: 100%; height: 110px; object-fit: cover; display: block; }
+        .photo-card-label { padding: 6px 8px; font-family: var(--mono); font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .photo-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+        .photo-lightbox img { max-width: 90vw; max-height: 80vh; object-fit: contain; border-radius: var(--radius); }
+        .photo-lightbox-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+        .photo-lightbox-caption { color: rgba(255,255,255,0.7); font-family: var(--mono); font-size: 12px; }
+        .photo-empty { padding: 40px; text-align: center; color: var(--text-dim); font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; }
+        .photo-drop-zone { border: 2px dashed var(--border-mid); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-raised); }
+        .photo-drop-zone:hover, .photo-drop-zone.drag-over { border-color: var(--accent); background: var(--accent-lo); }
+        .photo-drop-zone p { color: var(--text-dim); font-family: var(--mono); font-size: 12px; margin: 8px 0 0; letter-spacing: 0.05em; }
+
+        /* ===== SAFETY CHECKLIST TOOL ===== */
+        .safety-category { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+        .safety-category-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; user-select: none; }
+        .safety-category-header:hover { background: var(--bg-hover); }
+        .safety-cat-title { flex: 1; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
+        .safety-cat-count { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+        .safety-cat-chevron { color: var(--text-dim); font-size: 12px; transition: transform 0.2s; }
+        .safety-category.open .safety-cat-chevron { transform: rotate(180deg); }
+        .safety-items { display: none; padding: 0 16px 12px; border-top: 1px solid var(--border); }
+        .safety-category.open .safety-items { display: block; }
+        .safety-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .safety-item:last-child { border-bottom: none; }
+        .safety-item input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; margin-top: 2px; cursor: pointer; flex-shrink: 0; }
+        .safety-item-text { font-family: var(--sans); font-size: 13px; color: var(--text); line-height: 1.5; }
+        .safety-item.checked .safety-item-text { text-decoration: line-through; color: var(--text-dim); }
+        .safety-progress-bar { height: 6px; background: var(--bg-raised); border-radius: 3px; overflow: hidden; margin: 12px 0; }
+        .safety-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 3px; transition: width 0.35s ease; }
+        .safety-actions { display: flex; gap: 10px; margin-top: 14px; }
+        .safety-log-entry { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 8px; font-family: var(--mono); font-size: 12px; display: flex; align-items: center; gap: 12px; }
+        .safety-log-date { color: var(--accent); font-weight: 600; }
+        .safety-log-score { color: var(--text-mid); }
     </style>
 </head>
 <body>
@@ -2334,6 +2427,30 @@ app.get('/', (req, res) => {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Adjuster Follow-up
             </button>
+            <button class="tool-nav-btn" id="tool-nav-estimate" onclick="showToolView('estimate')" aria-label="Open Estimate Generator tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Estimate Generator
+            </button>
+            <button class="tool-nav-btn" id="tool-nav-changeorder" onclick="showToolView('changeorder')" aria-label="Open Change Order tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Change Order
+            </button>
+            <button class="tool-nav-btn" id="tool-nav-subs" onclick="showToolView('subs')" aria-label="Open Subcontractor Management tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Subcontractors
+            </button>
+            <button class="tool-nav-btn" id="tool-nav-materials" onclick="showToolView('materials')" aria-label="Open Materials Checklist tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Materials List
+            </button>
+            <button class="tool-nav-btn" id="tool-nav-photos" onclick="showToolView('photos')" aria-label="Open Photo Log tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Photo Log
+            </button>
+            <button class="tool-nav-btn" id="tool-nav-safety" onclick="showToolView('safety')" aria-label="Open Safety Checklist tool">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Safety Checklist
+            </button>
         </div>
 
         <!-- Chat History -->
@@ -2406,6 +2523,14 @@ app.get('/', (req, res) => {
             <button class="stab" id="stab-adjusters" data-tab="adjusters" onclick="switchSettingsTab('adjusters')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 Adjusters
+            </button>
+            <button class="stab" id="stab-estimates" data-tab="estimates" onclick="switchSettingsTab('estimates')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+                Estimates
+            </button>
+            <button class="stab" id="stab-changeorders" data-tab="changeorders" onclick="switchSettingsTab('changeorders')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                Change Orders
             </button>
         </div>
 
@@ -2661,6 +2786,40 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             </button>
         </div><!-- /adjusters -->
 
+        <!-- TAB: Estimates -->
+        <div class="stab-content" id="stab-content-estimates">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+                Estimate Generator Prompt
+            </div>
+            <p style="font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Customize how AI generates your estimates and quotes.</p>
+            <div class="settings-group">
+                <label for="estimate-system-prompt">System Prompt</label>
+                <textarea id="estimate-system-prompt" class="settings-textarea" rows="7" placeholder="You are a professional construction estimator. Generate a detailed quote based on the project description and line items provided. Include a brief scope summary, itemized costs, labor/materials breakdown, and total. Format as a professional quote document."></textarea>
+            </div>
+            <button class="settings-save-btn" onclick="saveEstimatePrompt()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Estimate Prompt
+            </button>
+        </div><!-- /estimates -->
+
+        <!-- TAB: Change Orders -->
+        <div class="stab-content" id="stab-content-changeorders">
+            <div class="stab-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                Change Order Prompt
+            </div>
+            <p style="font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Customize how AI drafts change order documents.</p>
+            <div class="settings-group">
+                <label for="changeorder-system-prompt">System Prompt</label>
+                <textarea id="changeorder-system-prompt" class="settings-textarea" rows="7" placeholder="You are a professional construction project manager. Generate a formal change order document based on the information provided. Include the reason for change, scope changes, cost impact, schedule impact, and require client sign-off language. Format as a professional change order."></textarea>
+            </div>
+            <button class="settings-save-btn" onclick="saveChangeOrderPrompt()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Change Order Prompt
+            </button>
+        </div><!-- /changeorders -->
+
     </div><!-- /settings-panel -->
 
     <!-- Main Content -->
@@ -2861,6 +3020,374 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 <div class="tool-output-body" id="adjuster-output-body"></div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: Estimate Generator ===== -->
+    <div class="tool-view" id="tool-view-estimate" role="main" aria-label="Estimate Generator Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="tool-header-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <h1>Estimate Generator</h1>
+            </div>
+        </div>
+        <div class="tool-body">
+            <div class="tool-field-group">
+                <div class="tool-field-row">
+                    <div class="tool-field">
+                        <label>Client Name</label>
+                        <input type="text" id="est-client" placeholder="John Smith">
+                    </div>
+                    <div class="tool-field">
+                        <label>Project Name</label>
+                        <input type="text" id="est-project" placeholder="Kitchen Remodel">
+                    </div>
+                </div>
+                <div class="tool-field-row">
+                    <div class="tool-field">
+                        <label>Job Address</label>
+                        <input type="text" id="est-address" placeholder="123 Main St, City, State">
+                    </div>
+                    <div class="tool-field">
+                        <label>Est. Start Date</label>
+                        <input type="date" id="est-start">
+                    </div>
+                </div>
+                <div class="tool-field">
+                    <label>Project Scope / Description</label>
+                    <textarea id="est-scope" rows="3" placeholder="Describe the work to be done..."></textarea>
+                </div>
+            </div>
+
+            <div class="tool-field-group" style="margin-top:18px;">
+                <div class="tool-action-bar">
+                    <span class="tool-action-bar-title">Line Items</span>
+                    <button class="add-line-btn" onclick="addEstimateRow()">+ Add Item</button>
+                </div>
+                <table class="line-items-table" id="est-line-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40%">Description</th>
+                            <th style="width:15%">Qty</th>
+                            <th style="width:20%">Unit Price ($)</th>
+                            <th style="width:18%">Total</th>
+                            <th style="width:7%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="est-line-body"></tbody>
+                </table>
+                <div class="estimate-total-row">
+                    Subtotal: <strong id="est-subtotal">$0.00</strong>
+                    &nbsp;|&nbsp; Tax (
+                    <input type="number" id="est-tax-pct" value="0" min="0" max="30" step="0.5" style="width:40px;background:transparent;border:none;border-bottom:1px solid var(--border-mid);color:var(--text);font-family:var(--mono);font-size:13px;text-align:center;outline:none;" oninput="updateEstimateTotal()">
+                    %): <strong id="est-tax-amt">$0.00</strong>
+                    &nbsp;|&nbsp; <strong style="font-size:18px;" id="est-grand-total">$0.00</strong>
+                </div>
+            </div>
+
+            <div class="tool-field" style="margin-top:14px;">
+                <label>Additional Notes / Terms</label>
+                <textarea id="est-notes" rows="2" placeholder="Payment terms, warranty info, exclusions..."></textarea>
+            </div>
+
+            <button class="tool-generate-btn" id="est-generate-btn" onclick="generateEstimate()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Generate Estimate
+            </button>
+
+            <div class="tool-output" id="est-output" style="display:none;">
+                <div class="tool-output-header">
+                    <span class="tool-output-label">Generated Estimate</span>
+                    <button class="tool-copy-btn" onclick="copyToolOutput('est-output-body')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="tool-output-body" id="est-output-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: Change Order ===== -->
+    <div class="tool-view" id="tool-view-changeorder" role="main" aria-label="Change Order Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="tool-header-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                <h1>Change Order</h1>
+            </div>
+        </div>
+        <div class="tool-body">
+            <div class="tool-field-group">
+                <div class="tool-field-row">
+                    <div class="tool-field">
+                        <label>Client Name</label>
+                        <input type="text" id="co-client" placeholder="John Smith">
+                    </div>
+                    <div class="tool-field">
+                        <label>Project / Contract #</label>
+                        <input type="text" id="co-contract" placeholder="Contract #2024-001">
+                    </div>
+                </div>
+                <div class="tool-field-row">
+                    <div class="tool-field">
+                        <label>Change Order #</label>
+                        <input type="text" id="co-number" placeholder="CO-001">
+                    </div>
+                    <div class="tool-field">
+                        <label>Status</label>
+                        <select id="co-status" style="background:var(--bg-raised);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;width:100%;outline:none;">
+                            <option value="pending">Pending Approval</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="tool-field">
+                    <label>Reason for Change</label>
+                    <textarea id="co-reason" rows="3" placeholder="Describe what changed and why (e.g., client requested additional bathroom, unforeseen structural issue, material substitution)..."></textarea>
+                </div>
+                <div class="tool-field">
+                    <label>Scope Changes</label>
+                    <textarea id="co-scope" rows="3" placeholder="Describe the specific work being added, removed, or modified..."></textarea>
+                </div>
+                <div class="tool-field-row">
+                    <div class="tool-field">
+                        <label>Cost Impact ($)</label>
+                        <input type="number" id="co-cost" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="tool-field">
+                        <label>Schedule Impact (days)</label>
+                        <input type="number" id="co-days" placeholder="0" min="-30" max="365">
+                    </div>
+                </div>
+            </div>
+
+            <button class="tool-generate-btn" onclick="generateChangeOrder()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Generate Change Order
+            </button>
+
+            <div class="tool-output" id="co-output" style="display:none;">
+                <div class="tool-output-header">
+                    <span class="tool-output-label">Generated Change Order</span>
+                    <button class="tool-copy-btn" onclick="copyToolOutput('co-output-body')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="tool-output-body" id="co-output-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: Subcontractor Management ===== -->
+    <div class="tool-view" id="tool-view-subs" role="main" aria-label="Subcontractor Management Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="tool-header-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h1>Subcontractor Management</h1>
+            </div>
+        </div>
+        <div class="tool-body">
+            <div class="tool-action-bar">
+                <span class="tool-action-bar-title">Subcontractors (<span id="sub-count">0</span>)</span>
+                <button class="tool-generate-btn" style="padding:8px 16px;font-size:12px;" onclick="toggleSubAddForm()">+ Add Subcontractor</button>
+            </div>
+
+            <div class="sub-add-form" id="sub-add-form">
+                <div class="form-row">
+                    <div class="tool-field"><label>Name / Company</label><input type="text" id="sub-name" placeholder="ABC Electric LLC"></div>
+                    <div class="tool-field"><label>Trade / Specialty</label><input type="text" id="sub-trade" placeholder="Electrical"></div>
+                </div>
+                <div class="form-row">
+                    <div class="tool-field"><label>Phone</label><input type="tel" id="sub-phone" placeholder="(555) 123-4567"></div>
+                    <div class="tool-field"><label>Email</label><input type="email" id="sub-email" placeholder="contact@abc.com"></div>
+                </div>
+                <div class="form-row-3">
+                    <div class="tool-field"><label>License #</label><input type="text" id="sub-license" placeholder="LIC-12345"></div>
+                    <div class="tool-field"><label>Insurance Exp.</label><input type="date" id="sub-ins-exp"></div>
+                    <div class="tool-field"><label>Rate ($/hr)</label><input type="number" id="sub-rate" placeholder="85" min="0"></div>
+                </div>
+                <div class="tool-field"><label>Notes</label><input type="text" id="sub-notes" placeholder="Preferred for large commercial jobs..."></div>
+                <div style="display:flex;gap:10px;">
+                    <button class="tool-generate-btn" style="padding:8px 16px;font-size:12px;" onclick="saveSub()">Save</button>
+                    <button class="add-line-btn" onclick="toggleSubAddForm()">Cancel</button>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="sub-table">
+                    <thead>
+                        <tr>
+                            <th>Name / Company</th>
+                            <th>Trade</th>
+                            <th>Phone</th>
+                            <th>Insurance Exp.</th>
+                            <th>Rate</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sub-table-body">
+                        <tr id="sub-empty-row"><td colspan="7" style="text-align:center;color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:28px;">No subcontractors added yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: Materials & Supply Checklist ===== -->
+    <div class="tool-view" id="tool-view-materials" role="main" aria-label="Materials Checklist Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="tool-header-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
+                <h1>Materials & Supply Checklist</h1>
+            </div>
+        </div>
+        <div class="tool-body">
+            <div class="mat-progress">
+                <div class="mat-progress-label" id="mat-progress-label">0 of 0 items checked</div>
+                <div class="mat-progress-bar"><div class="mat-progress-fill" id="mat-progress-fill" style="width:0%"></div></div>
+            </div>
+
+            <div class="mat-add-row">
+                <input type="text" id="mat-item-input" placeholder="Add material or supply item..." style="flex:1;" onkeydown="if(event.key==='Enter')addMaterialItem()">
+                <select id="mat-cat-select">
+                    <option value="Lumber">Lumber</option>
+                    <option value="Concrete">Concrete</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Hardware">Hardware</option>
+                    <option value="Tools">Tools</option>
+                    <option value="Safety">Safety</option>
+                    <option value="Other">Other</option>
+                </select>
+                <button class="tool-generate-btn" style="padding:8px 14px;font-size:12px;" onclick="addMaterialItem()">+ Add</button>
+            </div>
+
+            <div class="mat-list" id="mat-list"></div>
+
+            <div style="display:flex;gap:10px;margin-top:14px;">
+                <button class="add-line-btn" onclick="clearCheckedMaterials()">Clear Checked</button>
+                <button class="add-line-btn" onclick="clearAllMaterials()">Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: Job Site Photo Log ===== -->
+    <div class="tool-view" id="tool-view-photos" role="main" aria-label="Photo Log Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="tool-header-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+                <h1>Job Site Photo Log</h1>
+            </div>
+        </div>
+        <div class="tool-body">
+            <div class="tool-field-row" style="margin-bottom:14px;">
+                <div class="tool-field">
+                    <label>Job Name / Tag</label>
+                    <input type="text" id="photo-job-tag" placeholder="Roof repair - Unit 4B" style="max-width:320px;">
+                </div>
+            </div>
+
+            <div class="photo-drop-zone" id="photo-drop-zone" onclick="document.getElementById('photo-file-input').click()" ondragover="photoHandleDragOver(event)" ondragleave="photoHandleDragLeave(event)" ondrop="photoHandleDrop(event)">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <p>Click or drag photos here to add to log</p>
+                <p style="font-size:10px;color:var(--text-dim);margin-top:4px!important;">JPG, PNG, WEBP, GIF supported &bull; Photos stored in session only</p>
+                <input type="file" id="photo-file-input" accept="image/*" multiple style="display:none;" onchange="photoHandleFileSelect(event)">
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px;">
+                <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:0.06em;text-transform:uppercase;"><span id="photo-count">0</span> photos</span>
+                <button class="add-line-btn" onclick="clearAllPhotos()" style="padding:4px 10px;font-size:10px;">Clear All</button>
+            </div>
+
+            <div class="photo-grid" id="photo-grid">
+                <div class="photo-empty" id="photo-empty" style="grid-column:1/-1;">No photos added yet</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOOL VIEW: OSHA Safety Checklist ===== -->
+    <div class="tool-view" id="tool-view-safety" role="main" aria-label="Safety Checklist Tool">
+        <div class="tool-header">
+            <div class="tool-header-left">
+                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="tool-header-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h1>OSHA Safety Checklist</h1>
+            </div>
+        </div>
+        <div class="tool-body">
+            <div class="tool-field-row" style="margin-bottom:16px;align-items:flex-end;gap:12px;">
+                <div class="tool-field" style="max-width:220px;">
+                    <label>Inspection Date</label>
+                    <input type="date" id="safety-date">
+                </div>
+                <div class="tool-field" style="max-width:220px;">
+                    <label>Job Site</label>
+                    <input type="text" id="safety-site" placeholder="Site name or address">
+                </div>
+                <div class="tool-field" style="max-width:180px;">
+                    <label>Inspector Name</label>
+                    <input type="text" id="safety-inspector" placeholder="Your name">
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div class="mat-progress-label" id="safety-progress-label">0 of 0 items checked</div>
+                <div class="safety-progress-bar"><div class="safety-progress-fill" id="safety-progress-fill" style="width:0%"></div></div>
+            </div>
+
+            <div id="safety-categories"></div>
+
+            <div class="safety-actions">
+                <button class="tool-generate-btn" style="padding:9px 18px;font-size:12px;" onclick="saveSafetyLog()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                    Save Inspection Log
+                </button>
+                <button class="add-line-btn" onclick="resetSafetyChecklist()">Reset Checklist</button>
+                <button class="add-line-btn" onclick="toggleSafetyLogs()">View Past Logs</button>
+            </div>
+
+            <div id="safety-logs-panel" style="display:none;margin-top:18px;">
+                <div style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-mid);margin-bottom:10px;">Past Inspection Logs</div>
+                <div id="safety-logs-list"></div>
+            </div>
         </div>
     </div>
 
@@ -4093,6 +4620,607 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         // SHARED TOOL UTILITIES
         // ============================================
 
+        // ============================================
+        // ESTIMATE GENERATOR
+        // ============================================
+        var estimateRows = [];
+
+        function addEstimateRow(desc, qty, price) {
+            var id = Date.now() + Math.random();
+            estimateRows.push({ id: id, desc: desc || '', qty: qty || 1, price: price || 0 });
+            renderEstimateRows();
+        }
+
+        function renderEstimateRows() {
+            var tbody = document.getElementById('est-line-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            estimateRows.forEach(function(row) {
+                var total = (parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0);
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td><input type="text" value="' + escapeAttr(row.desc) + '" placeholder="Item description" oninput="updateEstimateRow(' + row.id + ', \'desc\', this.value)"></td>' +
+                    '<td><input type="number" value="' + row.qty + '" min="0" step="0.01" style="width:60px" oninput="updateEstimateRow(' + row.id + ', \'qty\', this.value)"></td>' +
+                    '<td><input type="number" value="' + row.price + '" min="0" step="0.01" style="width:80px" oninput="updateEstimateRow(' + row.id + ', \'price\', this.value)"></td>' +
+                    '<td style="font-family:var(--mono)">$' + total.toFixed(2) + '</td>' +
+                    '<td><button class="del-row-btn" onclick="deleteEstimateRow(' + row.id + ')">x</button></td>';
+                tbody.appendChild(tr);
+            });
+            updateEstimateTotal();
+        }
+
+        function updateEstimateRow(id, field, value) {
+            var row = estimateRows.find(function(r) { return r.id === id; });
+            if (row) { row[field] = value; }
+            updateEstimateTotal();
+            var tbody = document.getElementById('est-line-body');
+            if (!tbody) return;
+            var rows = tbody.querySelectorAll('tr');
+            var idx = estimateRows.findIndex(function(r) { return r.id === id; });
+            if (rows[idx]) {
+                var total = (parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0);
+                var cells = rows[idx].querySelectorAll('td');
+                if (cells[3]) cells[3].textContent = '$' + total.toFixed(2);
+            }
+        }
+
+        function deleteEstimateRow(id) {
+            estimateRows = estimateRows.filter(function(r) { return r.id !== id; });
+            renderEstimateRows();
+        }
+
+        function updateEstimateTotal() {
+            var subtotal = estimateRows.reduce(function(sum, r) {
+                return sum + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0);
+            }, 0);
+            var taxPct = parseFloat(document.getElementById('est-tax-pct') && document.getElementById('est-tax-pct').value) || 0;
+            var taxAmt = subtotal * taxPct / 100;
+            var grand = subtotal + taxAmt;
+            if (document.getElementById('est-subtotal')) document.getElementById('est-subtotal').textContent = '$' + subtotal.toFixed(2);
+            if (document.getElementById('est-tax-amt')) document.getElementById('est-tax-amt').textContent = '$' + taxAmt.toFixed(2);
+            if (document.getElementById('est-grand-total')) document.getElementById('est-grand-total').textContent = '$' + grand.toFixed(2);
+        }
+
+        function escapeAttr(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        async function generateEstimate() {
+            var client = (document.getElementById('est-client') || {}).value || '';
+            var project = (document.getElementById('est-project') || {}).value || '';
+            var address = (document.getElementById('est-address') || {}).value || '';
+            var startDate = (document.getElementById('est-start') || {}).value || '';
+            var scope = (document.getElementById('est-scope') || {}).value || '';
+            var notes = (document.getElementById('est-notes') || {}).value || '';
+            var taxPct = (document.getElementById('est-tax-pct') || {}).value || '0';
+            var lineItems = estimateRows.map(function(r) {
+                var total = (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0);
+                return r.desc + ' | Qty: ' + r.qty + ' | Unit: $' + parseFloat(r.price).toFixed(2) + ' | Total: $' + total.toFixed(2);
+            }).join('\n');
+            var subtotal = estimateRows.reduce(function(s,r){ return s + (parseFloat(r.qty)||0)*(parseFloat(r.price)||0); }, 0);
+            var taxAmt = subtotal * parseFloat(taxPct) / 100;
+            var customPrompt = localStorage.getItem('estimate_system_prompt') || '';
+            var token = getAuthToken();
+            if (!token) { alert('Please log in first.'); return; }
+            var outDiv = document.getElementById('est-output');
+            var outBody = document.getElementById('est-output-body');
+            if (outDiv) outDiv.style.display = '';
+            if (outBody) outBody.innerHTML = '<div class="tool-output-thinking"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg> Generating estimate...</div>';
+            try {
+                var resp = await fetch('/generate-estimate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ clientName: client, projectName: project, address: address, startDate: startDate, scope: scope, lineItems: lineItems, subtotal: subtotal.toFixed(2), taxPct: taxPct, taxAmount: taxAmt.toFixed(2), grandTotal: (subtotal + taxAmt).toFixed(2), additionalNotes: notes, customSystemPrompt: customPrompt })
+                });
+                var data = await resp.json();
+                if (outBody) outBody.textContent = data.response || data.error || 'Unknown error';
+            } catch(e) {
+                if (outBody) outBody.textContent = 'Error: ' + e.message;
+            }
+        }
+
+        function saveEstimatePrompt() {
+            var val = (document.getElementById('estimate-system-prompt') || {}).value || '';
+            localStorage.setItem('estimate_system_prompt', val);
+            if (typeof showSettingsToast === 'function') showSettingsToast('Estimate prompt saved');
+        }
+
+        // ============================================
+        // CHANGE ORDER
+        // ============================================
+        async function generateChangeOrder() {
+            var client = (document.getElementById('co-client') || {}).value || '';
+            var contract = (document.getElementById('co-contract') || {}).value || '';
+            var number = (document.getElementById('co-number') || {}).value || '';
+            var status = (document.getElementById('co-status') || {}).value || 'pending';
+            var reason = (document.getElementById('co-reason') || {}).value || '';
+            var scope = (document.getElementById('co-scope') || {}).value || '';
+            var cost = (document.getElementById('co-cost') || {}).value || '0';
+            var days = (document.getElementById('co-days') || {}).value || '0';
+            var customPrompt = localStorage.getItem('changeorder_system_prompt') || '';
+            var token = getAuthToken();
+            if (!token) { alert('Please log in first.'); return; }
+            var outDiv = document.getElementById('co-output');
+            var outBody = document.getElementById('co-output-body');
+            if (outDiv) outDiv.style.display = '';
+            if (outBody) outBody.innerHTML = '<div class="tool-output-thinking"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg> Generating change order...</div>';
+            try {
+                var resp = await fetch('/generate-change-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ clientName: client, contractNumber: contract, changeOrderNumber: number, status: status, reason: reason, scopeChanges: scope, costImpact: cost, scheduleDays: days, customSystemPrompt: customPrompt })
+                });
+                var data = await resp.json();
+                if (outBody) outBody.textContent = data.response || data.error || 'Unknown error';
+            } catch(e) {
+                if (outBody) outBody.textContent = 'Error: ' + e.message;
+            }
+        }
+
+        function saveChangeOrderPrompt() {
+            var val = (document.getElementById('changeorder-system-prompt') || {}).value || '';
+            localStorage.setItem('changeorder_system_prompt', val);
+            if (typeof showSettingsToast === 'function') showSettingsToast('Change order prompt saved');
+        }
+
+        // ============================================
+        // SUBCONTRACTOR MANAGEMENT
+        // ============================================
+        var subList = [];
+
+        function loadSubs() {
+            try { subList = JSON.parse(localStorage.getItem('sub_list') || '[]'); } catch(e) { subList = []; }
+            renderSubTable();
+        }
+
+        function saveSubs() {
+            localStorage.setItem('sub_list', JSON.stringify(subList));
+        }
+
+        function toggleSubAddForm() {
+            var form = document.getElementById('sub-add-form');
+            if (!form) return;
+            if (form.classList.contains('visible')) {
+                form.classList.remove('visible');
+            } else {
+                form.classList.add('visible');
+                ['sub-name','sub-trade','sub-phone','sub-email','sub-license','sub-ins-exp','sub-rate','sub-notes'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+            }
+        }
+
+        function saveSub() {
+            var name = (document.getElementById('sub-name') || {}).value || '';
+            if (!name.trim()) { alert('Name is required'); return; }
+            var sub = {
+                id: Date.now(),
+                name: name,
+                trade: (document.getElementById('sub-trade') || {}).value || '',
+                phone: (document.getElementById('sub-phone') || {}).value || '',
+                email: (document.getElementById('sub-email') || {}).value || '',
+                license: (document.getElementById('sub-license') || {}).value || '',
+                insExp: (document.getElementById('sub-ins-exp') || {}).value || '',
+                rate: (document.getElementById('sub-rate') || {}).value || '',
+                notes: (document.getElementById('sub-notes') || {}).value || '',
+                active: true
+            };
+            subList.push(sub);
+            saveSubs();
+            renderSubTable();
+            toggleSubAddForm();
+        }
+
+        function deleteSub(id) {
+            if (!confirm('Remove this subcontractor?')) return;
+            subList = subList.filter(function(s) { return s.id !== id; });
+            saveSubs();
+            renderSubTable();
+        }
+
+        function toggleSubStatus(id) {
+            var sub = subList.find(function(s) { return s.id === id; });
+            if (sub) { sub.active = !sub.active; saveSubs(); renderSubTable(); }
+        }
+
+        function renderSubTable() {
+            var tbody = document.getElementById('sub-table-body');
+            var counter = document.getElementById('sub-count');
+            if (!tbody) return;
+            if (counter) counter.textContent = subList.length;
+            if (subList.length === 0) {
+                tbody.innerHTML = '<tr id="sub-empty-row"><td colspan="7" style="text-align:center;color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:28px;">No subcontractors added yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            subList.forEach(function(sub) {
+                var insExpired = sub.insExp && new Date(sub.insExp) < new Date();
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td><strong style="color:var(--text)">' + escapeAttr(sub.name) + '</strong>' + (sub.notes ? '<br><span style="font-size:11px;color:var(--text-dim)">' + escapeAttr(sub.notes) + '</span>' : '') + '</td>' +
+                    '<td style="font-family:var(--mono);font-size:12px;">' + escapeAttr(sub.trade) + '</td>' +
+                    '<td style="font-family:var(--mono);font-size:12px;white-space:nowrap;">' + escapeAttr(sub.phone) + '</td>' +
+                    '<td style="font-family:var(--mono);font-size:12px;' + (insExpired ? 'color:var(--red)' : '') + '">' + (sub.insExp || '-') + (insExpired ? ' &#9888;' : '') + '</td>' +
+                    '<td style="font-family:var(--mono);font-size:12px;">' + (sub.rate ? '$' + sub.rate + '/hr' : '-') + '</td>' +
+                    '<td><span class="sub-status ' + (sub.active ? 'sub-status-active' : 'sub-status-inactive') + '">' + (sub.active ? 'Active' : 'Inactive') + '</span></td>' +
+                    '<td><button class="sub-action-btn" onclick="toggleSubStatus(' + sub.id + ')">' + (sub.active ? 'Deactivate' : 'Activate') + '</button><button class="sub-action-btn danger" onclick="deleteSub(' + sub.id + ')">Delete</button></td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ============================================
+        // MATERIALS CHECKLIST
+        // ============================================
+        var matList = [];
+
+        function loadMaterials() {
+            try { matList = JSON.parse(localStorage.getItem('mat_list') || '[]'); } catch(e) { matList = []; }
+            renderMatList();
+        }
+
+        function saveMaterials() {
+            localStorage.setItem('mat_list', JSON.stringify(matList));
+        }
+
+        function addMaterialItem() {
+            var input = document.getElementById('mat-item-input');
+            var catSel = document.getElementById('mat-cat-select');
+            if (!input) return;
+            var name = input.value.trim();
+            if (!name) return;
+            matList.push({ id: Date.now(), name: name, cat: catSel ? catSel.value : 'Other', checked: false });
+            input.value = '';
+            saveMaterials();
+            renderMatList();
+        }
+
+        function toggleMaterialItem(id) {
+            var item = matList.find(function(m) { return m.id === id; });
+            if (item) { item.checked = !item.checked; saveMaterials(); renderMatList(); }
+        }
+
+        function deleteMaterialItem(id) {
+            matList = matList.filter(function(m) { return m.id !== id; });
+            saveMaterials();
+            renderMatList();
+        }
+
+        function clearCheckedMaterials() {
+            matList = matList.filter(function(m) { return !m.checked; });
+            saveMaterials();
+            renderMatList();
+        }
+
+        function clearAllMaterials() {
+            if (!confirm('Clear all items?')) return;
+            matList = [];
+            saveMaterials();
+            renderMatList();
+        }
+
+        function renderMatList() {
+            var listEl = document.getElementById('mat-list');
+            if (!listEl) return;
+            var checked = matList.filter(function(m) { return m.checked; }).length;
+            var total = matList.length;
+            var pct = total > 0 ? Math.round(checked / total * 100) : 0;
+            var lbl = document.getElementById('mat-progress-label');
+            var fill = document.getElementById('mat-progress-fill');
+            if (lbl) lbl.textContent = checked + ' of ' + total + ' items checked';
+            if (fill) fill.style.width = pct + '%';
+            listEl.innerHTML = '';
+            if (matList.length === 0) {
+                listEl.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;text-align:center;padding:28px;">No items yet</div>';
+                return;
+            }
+            matList.forEach(function(item) {
+                var div = document.createElement('div');
+                div.className = 'mat-item' + (item.checked ? ' checked' : '');
+                div.innerHTML = '<input type="checkbox"' + (item.checked ? ' checked' : '') + ' onchange="toggleMaterialItem(' + item.id + ')">' +
+                    '<span class="mat-item-name">' + escapeAttr(item.name) + '</span>' +
+                    '<span class="mat-item-cat">' + escapeAttr(item.cat) + '</span>' +
+                    '<button class="mat-item-del" onclick="deleteMaterialItem(' + item.id + ')">x</button>';
+                listEl.appendChild(div);
+            });
+        }
+
+        // ============================================
+        // PHOTO LOG
+        // ============================================
+        var photoLog = [];
+
+        function photoHandleDragOver(e) {
+            e.preventDefault();
+            var dz = document.getElementById('photo-drop-zone');
+            if (dz) dz.classList.add('drag-over');
+        }
+
+        function photoHandleDragLeave(e) {
+            var dz = document.getElementById('photo-drop-zone');
+            if (dz) dz.classList.remove('drag-over');
+        }
+
+        function photoHandleDrop(e) {
+            e.preventDefault();
+            var dz = document.getElementById('photo-drop-zone');
+            if (dz) dz.classList.remove('drag-over');
+            var files = Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('image/'); });
+            files.forEach(addPhotoToLog);
+        }
+
+        function photoHandleFileSelect(e) {
+            Array.from(e.target.files).forEach(addPhotoToLog);
+            e.target.value = '';
+        }
+
+        function addPhotoToLog(file) {
+            var url = URL.createObjectURL(file);
+            var tag = (document.getElementById('photo-job-tag') || {}).value || '';
+            photoLog.push({ id: Date.now() + Math.random(), url: url, name: file.name, tag: tag, time: new Date().toLocaleString() });
+            renderPhotoGrid();
+        }
+
+        function clearAllPhotos() {
+            if (photoLog.length === 0) return;
+            if (!confirm('Clear all photos from this session?')) return;
+            photoLog.forEach(function(p) { try { URL.revokeObjectURL(p.url); } catch(e) {} });
+            photoLog = [];
+            renderPhotoGrid();
+        }
+
+        function renderPhotoGrid() {
+            var grid = document.getElementById('photo-grid');
+            var empty = document.getElementById('photo-empty');
+            var counter = document.getElementById('photo-count');
+            if (!grid) return;
+            if (counter) counter.textContent = photoLog.length;
+            if (photoLog.length === 0) {
+                grid.innerHTML = '<div class="photo-empty" id="photo-empty" style="grid-column:1/-1;">No photos added yet</div>';
+                return;
+            }
+            grid.innerHTML = '';
+            photoLog.forEach(function(photo) {
+                var card = document.createElement('div');
+                card.className = 'photo-card';
+                card.onclick = function() { openPhotoLightbox(photo); };
+                card.innerHTML = '<img src="' + photo.url + '" alt="' + escapeAttr(photo.name) + '" loading="lazy"><div class="photo-card-label">' + escapeAttr(photo.name) + '</div>';
+                grid.appendChild(card);
+            });
+        }
+
+        function openPhotoLightbox(photo) {
+            var existing = document.getElementById('photo-lightbox-overlay');
+            if (existing) existing.remove();
+            var lb = document.createElement('div');
+            lb.className = 'photo-lightbox';
+            lb.id = 'photo-lightbox-overlay';
+            lb.innerHTML = '<button class="photo-lightbox-close" onclick="this.closest(\'.photo-lightbox\').remove()">&times;</button>' +
+                '<img src="' + photo.url + '" alt="' + escapeAttr(photo.name) + '">' +
+                '<div class="photo-lightbox-caption">' + escapeAttr(photo.name) + (photo.tag ? ' &bull; ' + escapeAttr(photo.tag) : '') + ' &bull; ' + escapeAttr(photo.time) + '</div>';
+            lb.onclick = function(e) { if (e.target === lb) lb.remove(); };
+            document.body.appendChild(lb);
+        }
+
+        // ============================================
+        // SAFETY CHECKLIST
+        // ============================================
+        var safetyData = {
+            categories: [
+                { id: 'ppe', title: 'PPE & Personal Safety', open: true, items: [
+                    'Hard hats worn by all personnel on site',
+                    'Safety vests / high-visibility clothing worn',
+                    'Safety glasses or goggles in use where required',
+                    'Gloves appropriate for the task being performed',
+                    'Steel-toed boots worn by all workers',
+                    'Hearing protection available and used near loud equipment',
+                    'Fall protection harnesses inspected and in use above 6 ft'
+                ]},
+                { id: 'tools', title: 'Tools & Equipment', open: false, items: [
+                    'All power tools inspected before use',
+                    'Guards in place on grinders, saws, and rotating equipment',
+                    'Extension cords in good condition (no frays or exposed wire)',
+                    'GFCI protection used for all electrical equipment outdoors',
+                    'Ladders in good condition and properly secured',
+                    'Scaffolding erected and inspected by competent person',
+                    'Heavy equipment (excavators, lifts) operated by trained personnel only'
+                ]},
+                { id: 'site', title: 'Site Conditions', open: false, items: [
+                    'Site is clean and free of unnecessary clutter and debris',
+                    'Walkways and access routes clear of obstructions',
+                    'Adequate lighting in all work areas',
+                    'Barricades / signage in place around hazard zones',
+                    'Trenches and excavations properly shored or sloped',
+                    'Materials stacked and stored safely',
+                    'Spill containment in place for fuels and chemicals'
+                ]},
+                { id: 'fire', title: 'Fire & Emergency', open: false, items: [
+                    'Fire extinguishers accessible and inspected',
+                    'Hot work permit obtained for welding / cutting',
+                    'Emergency contact list posted on site',
+                    'First aid kit stocked and accessible',
+                    'Emergency evacuation route identified and communicated',
+                    'No smoking policy enforced in designated areas'
+                ]},
+                { id: 'hazmat', title: 'Hazardous Materials', open: false, items: [
+                    'SDS (Safety Data Sheets) available for all chemicals on site',
+                    'Chemicals stored in labeled, sealed containers',
+                    'Asbestos / lead paint survey completed before demolition',
+                    'Silica dust controls in place for cutting concrete or masonry',
+                    'Waste disposed of per local regulations'
+                ]},
+                { id: 'admin', title: 'Administrative', open: false, items: [
+                    'Daily toolbox talk / safety briefing conducted',
+                    'OSHA 10/30 certifications current for required personnel',
+                    'Incident log up to date',
+                    'Subcontractor safety plans reviewed',
+                    'Building permits posted and visible',
+                    'Competent person designated for site safety'
+                ]}
+            ],
+            checks: {}
+        };
+
+        function initSafetyChecklist() {
+            var dateEl = document.getElementById('safety-date');
+            if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+            renderSafetyCategories();
+            updateSafetyProgress();
+        }
+
+        function renderSafetyCategories() {
+            var container = document.getElementById('safety-categories');
+            if (!container) return;
+            container.innerHTML = '';
+            safetyData.categories.forEach(function(cat) {
+                var checkedCount = cat.items.filter(function(item, idx) { return safetyData.checks[cat.id + '_' + idx]; }).length;
+                var div = document.createElement('div');
+                div.className = 'safety-category' + (cat.open ? ' open' : '');
+                div.id = 'safety-cat-' + cat.id;
+                var itemsHtml = cat.items.map(function(item, idx) {
+                    var key = cat.id + '_' + idx;
+                    var isChecked = !!safetyData.checks[key];
+                    return '<div class="safety-item' + (isChecked ? ' checked' : '') + '" id="safety-item-' + key + '">' +
+                        '<input type="checkbox"' + (isChecked ? ' checked' : '') + ' onchange="toggleSafetyItem(\'' + cat.id + '\',' + idx + ',this.checked)">' +
+                        '<span class="safety-item-text">' + escapeAttr(item) + '</span></div>';
+                }).join('');
+                div.innerHTML = '<div class="safety-category-header" onclick="toggleSafetyCat(\'' + cat.id + '\')">' +
+                    '<span class="safety-cat-title">' + escapeAttr(cat.title) + '</span>' +
+                    '<span class="safety-cat-count">' + checkedCount + '/' + cat.items.length + '</span>' +
+                    '<span class="safety-cat-chevron">&#9660;</span></div>' +
+                    '<div class="safety-items">' + itemsHtml + '</div>';
+                container.appendChild(div);
+            });
+        }
+
+        function toggleSafetyCat(catId) {
+            var el = document.getElementById('safety-cat-' + catId);
+            if (el) el.classList.toggle('open');
+            var cat = safetyData.categories.find(function(c) { return c.id === catId; });
+            if (cat) cat.open = el ? el.classList.contains('open') : false;
+        }
+
+        function toggleSafetyItem(catId, idx, checked) {
+            var key = catId + '_' + idx;
+            safetyData.checks[key] = checked;
+            var itemEl = document.getElementById('safety-item-' + key);
+            if (itemEl) { if (checked) itemEl.classList.add('checked'); else itemEl.classList.remove('checked'); }
+            var cat = safetyData.categories.find(function(c) { return c.id === catId; });
+            if (cat) {
+                var catEl = document.getElementById('safety-cat-' + catId);
+                if (catEl) {
+                    var countEl = catEl.querySelector('.safety-cat-count');
+                    if (countEl) {
+                        var checkedCount = cat.items.filter(function(item, i) { return safetyData.checks[catId + '_' + i]; }).length;
+                        countEl.textContent = checkedCount + '/' + cat.items.length;
+                    }
+                }
+            }
+            updateSafetyProgress();
+        }
+
+        function updateSafetyProgress() {
+            var total = 0, checked = 0;
+            safetyData.categories.forEach(function(cat) {
+                total += cat.items.length;
+                cat.items.forEach(function(item, idx) { if (safetyData.checks[cat.id + '_' + idx]) checked++; });
+            });
+            var pct = total > 0 ? Math.round(checked / total * 100) : 0;
+            var lbl = document.getElementById('safety-progress-label');
+            var fill = document.getElementById('safety-progress-fill');
+            if (lbl) lbl.textContent = checked + ' of ' + total + ' items checked (' + pct + '%)';
+            if (fill) fill.style.width = pct + '%';
+        }
+
+        function resetSafetyChecklist() {
+            if (!confirm('Reset all checklist items?')) return;
+            safetyData.checks = {};
+            renderSafetyCategories();
+            updateSafetyProgress();
+        }
+
+        function saveSafetyLog() {
+            var date = (document.getElementById('safety-date') || {}).value || new Date().toISOString().slice(0,10);
+            var site = (document.getElementById('safety-site') || {}).value || '';
+            var inspector = (document.getElementById('safety-inspector') || {}).value || '';
+            var total = 0, checked = 0;
+            safetyData.categories.forEach(function(cat) {
+                total += cat.items.length;
+                cat.items.forEach(function(item, idx) { if (safetyData.checks[cat.id + '_' + idx]) checked++; });
+            });
+            var pct = total > 0 ? Math.round(checked / total * 100) : 0;
+            var logs = [];
+            try { logs = JSON.parse(localStorage.getItem('safety_logs') || '[]'); } catch(e) { logs = []; }
+            logs.unshift({ date: date, site: site, inspector: inspector, score: pct, checked: checked, total: total, savedAt: new Date().toLocaleString() });
+            if (logs.length > 50) logs = logs.slice(0, 50);
+            localStorage.setItem('safety_logs', JSON.stringify(logs));
+            if (typeof showSettingsToast === 'function') showSettingsToast('Inspection log saved (' + pct + '% complete)');
+            renderSafetyLogs();
+        }
+
+        function toggleSafetyLogs() {
+            var panel = document.getElementById('safety-logs-panel');
+            if (!panel) return;
+            if (panel.style.display === 'none') {
+                panel.style.display = '';
+                renderSafetyLogs();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function renderSafetyLogs() {
+            var list = document.getElementById('safety-logs-list');
+            if (!list) return;
+            var logs = [];
+            try { logs = JSON.parse(localStorage.getItem('safety_logs') || '[]'); } catch(e) { logs = []; }
+            if (logs.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:12px 0;">No saved logs yet</div>';
+                return;
+            }
+            list.innerHTML = logs.map(function(log) {
+                var color = log.score >= 90 ? 'var(--green)' : log.score >= 70 ? 'var(--orange)' : 'var(--red)';
+                return '<div class="safety-log-entry"><span class="safety-log-date">' + escapeAttr(log.date) + '</span>' +
+                    '<span style="color:var(--text-mid)">' + escapeAttr(log.site || 'No site') + '</span>' +
+                    '<span style="color:var(--text-dim)">' + escapeAttr(log.inspector || '') + '</span>' +
+                    '<span class="safety-log-score" style="color:' + color + ';font-weight:700">' + log.score + '% (' + log.checked + '/' + log.total + ')</span>' +
+                    '<span style="color:var(--text-dim);font-size:10px;">' + escapeAttr(log.savedAt || '') + '</span></div>';
+            }).join('');
+        }
+
+        // ============================================
+        // HOOK INTO EXISTING showToolView + openSettings
+        // ============================================
+        var _origShowToolView = typeof showToolView === 'function' ? showToolView : null;
+        // Initialize tool-specific state when tool is opened
+        var _toolInitDone = {};
+        function _onToolViewShown(viewId) {
+            if (viewId === 'subs' && !_toolInitDone.subs) { _toolInitDone.subs = true; loadSubs(); }
+            if (viewId === 'materials' && !_toolInitDone.materials) { _toolInitDone.materials = true; loadMaterials(); }
+            if (viewId === 'photos' && !_toolInitDone.photos) { _toolInitDone.photos = true; renderPhotoGrid(); }
+            if (viewId === 'safety' && !_toolInitDone.safety) { _toolInitDone.safety = true; initSafetyChecklist(); }
+            if (viewId === 'estimate' && !_toolInitDone.estimate) { _toolInitDone.estimate = true; if (estimateRows.length === 0) addEstimateRow('', 1, 0); }
+        }
+
+        // Patch showToolView to call _onToolViewShown after showing
+        (function() {
+            var orig = showToolView;
+            showToolView = function(viewId) {
+                orig(viewId);
+                if (viewId) _onToolViewShown(viewId);
+            };
+        })();
+
+        // Patch openSettings to populate new prompts from localStorage
+        (function() {
+            var origOpen = openSettings;
+            openSettings = function() {
+                origOpen.apply(this, arguments);
+                var estEl = document.getElementById('estimate-system-prompt');
+                if (estEl) estEl.value = localStorage.getItem('estimate_system_prompt') || '';
+                var coEl = document.getElementById('changeorder-system-prompt');
+                if (coEl) coEl.value = localStorage.getItem('changeorder_system_prompt') || '';
+            };
+        })();
+
         function copyToolOutput(elementId) {
             const el = document.getElementById(elementId);
             if (!el) return;
@@ -4653,6 +5781,111 @@ app.post('/generate-adjuster-followup', requireLogin, async (req, res) => {
     res.json({ response, ai: 'gemini' });
   } catch (error) {
     log('ERROR', `Adjuster follow-up error: ${error.message}`, requestId);
+    const { status, userMessage } = formatError(error);
+    res.status(status).json({ error: userMessage, requestId });
+  }
+});
+
+/**
+ * POST /generate-estimate
+ * Generate a professional construction estimate / quote document
+ */
+app.post('/generate-estimate', requireLogin, async (req, res) => {
+  const requestId = req.id;
+  try {
+    const {
+      clientName, projectName, address, startDate,
+      scope, lineItems, subtotal, taxPct, taxAmount, grandTotal,
+      additionalNotes, customSystemPrompt
+    } = req.body;
+
+    const defaultSystemPrompt = `You are a professional construction estimator. Generate a detailed, professional estimate document based on the project information and line items provided. Include a clear scope summary, itemized cost breakdown, totals, and professional terms. Format as a ready-to-present estimate document with all necessary sections clearly labeled.`;
+
+    const systemPrompt = (customSystemPrompt && customSystemPrompt.trim()) ? customSystemPrompt.trim() : defaultSystemPrompt;
+
+    const prompt = `${systemPrompt}
+
+PROJECT INFORMATION:
+Client: ${clientName || 'N/A'}
+Project: ${projectName || 'N/A'}
+Address: ${address || 'N/A'}
+Estimated Start: ${startDate || 'TBD'}
+
+PROJECT SCOPE / DESCRIPTION:
+${scope || 'No description provided.'}
+
+LINE ITEMS:
+${lineItems || 'No line items provided.'}
+
+FINANCIALS:
+Subtotal: $${subtotal || '0.00'}
+Tax (${taxPct || '0'}%): $${taxAmount || '0.00'}
+GRAND TOTAL: $${grandTotal || '0.00'}
+
+ADDITIONAL NOTES / TERMS:
+${additionalNotes || 'None'}
+
+Generate a complete, professional estimate document.`;
+
+    const response = await callGemini(prompt, 45000);
+    log('INFO', 'Estimate generated successfully', requestId);
+    res.json({ response, ai: 'gemini' });
+  } catch (error) {
+    log('ERROR', `Estimate generation error: ${error.message}`, requestId);
+    const { status, userMessage } = formatError(error);
+    res.status(status).json({ error: userMessage, requestId });
+  }
+});
+
+/**
+ * POST /generate-change-order
+ * Generate a formal change order document
+ */
+app.post('/generate-change-order', requireLogin, async (req, res) => {
+  const requestId = req.id;
+  try {
+    const {
+      clientName, contractNumber, changeOrderNumber, status,
+      reason, scopeChanges, costImpact, scheduleDays,
+      customSystemPrompt
+    } = req.body;
+
+    const defaultSystemPrompt = `You are a professional construction project manager. Generate a formal change order document based on the information provided. Include reason for change, detailed scope changes, cost impact breakdown, schedule impact, and require client sign-off language. Format as a professional, legally clear change order document.`;
+
+    const systemPrompt = (customSystemPrompt && customSystemPrompt.trim()) ? customSystemPrompt.trim() : defaultSystemPrompt;
+
+    const costNum = parseFloat(costImpact) || 0;
+    const daysNum = parseInt(scheduleDays) || 0;
+    const statusLabel = status === 'approved' ? 'APPROVED' : status === 'rejected' ? 'REJECTED' : 'PENDING APPROVAL';
+
+    const prompt = `${systemPrompt}
+
+CHANGE ORDER DETAILS:
+Client: ${clientName || 'N/A'}
+Contract / Project: ${contractNumber || 'N/A'}
+Change Order #: ${changeOrderNumber || 'CO-001'}
+Status: ${statusLabel}
+Date: ${new Date().toLocaleDateString()}
+
+REASON FOR CHANGE:
+${reason || 'No reason provided.'}
+
+SCOPE CHANGES:
+${scopeChanges || 'No scope changes described.'}
+
+FINANCIAL IMPACT:
+Cost Impact: ${costNum >= 0 ? '+' : ''}$${Math.abs(costNum).toFixed(2)} ${costNum >= 0 ? '(addition to contract)' : '(deduction from contract)'}
+
+SCHEDULE IMPACT:
+${daysNum === 0 ? 'No schedule change.' : (daysNum > 0 ? '+' + daysNum + ' calendar days added to project timeline.' : Math.abs(daysNum) + ' calendar days reduced from project timeline.')}
+
+Generate a complete, professional change order document.`;
+
+    const response = await callGemini(prompt, 35000);
+    log('INFO', 'Change order generated successfully', requestId);
+    res.json({ response, ai: 'gemini' });
+  } catch (error) {
+    log('ERROR', `Change order generation error: ${error.message}`, requestId);
     const { status, userMessage } = formatError(error);
     res.status(status).json({ error: userMessage, requestId });
   }
