@@ -4716,7 +4716,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var lineItems = estimateRows.map(function(r) {
                 var total = (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0);
                 return r.desc + ' | Qty: ' + r.qty + ' | Unit: $' + parseFloat(r.price).toFixed(2) + ' | Total: $' + total.toFixed(2);
-            }).join('\n');
+            }).join(String.fromCharCode(10));
             var subtotal = estimateRows.reduce(function(s,r){ return s + (parseFloat(r.qty)||0)*(parseFloat(r.price)||0); }, 0);
             var taxAmt = subtotal * parseFloat(taxPct) / 100;
             var customPrompt = localStorage.getItem('estimate_system_prompt') || '';
