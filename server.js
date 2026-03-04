@@ -632,7 +632,7 @@ function chooseAI(prompt) {
  * @param {number} timeoutMs - Timeout in milliseconds (default: 30s)
  * @returns {Promise<string>} AI response
  */
-async function callGemini(prompt, timeoutMs = 30000) {
+async function callGemini(prompt, timeoutMs = 30000, systemPrompt = '') {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_NOT_CONFIGURED');
   }
@@ -659,6 +659,7 @@ async function callGemini(prompt, timeoutMs = 30000) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            ...(systemPrompt ? { system_instruction: { parts: [{ text: systemPrompt }] } } : {}),
             contents: [{
               parts: [{ text: prompt }]
             }]
@@ -4366,13 +4367,14 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             }
 
             // System tab
-            if (el('settings-system-prompt')) el('settings-system-prompt').value = localStorage.getItem('system_prompt') || '';
-            if (el('settings-temperature')) {
+            const DEFAULT_CONSTRUCTION_PROMPT = 'You are an AI assistant for a construction business. Help with invoices, estimates, change orders, client follow-ups, subcontractors, materials, safety, and project management. Be professional, concise, and focused on construction industry needs.';
+            if (el('system-prompt-input')) el('system-prompt-input').value = localStorage.getItem('system_prompt') || DEFAULT_CONSTRUCTION_PROMPT;
+            if (el('chat-temp-input')) {
                 const temp = localStorage.getItem('chat_temperature') || '0.7';
-                el('settings-temperature').value = temp;
-                if (el('settings-temperature-val')) el('settings-temperature-val').textContent = temp;
+                el('chat-temp-input').value = temp;
+                if (el('chat-temp-val')) el('chat-temp-val').textContent = temp;
             }
-            if (el('settings-language')) el('settings-language').value = localStorage.getItem('chat_language') || 'en';
+            if (el('chat-lang-input')) el('chat-lang-input').value = localStorage.getItem('chat_language') || 'en';
 
             // Agent tab
             if (el('openclaw-url-input')) el('openclaw-url-input').value = getOpenClawSetting('url') || 'http://your-vps-ip:18789';
@@ -4504,7 +4506,8 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                             prompt: userInput,
                             ai: currentAIMode,
                             openclawUrl: getOpenClawSetting('url'),
-                            openclawToken: getOpenClawSetting('token')
+                            openclawToken: getOpenClawSetting('token'),
+                            systemPrompt: localStorage.getItem('system_prompt') || ''
                         }),
                         signal: currentRequest.signal
                     });
@@ -4530,11 +4533,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                         throw new Error(data.error || data.message || 'Service temporarily unavailable. Please try again.');
                     }
 
-                    const routingInfo = data.routing ?
-                        'Routed to ' + data.routing.ai.toUpperCase() + ' (confidence: ' + data.routing.confidence + ')' :
-                        null;
-
-                    addMsg('bot', data.response, data.ai, routingInfo);
+                    addMsg('bot', data.response, data.ai, null);
 
                 } catch (fetchErr) {
                     clearTimeout(clientTimeout);
@@ -4678,9 +4677,9 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         }
 
         function saveSystemSettings() {
-            const prompt = document.getElementById('settings-system-prompt')?.value || '';
-            const temp   = document.getElementById('settings-temperature')?.value || '0.7';
-            const lang   = document.getElementById('settings-language')?.value || 'en';
+            const prompt = document.getElementById('system-prompt-input')?.value || '';
+            const temp   = document.getElementById('chat-temp-input')?.value || '0.7';
+            const lang   = document.getElementById('chat-lang-input')?.value || 'en';
             localStorage.setItem('system_prompt', prompt);
             localStorage.setItem('chat_temperature', temp);
             localStorage.setItem('chat_language', lang);
@@ -4785,7 +4784,8 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             const level = getEscalationLevel(days);
             wrap.innerHTML = '<span class="escalation-badge ' + level.cls + '">' + level.label + '</span>';
             const btn = document.getElementById('invoice-generate-btn');
-            if (btn && invoiceFileContent) btn.disabled = false;
+            const hasContext = invoiceFileContent || (document.getElementById('invoice-notes-input')?.value?.trim());
+            if (btn && hasContext) btn.disabled = false;
         }
 
         function handleInvoiceDragOver(e) {
@@ -5788,6 +5788,8 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                         var el = document.getElementById(id);
                         if (el) el.value = '';
                     });
+                    var statusSel = document.getElementById('inv-new-status');
+                    if (statusSel) statusSel.value = 'pending';
                     loadInvoiceList();
                 } else {
                     var d = await resp.json();
@@ -6058,7 +6060,7 @@ app.post('/chat', requireLogin, async (req, res) => {
   const requestId = req.id;
 
   try {
-    const { prompt, ai: forceAI, openclawUrl, openclawToken } = req.body;
+    const { prompt, ai: forceAI, openclawUrl, openclawToken, systemPrompt } = req.body;
 
     // Input validation
     if (!prompt || typeof prompt !== 'string') {
@@ -6093,7 +6095,7 @@ app.post('/chat', requireLogin, async (req, res) => {
 
     try {
       if (routing.ai === 'gemini') {
-        response = await callGemini(prompt);
+        response = await callGemini(prompt, 30000, systemPrompt);
       } else {
         response = await callOpenClaw(prompt, openclawUrl, openclawToken, 25000, isAdmin);
       }
