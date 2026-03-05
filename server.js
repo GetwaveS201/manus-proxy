@@ -3401,7 +3401,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     </button>
                 </div>
                 <div class="dash-section-label">AI Assistant</div>
-                <button class="dash-chat-btn" onclick="document.getElementById('msg-input').focus()">
+                <button class="dash-chat-btn" onclick="document.getElementById('input').focus()">
                     <div class="dash-chat-icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     </div>
@@ -5652,7 +5652,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             });
             var checked = matList.filter(function(m) { return m.checked; }).length;
             lines.push('TOTAL: ' + checked + ' of ' + matList.length + ' items checked');
-            var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+            var blob = new Blob([lines.join('\\n')], { type: 'text/plain' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url; a.download = 'materials-' + new Date().toISOString().slice(0,10) + '.txt';
@@ -6262,7 +6262,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 return [inv.invoiceNumber, inv.clientName, inv.clientEmail || '', inv.amount || 0, inv.dueDate || '', inv.status, followUp]
                     .map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
             });
-            var csv = [headers.join(',')].concat(rows).join('\n');
+            var csv = [headers.join(',')].concat(rows).join('\\n');
             var blob = new Blob([csv], { type: 'text/csv' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
