@@ -6560,14 +6560,14 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
 
                 card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
                     '<div style="display:flex;align-items:center;gap:8px;">' +
-                    '<label class="toggle-switch" style="margin:0;flex-shrink:0;"><input type="checkbox" ' + (a.enabled ? 'checked' : '') + ' onchange="toggleCustomAutomation(\'' + a.id + '\',this.checked)"><span class="toggle-slider"></span></label>' +
+                    '<label class="toggle-switch" style="margin:0;flex-shrink:0;"><input type="checkbox" ' + (a.enabled ? 'checked' : '') + ' onchange="toggleCustomAutomation(\\'' + a.id + '\\',this.checked)"><span class="toggle-slider"></span></label>' +
                     '<div><div style="font-family:var(--mono);font-size:12px;color:var(--text);font-weight:600;">' + escapeHtml(a.name) + '</div>' +
                     '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">' + trigDesc + ' &bull; ' + (actionLabels[a.action] || a.action) + '</div></div>' +
                     '</div>' +
                     '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-                    '<button class="agent-action-btn" onclick="runCustomAutomationNow(\'' + a.id + '\')" style="padding:5px 10px;font-size:10px;" title="Run Now">&#9654; Run</button>' +
-                    '<button class="agent-action-btn" onclick="openCustomAutomationForm(\'' + a.id + '\')" style="padding:5px 10px;font-size:10px;" title="Edit">&#9998; Edit</button>' +
-                    '<button class="agent-action-btn" onclick="deleteCustomAutomation(\'' + a.id + '\')" style="padding:5px 10px;font-size:10px;color:var(--red);" title="Delete">&#10005;</button>' +
+                    '<button class="agent-action-btn" onclick="runCustomAutomationNow(\\'' + a.id + '\\')" style="padding:5px 10px;font-size:10px;" title="Run Now">&#9654; Run</button>' +
+                    '<button class="agent-action-btn" onclick="openCustomAutomationForm(\\'' + a.id + '\\')" style="padding:5px 10px;font-size:10px;" title="Edit">&#9998; Edit</button>' +
+                    '<button class="agent-action-btn" onclick="deleteCustomAutomation(\\'' + a.id + '\\')" style="padding:5px 10px;font-size:10px;color:var(--red);" title="Delete">&#10005;</button>' +
                     '</div></div>' +
                     webhookInfo +
                     '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;" id="ca-status-' + a.id + '">' + escapeHtml(lastRunText) + '</div>' +
