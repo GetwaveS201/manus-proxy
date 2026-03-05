@@ -3116,10 +3116,17 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                         <input type="email" id="auto-cc-email" placeholder="you@yourcompany.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
                     </div>
                 </div>
-                <button class="settings-save-btn" onclick="saveAutomationConfig()" style="width:auto;padding:9px 20px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-                    Save Automation Settings
-                </button>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="settings-save-btn" onclick="saveAutomationConfig()" style="width:auto;padding:9px 20px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                        Save
+                    </button>
+                    <button class="agent-action-btn" id="auto-run-now-btn" onclick="runAutomationNow()" style="padding:9px 16px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Run Now
+                    </button>
+                </div>
+                <div id="auto-last-run" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:6px;display:none;"></div>
                 <div id="auto-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
             </div>
 
@@ -3156,25 +3163,25 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </div>
                 <h2>How can I help you?</h2>
-                <p>Ask me anything — I can answer questions, analyze data, and automate tasks using Chat or Agent mode.</p>
+                <p>Ask me anything about your construction business — invoices, estimates, client follow-ups, safety, and more.</p>
                 <div class="example-queries">
                     <h3>Try asking</h3>
                     <ul role="list">
-                        <li onclick="setPrompt('Build me a sales report for Q1')" role="button" tabindex="0" aria-label="Example: Build me a sales report for Q1">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                            Build me a sales report for Q1
+                        <li onclick="setPrompt('Write a professional follow-up email for a client who is 45 days past due on a $12,000 roofing invoice')" role="button" tabindex="0" aria-label="Example: Write a follow-up email for overdue invoice">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            Draft a follow-up email for a 45-day overdue invoice
                         </li>
-                        <li onclick="setPrompt('Find the best CRM tools for small businesses')" role="button" tabindex="0" aria-label="Example: Find the best CRM tools for small businesses">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            Find the best CRM tools for small businesses
+                        <li onclick="setPrompt('Create a detailed estimate for a 2,500 sq ft residential roof replacement including labor and materials')" role="button" tabindex="0" aria-label="Example: Create a roofing estimate">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            Generate a roof replacement estimate
                         </li>
-                        <li onclick="setPrompt('Calculate the ROI of our marketing campaign')" role="button" tabindex="0" aria-label="Example: Calculate the ROI of our marketing campaign">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            Calculate the ROI of our marketing campaign
+                        <li onclick="setPrompt('What should be included in a subcontractor agreement for a commercial framing job?')" role="button" tabindex="0" aria-label="Example: Subcontractor agreement advice">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            What goes in a subcontractor agreement?
                         </li>
-                        <li onclick="setPrompt('What is machine learning?')" role="button" tabindex="0" aria-label="Example: What is machine learning">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                            What is machine learning?
+                        <li onclick="setPrompt('List the top OSHA fall protection requirements for residential construction crews')" role="button" tabindex="0" aria-label="Example: OSHA fall protection requirements">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            OSHA fall protection requirements
                         </li>
                     </ul>
                 </div>
@@ -3222,13 +3229,33 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             <div class="invoice-tracker">
                 <div class="invoice-tracker-header">
                     <span class="invoice-tracker-title">Saved Invoices (<span id="inv-list-count">0</span>)</span>
-                    <div style="display:flex;gap:8px;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <button class="add-line-btn" onclick="toggleAddInvoiceForm()" style="padding:5px 12px;font-size:10px;">+ Add Invoice</button>
+                        <button class="add-line-btn" onclick="exportInvoicesCSV()" style="padding:5px 12px;font-size:10px;" title="Export all invoices to CSV">&#8595; CSV</button>
                         <button class="add-line-btn" onclick="loadInvoiceList()" style="padding:5px 12px;font-size:10px;">&#8635; Refresh</button>
                     </div>
                 </div>
-                <!-- Add invoice inline form -->
+                <!-- Outstanding summary banner -->
+                <div id="inv-summary-bar" style="display:none;font-family:var(--mono);font-size:11px;background:var(--bg-raised);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;display:flex;gap:16px;flex-wrap:wrap;">
+                    <span>Outstanding: <strong id="inv-summary-outstanding" style="color:var(--accent);">$0</strong></span>
+                    <span>Overdue: <strong id="inv-summary-overdue" style="color:var(--red);">$0</strong></span>
+                    <span>Paid: <strong id="inv-summary-paid" style="color:var(--green);">$0</strong></span>
+                </div>
+                <!-- Search + filter bar -->
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <input type="text" id="inv-search" placeholder="Search client, invoice #..." oninput="renderInvoiceList()" style="flex:1;padding:7px 10px;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:var(--mono);">
+                    <select id="inv-filter-status" onchange="renderInvoiceList()" style="padding:7px 10px;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:var(--mono);">
+                        <option value="">All Status</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                        <option value="draft">Draft</option>
+                    </select>
+                </div>
+                <!-- Add / Edit invoice inline form -->
                 <div class="add-invoice-form" id="add-invoice-form" style="display:none;">
+                    <input type="hidden" id="inv-edit-id">
+                    <div id="inv-form-title" style="font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">Add Invoice</div>
                     <div class="tool-field-row" style="margin-bottom:10px;">
                         <div class="tool-field"><label>Client Name</label><input type="text" id="inv-new-client" placeholder="Mike Johnson"></div>
                         <div class="tool-field"><label>Client Email</label><input type="email" id="inv-new-email" placeholder="mike@example.com"></div>
@@ -3249,8 +3276,8 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                         </div>
                     </div>
                     <div style="display:flex;gap:8px;">
-                        <button class="tool-generate-btn" style="padding:8px 16px;font-size:12px;width:auto;" onclick="saveInvoiceEntry()">Save Invoice</button>
-                        <button class="add-line-btn" onclick="toggleAddInvoiceForm()">Cancel</button>
+                        <button class="tool-generate-btn" id="inv-save-btn" style="padding:8px 16px;font-size:12px;width:auto;" onclick="saveInvoiceEntry()">Save Invoice</button>
+                        <button class="add-line-btn" onclick="cancelInvoiceForm()">Cancel</button>
                     </div>
                 </div>
                 <!-- Invoice list -->
@@ -3704,6 +3731,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             <div style="display:flex;gap:10px;margin-top:14px;">
                 <button class="add-line-btn" onclick="clearCheckedMaterials()">Clear Checked</button>
                 <button class="add-line-btn" onclick="clearAllMaterials()">Clear All</button>
+                <button class="add-line-btn" onclick="exportMaterialsText()" title="Export as text file">&#8595; Export</button>
             </div>
         </div>
     </div>
@@ -5263,13 +5291,18 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 return;
             }
             tbody.innerHTML = '';
+            var now = new Date();
+            var in30 = new Date(now.getTime() + 30 * 86400000);
             subList.forEach(function(sub) {
-                var insExpired = sub.insExp && new Date(sub.insExp) < new Date();
+                var insExpired = sub.insExp && new Date(sub.insExp) < now;
+                var insExpiringSoon = !insExpired && sub.insExp && new Date(sub.insExp) < in30;
+                var insColor = insExpired ? 'color:var(--red)' : insExpiringSoon ? 'color:var(--orange)' : '';
+                var insIcon = insExpired ? ' <span title="Insurance expired">&#9888;</span>' : insExpiringSoon ? ' <span title="Expiring within 30 days">&#9201;</span>' : '';
                 var tr = document.createElement('tr');
                 tr.innerHTML = '<td><strong style="color:var(--text)">' + escapeAttr(sub.name) + '</strong>' + (sub.notes ? '<br><span style="font-size:11px;color:var(--text-dim)">' + escapeAttr(sub.notes) + '</span>' : '') + '</td>' +
                     '<td style="font-family:var(--mono);font-size:12px;">' + escapeAttr(sub.trade) + '</td>' +
                     '<td style="font-family:var(--mono);font-size:12px;white-space:nowrap;">' + escapeAttr(sub.phone) + '</td>' +
-                    '<td style="font-family:var(--mono);font-size:12px;' + (insExpired ? 'color:var(--red)' : '') + '">' + (sub.insExp || '-') + (insExpired ? ' &#9888;' : '') + '</td>' +
+                    '<td style="font-family:var(--mono);font-size:12px;' + insColor + '">' + (sub.insExp || '-') + insIcon + '</td>' +
                     '<td style="font-family:var(--mono);font-size:12px;">' + (sub.rate ? '$' + sub.rate + '/hr' : '-') + '</td>' +
                     '<td><span class="sub-status ' + (sub.active ? 'sub-status-active' : 'sub-status-inactive') + '">' + (sub.active ? 'Active' : 'Inactive') + '</span></td>' +
                     '<td><button class="sub-action-btn" onclick="toggleSubStatus(' + sub.id + ')">' + (sub.active ? 'Deactivate' : 'Activate') + '</button><button class="sub-action-btn danger" onclick="deleteSub(' + sub.id + ')">Delete</button></td>';
@@ -5325,6 +5358,30 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             matList = [];
             saveMaterials();
             renderMatList();
+        }
+
+        function exportMaterialsText() {
+            if (!matList.length) { showSettingsToast('No items to export'); return; }
+            var categories = {};
+            matList.forEach(function(m) {
+                if (!categories[m.cat]) categories[m.cat] = [];
+                categories[m.cat].push((m.checked ? '[x] ' : '[ ] ') + m.name);
+            });
+            var lines = ['MATERIALS & SUPPLY CHECKLIST', 'Generated: ' + new Date().toLocaleString(), ''];
+            Object.keys(categories).sort().forEach(function(cat) {
+                lines.push('--- ' + cat.toUpperCase() + ' ---');
+                categories[cat].forEach(function(l) { lines.push('  ' + l); });
+                lines.push('');
+            });
+            var checked = matList.filter(function(m) { return m.checked; }).length;
+            lines.push('TOTAL: ' + checked + ' of ' + matList.length + ' items checked');
+            var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = 'materials-' + new Date().toISOString().slice(0,10) + '.txt';
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            showSettingsToast('Materials list exported');
         }
 
         function renderMatList() {
@@ -5805,31 +5862,69 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var count = document.getElementById('inv-list-count');
             if (!list) return;
             if (count) count.textContent = savedInvoices.length;
+
+            // Summary banner
+            var outstanding = 0, overdueAmt = 0, paidAmt = 0;
+            savedInvoices.forEach(function(inv) {
+                var amt = inv.amount || 0;
+                if (inv.status === 'paid') paidAmt += amt;
+                else if (inv.status !== 'draft') outstanding += amt;
+                if (inv.status === 'overdue') overdueAmt += amt;
+            });
+            var summaryBar = document.getElementById('inv-summary-bar');
+            if (summaryBar && savedInvoices.length > 0) {
+                summaryBar.style.display = 'flex';
+                var fmtAmt = function(n) { return '$' + n.toLocaleString(); };
+                var el = document.getElementById('inv-summary-outstanding');
+                if (el) el.textContent = fmtAmt(outstanding);
+                el = document.getElementById('inv-summary-overdue');
+                if (el) el.textContent = fmtAmt(overdueAmt);
+                el = document.getElementById('inv-summary-paid');
+                if (el) el.textContent = fmtAmt(paidAmt);
+            } else if (summaryBar) { summaryBar.style.display = 'none'; }
+
             if (savedInvoices.length === 0) {
                 list.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:10px 0;">No saved invoices yet. Add one above.</div>';
                 return;
             }
+
+            // Apply search + filter
+            var searchTerm = ((document.getElementById('inv-search') || {}).value || '').toLowerCase();
+            var filterStatus = (document.getElementById('inv-filter-status') || {}).value || '';
+            var filtered = savedInvoices.filter(function(inv) {
+                if (filterStatus && inv.status !== filterStatus) return false;
+                if (searchTerm) {
+                    var haystack = (inv.clientName + ' ' + inv.invoiceNumber + ' ' + (inv.clientEmail || '')).toLowerCase();
+                    if (haystack.indexOf(searchTerm) === -1) return false;
+                }
+                return true;
+            });
+
             var today = Date.now();
             list.innerHTML = '';
-            savedInvoices.forEach(function(inv) {
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:10px 0;">No invoices match your search.</div>';
+                return;
+            }
+            filtered.forEach(function(inv) {
                 var daysOverdue = inv.dueDate ? Math.floor((today - new Date(inv.dueDate).getTime()) / 86400000) : 0;
                 var item = document.createElement('div');
                 item.className = 'invoice-item';
                 item.dataset.id = inv.id;
                 var statusClass = inv.status === 'overdue' ? 'overdue' : inv.status === 'paid' ? 'paid' : inv.status === 'draft' ? 'draft' : 'pending';
-                var daysLabel = inv.status === 'overdue' && daysOverdue > 0 ? ' (' + daysOverdue + 'd overdue)' : '';
-                item.innerHTML = '<span class="inv-number">' + inv.invoiceNumber + '</span>' +
-                    '<span class="inv-client">' + inv.clientName + '</span>' +
+                var daysLabel = inv.status === 'overdue' && daysOverdue > 0 ? ' (' + daysOverdue + 'd)' : '';
+                var followUpLabel = inv.lastFollowUp ? '<span style="font-size:10px;color:var(--text-dim);margin-left:6px;" title="Last follow-up sent">&#9993; ' + Math.floor((today - inv.lastFollowUp) / 86400000) + 'd ago</span>' : '';
+                item.innerHTML =
+                    '<span class="inv-number">' + inv.invoiceNumber + '</span>' +
+                    '<span class="inv-client">' + inv.clientName + followUpLabel + '</span>' +
                     '<span class="inv-amount">$' + (inv.amount || 0).toLocaleString() + '</span>' +
                     '<span class="inv-status ' + statusClass + '">' + inv.status + daysLabel + '</span>' +
-                    '<button class="inv-del-btn" title="Delete">x</button>';
-                item.querySelector('.inv-del-btn').addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    deleteInvoiceEntry(inv.id);
-                });
-                item.addEventListener('click', function() {
-                    selectInvoiceForFollowup(inv, daysOverdue);
-                });
+                    '<button class="inv-del-btn" title="Edit" style="margin-right:2px;">&#9998;</button>' +
+                    '<button class="inv-del-btn" title="Delete">&#10005;</button>';
+                var btns = item.querySelectorAll('.inv-del-btn');
+                btns[0].addEventListener('click', function(e) { e.stopPropagation(); editInvoiceEntry(inv); });
+                btns[1].addEventListener('click', function(e) { e.stopPropagation(); deleteInvoiceEntry(inv.id); });
+                item.addEventListener('click', function() { selectInvoiceForFollowup(inv, daysOverdue); });
                 list.appendChild(item);
             });
         }
@@ -5837,12 +5932,73 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         function toggleAddInvoiceForm() {
             var form = document.getElementById('add-invoice-form');
             if (!form) return;
-            form.style.display = form.style.display === 'none' ? '' : 'none';
+            if (form.style.display !== 'none') { cancelInvoiceForm(); return; }
+            // Reset to "Add" mode
+            var idEl = document.getElementById('inv-edit-id');
+            if (idEl) idEl.value = '';
+            var title = document.getElementById('inv-form-title');
+            if (title) title.textContent = 'Add Invoice';
+            var btn = document.getElementById('inv-save-btn');
+            if (btn) btn.textContent = 'Save Invoice';
+            form.style.display = '';
+        }
+
+        function cancelInvoiceForm() {
+            var form = document.getElementById('add-invoice-form');
+            if (form) form.style.display = 'none';
+            var idEl = document.getElementById('inv-edit-id');
+            if (idEl) idEl.value = '';
+            ['inv-new-client','inv-new-email','inv-new-number','inv-new-amount','inv-new-due'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            var statusSel = document.getElementById('inv-new-status');
+            if (statusSel) statusSel.value = 'pending';
+        }
+
+        function editInvoiceEntry(inv) {
+            var form = document.getElementById('add-invoice-form');
+            if (!form) return;
+            var idEl = document.getElementById('inv-edit-id');
+            if (idEl) idEl.value = inv.id;
+            var title = document.getElementById('inv-form-title');
+            if (title) title.textContent = 'Edit Invoice';
+            var btn = document.getElementById('inv-save-btn');
+            if (btn) btn.textContent = 'Update Invoice';
+            var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+            set('inv-new-client', inv.clientName);
+            set('inv-new-email', inv.clientEmail);
+            set('inv-new-number', inv.invoiceNumber);
+            set('inv-new-amount', inv.amount);
+            set('inv-new-due', inv.dueDate);
+            var statusSel = document.getElementById('inv-new-status');
+            if (statusSel) statusSel.value = inv.status || 'pending';
+            form.style.display = '';
+            form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function exportInvoicesCSV() {
+            if (!savedInvoices.length) { showSettingsToast('No invoices to export'); return; }
+            var headers = ['Invoice #','Client Name','Client Email','Amount','Due Date','Status','Last Follow-Up'];
+            var rows = savedInvoices.map(function(inv) {
+                var followUp = inv.lastFollowUp ? new Date(inv.lastFollowUp).toLocaleDateString() : '';
+                return [inv.invoiceNumber, inv.clientName, inv.clientEmail || '', inv.amount || 0, inv.dueDate || '', inv.status, followUp]
+                    .map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+            });
+            var csv = [headers.join(',')].concat(rows).join('\n');
+            var blob = new Blob([csv], { type: 'text/csv' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = 'invoices-' + new Date().toISOString().slice(0,10) + '.csv';
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            showSettingsToast('Exported ' + savedInvoices.length + ' invoices');
         }
 
         async function saveInvoiceEntry() {
             var token = getAuthToken();
             if (!token) return;
+            var editId = (document.getElementById('inv-edit-id') || {}).value || '';
             var clientName = (document.getElementById('inv-new-client') || {}).value || '';
             var clientEmail = (document.getElementById('inv-new-email') || {}).value || '';
             var invoiceNumber = (document.getElementById('inv-new-number') || {}).value || '';
@@ -5851,20 +6007,16 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var status = (document.getElementById('inv-new-status') || {}).value || 'pending';
             if (!clientName || !invoiceNumber) { showSettingsToast('Client name and invoice # required'); return; }
             try {
+                var payload = { clientName: clientName, clientEmail: clientEmail, invoiceNumber: invoiceNumber, amount: amount, dueDate: dueDate, status: status };
+                if (editId) payload.id = editId;
                 var resp = await fetch('/api/invoices', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ clientName: clientName, clientEmail: clientEmail, invoiceNumber: invoiceNumber, amount: amount, dueDate: dueDate, status: status })
+                    body: JSON.stringify(payload)
                 });
                 if (resp.ok) {
-                    showSettingsToast('Invoice saved');
-                    toggleAddInvoiceForm();
-                    ['inv-new-client','inv-new-email','inv-new-number','inv-new-amount','inv-new-due'].forEach(function(id) {
-                        var el = document.getElementById(id);
-                        if (el) el.value = '';
-                    });
-                    var statusSel = document.getElementById('inv-new-status');
-                    if (statusSel) statusSel.value = 'pending';
+                    showSettingsToast(editId ? 'Invoice updated' : 'Invoice saved');
+                    cancelInvoiceForm();
                     loadInvoiceList();
                 } else {
                     var d = await resp.json();
@@ -5953,6 +6105,13 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     if (hourInput) hourInput.value = cfg.hour || 9;
                     if (ccInput) ccInput.value = cfg.ccEmail || '';
                 }
+                if (data.lastRun) {
+                    var lastRunEl = document.getElementById('auto-last-run');
+                    if (lastRunEl) {
+                        lastRunEl.textContent = 'Last run: ' + new Date(data.lastRun).toLocaleString();
+                        lastRunEl.style.display = '';
+                    }
+                }
             } catch(e) {}
         }
 
@@ -6036,6 +6195,37 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 }
             } catch(e) {
                 if (statusEl) { statusEl.style.display = ''; statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--red)'; }
+            }
+        }
+
+        async function runAutomationNow() {
+            var token = getAuthToken();
+            if (!token) return;
+            var btn = document.getElementById('auto-run-now-btn');
+            var statusEl = document.getElementById('auto-save-status');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:0.6">Running...</span>'; }
+            try {
+                var resp = await fetch('/api/run-automation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                    if (statusEl) { statusEl.style.display = ''; statusEl.textContent = data.message || 'Run complete.'; statusEl.style.color = 'var(--green)'; }
+                    var lastRunEl = document.getElementById('auto-last-run');
+                    if (lastRunEl) { lastRunEl.textContent = 'Last run: ' + new Date().toLocaleString(); lastRunEl.style.display = ''; }
+                    showSettingsToast('Automation ran: ' + (data.sent || 0) + ' email(s) sent');
+                } else {
+                    if (statusEl) { statusEl.style.display = ''; statusEl.textContent = data.error || 'Run failed'; statusEl.style.color = 'var(--red)'; }
+                }
+            } catch(e) {
+                if (statusEl) { statusEl.style.display = ''; statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--red)'; }
+            }
+            finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Now';
+                }
             }
         }
 
@@ -6806,7 +6996,8 @@ app.delete('/api/invoices/:id', requireLogin, (req, res) => {
 app.get('/api/automations', requireLogin, (req, res) => {
   res.json({
     automations: automationsConfig,
-    emailConfigured: getEffectiveSmtp().configured
+    emailConfigured: getEffectiveSmtp().configured,
+    lastRun: automationsConfig.lastRun || null
   });
 });
 
@@ -6876,6 +7067,23 @@ app.post('/api/smtp-test', requireLogin, async (req, res) => {
 });
 
 // ============================================
+// MANUAL AUTOMATION TRIGGER
+// ============================================
+
+app.post('/api/run-automation', requireLogin, async (req, res) => {
+  const requestId = req.id;
+  try {
+    const result = await runOverdueFollowup();
+    automationsConfig.lastRun = Date.now();
+    saveAutomationsConfig();
+    res.json({ success: true, sent: result.sent || 0, skipped: result.skipped || 0, message: `Ran automation: ${result.sent || 0} email(s) sent, ${result.skipped || 0} skipped.` });
+  } catch (err) {
+    log('ERROR', `Manual automation run failed: ${err.message}`, requestId);
+    res.status(500).json({ error: 'Automation failed: ' + err.message });
+  }
+});
+
+// ============================================
 // AUTOMATION ENGINE
 // ============================================
 
@@ -6892,9 +7100,11 @@ async function runOverdueFollowup() {
     return true;
   });
 
+  let sent = 0, skipped = 0;
+
   if (overdue.length === 0) {
     log('INFO', 'No overdue invoices needing follow-up');
-    return;
+    return { sent, skipped };
   }
 
   log('INFO', `Found ${overdue.length} overdue invoices to follow up`);
@@ -6929,11 +7139,14 @@ Keep it concise and include a clear call to action to pay immediately.`;
       const idx = invoiceStore.findIndex(i => i.id === inv.id);
       if (idx >= 0) invoiceStore[idx].lastFollowUp = today;
       log('INFO', `Auto follow-up sent for invoice ${inv.invoiceNumber} to ${inv.clientEmail}`);
+      sent++;
     } catch (err) {
       log('ERROR', `Auto follow-up failed for invoice ${inv.invoiceNumber}: ${err.message}`);
+      skipped++;
     }
   }
   saveInvoiceStore();
+  return { sent, skipped };
 }
 
 function scheduleAutomations() {
@@ -6942,7 +7155,7 @@ function scheduleAutomations() {
   activeCronJobs = [];
 
   const { overdueFollowup } = automationsConfig;
-  if (overdueFollowup.enabled && SMTP_HOST && SMTP_USER) {
+  if (overdueFollowup.enabled && getEffectiveSmtp().configured) {
     const pattern = `${overdueFollowup.minute} ${overdueFollowup.hour} * * *`;
     const job = cron.schedule(pattern, runOverdueFollowup, { timezone: 'America/New_York' });
     activeCronJobs.push(job);
