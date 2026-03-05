@@ -143,24 +143,61 @@ function saveAutomationsConfig() {
 }
 
 // ============================================
+// SMTP CONFIG STORE (UI-configurable fallback)
+// ============================================
+
+const SMTP_CONFIG_FILE = process.env.SMTP_CONFIG_FILE || path.join('/data', 'smtp.json');
+let smtpFileConfig = { host: '', port: 587, user: '', pass: '', from: '' };
+
+function loadSmtpConfig() {
+  try {
+    if (fs.existsSync(SMTP_CONFIG_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf8'));
+      smtpFileConfig = Object.assign(smtpFileConfig, parsed);
+    }
+  } catch (e) { log('WARN', `Could not load smtp config: ${e.message}`); }
+}
+
+function saveSmtpConfig() {
+  try {
+    const dir = path.dirname(SMTP_CONFIG_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify(smtpFileConfig, null, 2), 'utf8');
+  } catch (e) { log('ERROR', `Could not save smtp config: ${e.message}`); }
+}
+
+loadSmtpConfig();
+
+function getEffectiveSmtp() {
+  const host = SMTP_HOST || smtpFileConfig.host || '';
+  const port = (SMTP_HOST ? SMTP_PORT : smtpFileConfig.port) || 587;
+  const user = SMTP_USER || smtpFileConfig.user || '';
+  const pass = SMTP_PASS || smtpFileConfig.pass || '';
+  const from = SMTP_FROM || smtpFileConfig.from || user;
+  return { host, port, user, pass, from, configured: !!(host && user && pass) };
+}
+
+// ============================================
 // EMAIL HELPER
 // ============================================
 
 function createTransporter() {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
+  const smtp = getEffectiveSmtp();
+  if (!smtp.configured) return null;
   return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS }
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.port === 465,
+    auth: { user: smtp.user, pass: smtp.pass }
   });
 }
 
 async function sendMail({ to, subject, text, html }) {
   const transporter = createTransporter();
   if (!transporter) throw new Error('EMAIL_NOT_CONFIGURED');
+  const smtp = getEffectiveSmtp();
   const info = await transporter.sendMail({
-    from: `"AI Work Agent" <${SMTP_FROM}>`,
+    from: `"Legend Construction Services" <${smtp.from}>`,
     to, subject,
     text: text || '',
     html: html || text || ''
@@ -3008,14 +3045,52 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 AI Workflow Automations
             </div>
 
-            <!-- Email status -->
+            <!-- Email SMTP wizard -->
             <div class="automation-card">
                 <div class="automation-card-header">
-                    <span class="automation-card-title">Email Connection</span>
+                    <span class="automation-card-title">Email Connection (SMTP)</span>
                     <span id="email-status-badge" class="automation-card-status off">Not Configured</span>
                 </div>
-                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 8px;">Set <code>SMTP_HOST</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, and <code>SMTP_FROM</code> environment variables on your Render server to enable email sending. Automations require email to be configured.</p>
-                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:0;">From: <span id="email-from-display" style="color:var(--accent);">Not set</span></p>
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Configure SMTP to send emails from automations and tool outputs. Gmail: use App Password with smtp.gmail.com:587. Outlook: smtp.office365.com:587.</p>
+                <div id="smtp-env-notice" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text-dim);background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;">
+                    <strong style="color:var(--accent);">Note:</strong> SMTP is configured via environment variables on this server. Settings below are read-only.
+                </div>
+                <div class="tool-field-row" style="margin-bottom:8px;">
+                    <div class="tool-field">
+                        <label for="smtp-host-input">SMTP Host</label>
+                        <input type="text" id="smtp-host-input" placeholder="smtp.gmail.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                    <div class="tool-field" style="max-width:100px;">
+                        <label for="smtp-port-input">Port</label>
+                        <input type="number" id="smtp-port-input" placeholder="587" min="1" max="65535" value="587" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div class="tool-field-row" style="margin-bottom:8px;">
+                    <div class="tool-field">
+                        <label for="smtp-user-input">Username / Email</label>
+                        <input type="email" id="smtp-user-input" placeholder="you@gmail.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                    <div class="tool-field">
+                        <label for="smtp-pass-input">Password / App Password</label>
+                        <input type="password" id="smtp-pass-input" placeholder="••••••••••••" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div class="tool-field" style="margin-bottom:12px;">
+                    <label for="smtp-from-input">From Name / Email (optional)</label>
+                    <input type="text" id="smtp-from-input" placeholder="Legend Construction Services &lt;invoices@legendconstruction.com&gt;" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="settings-save-btn" onclick="saveSmtpConfigUI()" style="width:auto;padding:9px 20px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                        Save
+                    </button>
+                    <button class="agent-action-btn" id="smtp-test-btn" onclick="testSmtpConnection()" style="padding:9px 16px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Test Connection
+                    </button>
+                </div>
+                <div id="smtp-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:10px 0 0;">Sending as: <span id="email-from-display" style="color:var(--accent);">Not set</span></p>
             </div>
 
             <!-- Overdue invoice auto follow-up -->
@@ -5834,17 +5909,39 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var token = getAuthToken();
             if (!token) return;
             try {
-                var resp = await fetch('/api/automations', { headers: { 'Authorization': 'Bearer ' + token } });
-                var data = await resp.json();
+                var [autoResp, smtpResp] = await Promise.all([
+                    fetch('/api/automations', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('/api/smtp-config', { headers: { 'Authorization': 'Bearer ' + token } })
+                ]);
+                var data = await autoResp.json();
+                var smtpData = await smtpResp.json();
+
+                // Populate SMTP form
+                var hostEl = document.getElementById('smtp-host-input');
+                var portEl = document.getElementById('smtp-port-input');
+                var userEl = document.getElementById('smtp-user-input');
+                var fromEl2 = document.getElementById('smtp-from-input');
+                if (hostEl) hostEl.value = smtpData.host || '';
+                if (portEl) portEl.value = smtpData.port || 587;
+                if (userEl) userEl.value = smtpData.user || '';
+                if (fromEl2) fromEl2.value = smtpData.from || '';
+                if (smtpData.fromEnv) {
+                    var notice = document.getElementById('smtp-env-notice');
+                    if (notice) notice.style.display = '';
+                    ['smtp-host-input','smtp-port-input','smtp-user-input','smtp-pass-input','smtp-from-input'].forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) { el.readOnly = true; el.style.opacity = '0.6'; }
+                    });
+                }
+
                 var badge = document.getElementById('email-status-badge');
                 var fromEl = document.getElementById('email-from-display');
-                var emailStatus = await fetch('/api/email-status', { headers: { 'Authorization': 'Bearer ' + token } });
-                var emailData = await emailStatus.json();
                 if (badge) {
-                    badge.textContent = emailData.configured ? 'Configured' : 'Not Configured';
-                    badge.className = 'automation-card-status ' + (emailData.configured ? 'on' : 'off');
+                    badge.textContent = smtpData.configured ? 'Configured' : 'Not Configured';
+                    badge.className = 'automation-card-status ' + (smtpData.configured ? 'on' : 'off');
                 }
-                if (fromEl) fromEl.textContent = emailData.from || 'Not set';
+                if (fromEl) fromEl.textContent = smtpData.from || 'Not set';
+
                 var cfg = data.automations && data.automations.overdueFollowup;
                 if (cfg) {
                     var toggle = document.getElementById('overdue-followup-toggle');
@@ -5857,6 +5954,62 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     if (ccInput) ccInput.value = cfg.ccEmail || '';
                 }
             } catch(e) {}
+        }
+
+        async function saveSmtpConfigUI() {
+            var token = getAuthToken();
+            if (!token) return;
+            var host = (document.getElementById('smtp-host-input') || {}).value || '';
+            var port = (document.getElementById('smtp-port-input') || {}).value || '587';
+            var user = (document.getElementById('smtp-user-input') || {}).value || '';
+            var pass = (document.getElementById('smtp-pass-input') || {}).value || '';
+            var from = (document.getElementById('smtp-from-input') || {}).value || '';
+            if (!host || !user) { showSmtpStatus('Host and username are required', 'error'); return; }
+            try {
+                var resp = await fetch('/api/smtp-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ host: host, port: port, user: user, pass: pass, from: from })
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                    showSmtpStatus('Saved! ' + (data.configured ? 'Email is now configured.' : 'Fill in all fields to enable email.'), 'ok');
+                    loadAutomationsSettings();
+                } else {
+                    showSmtpStatus(data.error || 'Save failed', 'error');
+                }
+            } catch(e) { showSmtpStatus('Save failed: ' + e.message, 'error'); }
+        }
+
+        async function testSmtpConnection() {
+            var token = getAuthToken();
+            if (!token) return;
+            var btn = document.getElementById('smtp-test-btn');
+            var origLabel = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:0.6">Testing...</span>'; }
+            try {
+                var resp = await fetch('/api/smtp-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                    showSmtpStatus('\u2713 ' + data.message, 'ok');
+                } else {
+                    showSmtpStatus('\u2717 ' + (data.error || 'Test failed'), 'error');
+                }
+            } catch(e) { showSmtpStatus('\u2717 ' + e.message, 'error'); }
+            finally { if (btn) { btn.disabled = false; btn.innerHTML = origLabel; } }
+        }
+
+        function showSmtpStatus(msg, type) {
+            var el = document.getElementById('smtp-save-status');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.display = '';
+            el.style.color = type === 'error' ? 'var(--red)' : 'var(--green)';
+            clearTimeout(el._t);
+            el._t = setTimeout(function() { el.style.display = 'none'; }, 4000);
         }
 
         async function saveAutomationConfig() {
@@ -6593,6 +6746,19 @@ app.post('/send-email', requireLogin, async (req, res) => {
 // ============================================
 
 app.get('/api/invoices', requireLogin, (req, res) => {
+  const today = Date.now();
+  let changed = false;
+  invoiceStore.forEach(inv => {
+    if (inv.status === 'pending' && inv.dueDate) {
+      const due = new Date(inv.dueDate).getTime();
+      if (!isNaN(due) && today > due) {
+        inv.status = 'overdue';
+        inv.updatedAt = Date.now();
+        changed = true;
+      }
+    }
+  });
+  if (changed) saveInvoiceStore();
   res.json({ invoices: invoiceStore });
 });
 
@@ -6640,7 +6806,7 @@ app.delete('/api/invoices/:id', requireLogin, (req, res) => {
 app.get('/api/automations', requireLogin, (req, res) => {
   res.json({
     automations: automationsConfig,
-    emailConfigured: !!(SMTP_HOST && SMTP_USER && SMTP_PASS)
+    emailConfigured: getEffectiveSmtp().configured
   });
 });
 
@@ -6664,7 +6830,49 @@ app.post('/api/automations', requireLogin, (req, res) => {
 // ============================================
 
 app.get('/api/email-status', requireLogin, (req, res) => {
-  res.json({ configured: !!(SMTP_HOST && SMTP_USER && SMTP_PASS), from: SMTP_FROM || '' });
+  const smtp = getEffectiveSmtp();
+  res.json({ configured: smtp.configured, from: smtp.from || '' });
+});
+
+// ============================================
+// SMTP CONFIG ENDPOINTS
+// ============================================
+
+app.get('/api/smtp-config', requireLogin, (req, res) => {
+  const smtp = getEffectiveSmtp();
+  res.json({
+    host: smtp.host,
+    port: smtp.port,
+    user: smtp.user,
+    from: smtp.from,
+    configured: smtp.configured,
+    fromEnv: !!(SMTP_HOST || SMTP_USER || SMTP_PASS)
+  });
+});
+
+app.post('/api/smtp-config', requireLogin, async (req, res) => {
+  const { host, port, user, pass, from } = req.body || {};
+  smtpFileConfig = {
+    host: (host || '').trim(),
+    port: parseInt(port) || 587,
+    user: (user || '').trim(),
+    pass: pass || '',
+    from: (from || '').trim()
+  };
+  saveSmtpConfig();
+  const smtp = getEffectiveSmtp();
+  res.json({ success: true, configured: smtp.configured });
+});
+
+app.post('/api/smtp-test', requireLogin, async (req, res) => {
+  try {
+    const transporter = createTransporter();
+    if (!transporter) return res.status(503).json({ error: 'SMTP not configured. Fill in all required fields first.' });
+    await transporter.verify();
+    res.json({ success: true, message: 'Connection verified successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Connection failed: ' + err.message });
+  }
 });
 
 // ============================================
