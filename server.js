@@ -2656,7 +2656,7 @@ app.get('/', (req, res) => {
             </div>
         </div>
         <div class="sidebar-header">
-            <button class="home-btn" onclick="goHome()" aria-label="Start new chat" title="New Chat (Ctrl+K)">
+            <button class="home-btn" onclick="newChat()" aria-label="Start new chat" title="New Chat (Ctrl+K)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
@@ -4441,6 +4441,23 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             loadHistoryUI();
         }
 
+        function newChat() {
+            showToolView('chat');
+            saveCurrentChat();
+            currentChatId = generateChatId();
+            currentMessages = [];
+            localStorage.setItem('currentChatId', currentChatId);
+            // Clear chat messages
+            const inner = getChatInner();
+            inner.querySelectorAll('.message-row').forEach(r => r.remove());
+            // Hide dashboard, focus input
+            const dash = document.getElementById('dashboard-home');
+            if (dash) dash.style.display = 'none';
+            loadHistoryUI();
+            const inp = document.getElementById('input');
+            if (inp) inp.focus();
+        }
+
         async function buildDashboardHome() {
             const hour = new Date().getHours();
             const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -4945,7 +4962,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             // Ctrl/Cmd + K: New chat
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
-                goHome();
+                newChat();
             }
             // Escape: Clear input
             if (e.key === 'Escape') {
