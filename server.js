@@ -3677,7 +3677,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div class="tool-view" id="tool-view-estimate" role="main" aria-label="Estimate Generator Tool">
         <div class="tool-header">
             <div class="tool-header-left">
-                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                <button class="tool-back-btn" onclick="goHome()" aria-label="Back to chat">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                 </button>
@@ -3774,7 +3774,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div class="tool-view" id="tool-view-changeorder" role="main" aria-label="Change Order Tool">
         <div class="tool-header">
             <div class="tool-header-left">
-                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                <button class="tool-back-btn" onclick="goHome()" aria-label="Back to chat">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                 </button>
@@ -3858,7 +3858,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div class="tool-view" id="tool-view-subs" role="main" aria-label="Subcontractor Management Tool">
         <div class="tool-header">
             <div class="tool-header-left">
-                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                <button class="tool-back-btn" onclick="goHome()" aria-label="Back to chat">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                 </button>
@@ -3920,7 +3920,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div class="tool-view" id="tool-view-materials" role="main" aria-label="Materials Checklist Tool">
         <div class="tool-header">
             <div class="tool-header-left">
-                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                <button class="tool-back-btn" onclick="goHome()" aria-label="Back to chat">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                 </button>
@@ -3965,7 +3965,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div class="tool-view" id="tool-view-photos" role="main" aria-label="Photo Log Tool">
         <div class="tool-header">
             <div class="tool-header-left">
-                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                <button class="tool-back-btn" onclick="goHome()" aria-label="Back to chat">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                 </button>
@@ -4005,7 +4005,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div class="tool-view" id="tool-view-safety" role="main" aria-label="Safety Checklist Tool">
         <div class="tool-header">
             <div class="tool-header-left">
-                <button class="tool-back-btn" onclick="showToolView(null)" aria-label="Back to chat">
+                <button class="tool-back-btn" onclick="goHome()" aria-label="Back to chat">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                 </button>
@@ -4427,6 +4427,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         }
 
         function goHome() {
+            showToolView('chat');
             saveCurrentChat();
             currentChatId = generateChatId();
             currentMessages = [];
