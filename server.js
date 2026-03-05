@@ -26,6 +26,8 @@ const fs     = require('fs');
 const path   = require('path');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
+const https = require('https');
+const http  = require('http');
 
 // ============================================
 // CONFIGURATION & ENVIRONMENT
@@ -167,6 +169,31 @@ function saveSmtpConfig() {
 }
 
 loadSmtpConfig();
+
+// ============================================
+// CUSTOM AUTOMATIONS STORE
+// ============================================
+
+const CUSTOM_AUTOMATIONS_FILE = process.env.CUSTOM_AUTOMATIONS_FILE || path.join('/data', 'custom_automations.json');
+let customAutomations = [];
+
+function loadCustomAutomations() {
+  try {
+    if (fs.existsSync(CUSTOM_AUTOMATIONS_FILE)) {
+      customAutomations = JSON.parse(fs.readFileSync(CUSTOM_AUTOMATIONS_FILE, 'utf8')) || [];
+    }
+  } catch (e) { log('WARN', `Could not load custom automations: ${e.message}`); }
+}
+
+function saveCustomAutomations() {
+  try {
+    const dir = path.dirname(CUSTOM_AUTOMATIONS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CUSTOM_AUTOMATIONS_FILE, JSON.stringify(customAutomations, null, 2), 'utf8');
+  } catch (e) { log('ERROR', `Could not save custom automations: ${e.message}`); }
+}
+
+loadCustomAutomations();
 
 function getEffectiveSmtp() {
   const host = SMTP_HOST || smtpFileConfig.host || '';
@@ -3128,6 +3155,94 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 </div>
                 <div id="auto-last-run" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:6px;display:none;"></div>
                 <div id="auto-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
+            </div>
+
+            <!-- Custom Automations Builder -->
+            <div class="automation-card" style="border-color:var(--accent);padding-bottom:0;">
+                <div class="automation-card-header" style="margin-bottom:6px;">
+                    <span class="automation-card-title" style="font-size:14px;">Custom Automations</span>
+                    <button class="agent-action-btn" onclick="openCustomAutomationForm()" style="padding:7px 14px;font-size:11px;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        New Automation
+                    </button>
+                </div>
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Build automations that can do almost anything — send emails, post to Zapier / Slack / Make, generate reports. Use <code style="background:var(--bg-hover);padding:1px 4px;border-radius:3px;">{{variable}}</code> tokens in your prompts.</p>
+
+                <!-- Inline create/edit form (hidden by default) -->
+                <div id="custom-auto-form" style="display:none;background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;">
+                    <input type="hidden" id="ca-edit-id">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div style="flex:1;min-width:160px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Automation Name *</label>
+                            <input type="text" id="ca-name" placeholder="Weekly Revenue Report" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                        </div>
+                        <div style="min-width:140px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Trigger</label>
+                            <select id="ca-trigger" onchange="updateCustomAutoFormFields()" style="width:100%;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                                <option value="manual">Manual only</option>
+                                <option value="daily">Daily (cron)</option>
+                                <option value="weekly">Weekly (cron)</option>
+                                <option value="webhook">Incoming Webhook</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="ca-trigger-fields" style="display:none;display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div id="ca-hour-wrap" style="min-width:100px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Hour (0-23)</label>
+                            <input type="number" id="ca-hour" min="0" max="23" value="8" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                        </div>
+                        <div id="ca-dow-wrap" style="display:none;min-width:120px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Day of Week</label>
+                            <select id="ca-dow" style="width:100%;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">AI Prompt * <span style="color:var(--accent);font-size:9px;">Available: {{date}} {{time}} {{month}} {{overdue_count}} {{pending_count}} {{outstanding_total}} {{overdue_total}} {{overdue_invoices}} {{pending_invoices}}</span></label>
+                        <textarea id="ca-prompt" rows="5" placeholder="Generate a professional weekly summary of outstanding invoices as of {{date}}. Include overdue count ({{overdue_count}}) and total outstanding ({{outstanding_total}}). List all overdue invoices:&#10;{{overdue_invoices}}" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;"></textarea>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div style="min-width:140px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Action</label>
+                            <select id="ca-action" onchange="updateCustomAutoFormFields()" style="width:100%;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                                <option value="log">Log Only</option>
+                                <option value="email">Send Email</option>
+                                <option value="webhook">Post to Webhook</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="ca-email-fields" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div style="flex:1;min-width:160px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Send To (email)</label>
+                            <input type="email" id="ca-email-to" placeholder="boss@company.com" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                        </div>
+                        <div style="flex:1;min-width:160px;">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Subject</label>
+                            <input type="text" id="ca-email-subject" placeholder="Weekly Report - {{date}}" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                        </div>
+                    </div>
+                    <div id="ca-outwebhook-fields" style="display:none;margin-bottom:10px;">
+                        <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Outbound Webhook URL (Zapier, Slack, Make, etc.)</label>
+                        <input type="url" id="ca-webhook-url" placeholder="https://hooks.zapier.com/hooks/catch/..." style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;padding:10px 0 14px;">
+                        <button class="settings-save-btn" onclick="saveCustomAutomation()" style="width:auto;padding:8px 18px;font-size:12px;">Save</button>
+                        <button class="agent-action-btn" onclick="cancelCustomAutomationForm()" style="padding:8px 14px;font-size:12px;">Cancel</button>
+                        <span id="ca-form-status" style="font-family:var(--mono);font-size:11px;display:none;margin-left:8px;"></span>
+                    </div>
+                </div>
+
+                <!-- List of custom automations -->
+                <div id="custom-auto-list" style="padding-bottom:16px;">
+                    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:center;padding:20px 0;" id="custom-auto-empty">No custom automations yet. Click <strong>New Automation</strong> to create one.</p>
+                </div>
             </div>
 
         </div><!-- /automations -->
@@ -6229,6 +6344,250 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             }
         }
 
+        // ============================================
+        // CUSTOM AUTOMATIONS UI
+        // ============================================
+
+        var _customAutomations = [];
+
+        async function loadCustomAutomationsUI() {
+            var token = getAuthToken();
+            if (!token) return;
+            try {
+                var resp = await fetch('/api/custom-automations', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!resp.ok) return;
+                var data = await resp.json();
+                _customAutomations = data.automations || [];
+                renderCustomAutomationsList();
+            } catch(e) {}
+        }
+
+        function renderCustomAutomationsList() {
+            var list = document.getElementById('custom-auto-list');
+            var empty = document.getElementById('custom-auto-empty');
+            if (!list) return;
+            if (!_customAutomations.length) {
+                if (empty) empty.style.display = '';
+                list.querySelectorAll('.ca-card').forEach(function(el) { el.remove(); });
+                return;
+            }
+            if (empty) empty.style.display = 'none';
+            list.querySelectorAll('.ca-card').forEach(function(el) { el.remove(); });
+
+            var triggerLabels = { manual: 'Manual', daily: 'Daily', weekly: 'Weekly', webhook: 'Webhook' };
+            var actionLabels  = { log: 'Log Only', email: 'Send Email', webhook: 'Post to Webhook' };
+            var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+            _customAutomations.forEach(function(a) {
+                var card = document.createElement('div');
+                card.className = 'ca-card';
+                card.dataset.id = a.id;
+                card.style.cssText = 'background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;';
+
+                var trigDesc = triggerLabels[a.trigger] || a.trigger;
+                if (a.trigger === 'daily') trigDesc += ' at ' + String(a.triggerHour || 8).padStart(2,'0') + ':00';
+                if (a.trigger === 'weekly') trigDesc += ' ' + (dayNames[a.triggerDayOfWeek] || 'Mon') + ' at ' + String(a.triggerHour || 8).padStart(2,'0') + ':00';
+
+                var webhookInfo = '';
+                if (a.trigger === 'webhook' && a.webhookToken) {
+                    webhookInfo = '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:4px;word-break:break-all;">Webhook URL: <span style="color:var(--accent);">' + window.location.origin + '/webhooks/' + a.webhookToken + '</span></div>';
+                }
+
+                var lastRunText = a.lastRun ? 'Last run: ' + new Date(a.lastRun).toLocaleString() + (a.lastResult ? ' — ' + a.lastResult : '') : 'Never run';
+                var previewText = a.lastResultPreview ? '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden;">' + escapeHtml(a.lastResultPreview) + (a.lastResultPreview.length >= 300 ? '...' : '') + '</div>' : '';
+
+                card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                    '<label class="toggle-switch" style="margin:0;flex-shrink:0;"><input type="checkbox" ' + (a.enabled ? 'checked' : '') + ' onchange="toggleCustomAutomation(\'' + a.id + '\',this.checked)"><span class="toggle-slider"></span></label>' +
+                    '<div><div style="font-family:var(--mono);font-size:12px;color:var(--text);font-weight:600;">' + escapeHtml(a.name) + '</div>' +
+                    '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">' + trigDesc + ' &bull; ' + (actionLabels[a.action] || a.action) + '</div></div>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+                    '<button class="agent-action-btn" onclick="runCustomAutomationNow(\'' + a.id + '\')" style="padding:5px 10px;font-size:10px;" title="Run Now">&#9654; Run</button>' +
+                    '<button class="agent-action-btn" onclick="openCustomAutomationForm(\'' + a.id + '\')" style="padding:5px 10px;font-size:10px;" title="Edit">&#9998; Edit</button>' +
+                    '<button class="agent-action-btn" onclick="deleteCustomAutomation(\'' + a.id + '\')" style="padding:5px 10px;font-size:10px;color:var(--red);" title="Delete">&#10005;</button>' +
+                    '</div></div>' +
+                    webhookInfo +
+                    '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;" id="ca-status-' + a.id + '">' + escapeHtml(lastRunText) + '</div>' +
+                    previewText;
+
+                list.appendChild(card);
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function openCustomAutomationForm(id) {
+            var form = document.getElementById('custom-auto-form');
+            if (!form) return;
+            form.style.display = '';
+
+            // Scroll form into view
+            setTimeout(function() { form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+
+            // Reset status
+            var statusEl = document.getElementById('ca-form-status');
+            if (statusEl) statusEl.style.display = 'none';
+
+            if (!id) {
+                // New form — clear fields
+                document.getElementById('ca-edit-id').value = '';
+                document.getElementById('ca-name').value = '';
+                document.getElementById('ca-trigger').value = 'manual';
+                document.getElementById('ca-hour').value = '8';
+                document.getElementById('ca-dow').value = '1';
+                document.getElementById('ca-prompt').value = '';
+                document.getElementById('ca-action').value = 'log';
+                document.getElementById('ca-email-to').value = '';
+                document.getElementById('ca-email-subject').value = 'Automation Report - {{date}}';
+                document.getElementById('ca-webhook-url').value = '';
+                updateCustomAutoFormFields();
+                return;
+            }
+
+            // Populate with existing automation
+            var a = _customAutomations.find(function(x) { return x.id === id; });
+            if (!a) return;
+            document.getElementById('ca-edit-id').value = a.id;
+            document.getElementById('ca-name').value = a.name || '';
+            document.getElementById('ca-trigger').value = a.trigger || 'manual';
+            document.getElementById('ca-hour').value = a.triggerHour !== undefined ? a.triggerHour : 8;
+            document.getElementById('ca-dow').value = a.triggerDayOfWeek !== undefined ? a.triggerDayOfWeek : 1;
+            document.getElementById('ca-prompt').value = a.prompt || '';
+            document.getElementById('ca-action').value = a.action || 'log';
+            document.getElementById('ca-email-to').value = a.emailTo || '';
+            document.getElementById('ca-email-subject').value = a.emailSubject || 'Automation Report - {{date}}';
+            document.getElementById('ca-webhook-url').value = a.webhookUrl || '';
+            updateCustomAutoFormFields();
+        }
+
+        function cancelCustomAutomationForm() {
+            var form = document.getElementById('custom-auto-form');
+            if (form) form.style.display = 'none';
+        }
+
+        function updateCustomAutoFormFields() {
+            var trigger = (document.getElementById('ca-trigger') || {}).value;
+            var action  = (document.getElementById('ca-action')  || {}).value;
+
+            var triggerFields   = document.getElementById('ca-trigger-fields');
+            var hourWrap        = document.getElementById('ca-hour-wrap');
+            var dowWrap         = document.getElementById('ca-dow-wrap');
+            var emailFields     = document.getElementById('ca-email-fields');
+            var webhookOutField = document.getElementById('ca-outwebhook-fields');
+
+            if (triggerFields) triggerFields.style.display = (trigger === 'daily' || trigger === 'weekly') ? 'flex' : 'none';
+            if (hourWrap) hourWrap.style.display = '';
+            if (dowWrap) dowWrap.style.display = (trigger === 'weekly') ? '' : 'none';
+            if (emailFields) emailFields.style.display = (action === 'email') ? 'flex' : 'none';
+            if (webhookOutField) webhookOutField.style.display = (action === 'webhook') ? '' : 'none';
+        }
+
+        async function saveCustomAutomation() {
+            var token = getAuthToken();
+            if (!token) return;
+            var id      = (document.getElementById('ca-edit-id') || {}).value || '';
+            var name    = (document.getElementById('ca-name') || {}).value.trim();
+            var trigger = (document.getElementById('ca-trigger') || {}).value;
+            var hour    = parseInt((document.getElementById('ca-hour') || {}).value) || 8;
+            var dow     = parseInt((document.getElementById('ca-dow') || {}).value) || 1;
+            var prompt  = (document.getElementById('ca-prompt') || {}).value.trim();
+            var action  = (document.getElementById('ca-action') || {}).value;
+            var emailTo = (document.getElementById('ca-email-to') || {}).value.trim();
+            var emailSubject = (document.getElementById('ca-email-subject') || {}).value.trim();
+            var webhookUrl = (document.getElementById('ca-webhook-url') || {}).value.trim();
+
+            if (!name || !prompt) {
+                var statusEl = document.getElementById('ca-form-status');
+                if (statusEl) { statusEl.style.display = ''; statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Name and Prompt are required.'; }
+                return;
+            }
+
+            var payload = { name: name, trigger: trigger, triggerHour: hour, triggerDayOfWeek: dow, prompt: prompt, action: action, emailTo: emailTo, emailSubject: emailSubject, webhookUrl: webhookUrl };
+
+            try {
+                var url    = id ? '/api/custom-automations/' + id : '/api/custom-automations';
+                var method = id ? 'PUT' : 'POST';
+                var resp = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(payload)
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                    cancelCustomAutomationForm();
+                    loadCustomAutomationsUI();
+                    showSettingsToast(id ? 'Automation updated' : 'Automation created');
+                } else {
+                    var statusEl = document.getElementById('ca-form-status');
+                    if (statusEl) { statusEl.style.display = ''; statusEl.style.color = 'var(--red)'; statusEl.textContent = data.error || 'Save failed'; }
+                }
+            } catch(e) {
+                var statusEl = document.getElementById('ca-form-status');
+                if (statusEl) { statusEl.style.display = ''; statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Error: ' + e.message; }
+            }
+        }
+
+        async function deleteCustomAutomation(id) {
+            if (!confirm('Delete this automation? This cannot be undone.')) return;
+            var token = getAuthToken();
+            if (!token) return;
+            try {
+                var resp = await fetch('/api/custom-automations/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resp.ok) { loadCustomAutomationsUI(); showSettingsToast('Automation deleted'); }
+            } catch(e) {}
+        }
+
+        async function toggleCustomAutomation(id, enabled) {
+            var token = getAuthToken();
+            if (!token) return;
+            try {
+                await fetch('/api/custom-automations/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                var a = _customAutomations.find(function(x) { return x.id === id; });
+                if (a) a.enabled = enabled;
+                showSettingsToast('Automation ' + (enabled ? 'enabled' : 'disabled'));
+            } catch(e) {}
+        }
+
+        async function runCustomAutomationNow(id) {
+            var token = getAuthToken();
+            if (!token) return;
+            var card = document.querySelector('.ca-card[data-id="' + id + '"]');
+            var btn = card ? card.querySelector('button[onclick*="runCustomAutomationNow"]') : null;
+            var statusEl = document.getElementById('ca-status-' + id);
+            if (btn) { btn.disabled = true; btn.innerHTML = '&#9654; Running...'; }
+            if (statusEl) { statusEl.textContent = 'Running...'; statusEl.style.color = 'var(--accent)'; }
+            try {
+                var resp = await fetch('/api/custom-automations/' + id + '/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = 'Ran: ' + (data.actionResult || 'done'); }
+                    var a = _customAutomations.find(function(x) { return x.id === id; });
+                    if (a) { a.lastRun = Date.now(); a.lastResult = data.actionResult; a.lastResultPreview = data.result ? data.result.substring(0,300) : ''; }
+                    showSettingsToast('Automation ran: ' + (data.actionResult || 'done'));
+                    // Re-render to show preview
+                    setTimeout(renderCustomAutomationsList, 300);
+                } else {
+                    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Error: ' + (data.error || 'Failed'); }
+                }
+            } catch(e) {
+                if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Error: ' + e.message; }
+            }
+            if (btn) { btn.disabled = false; btn.innerHTML = '&#9654; Run'; }
+        }
+
         // Load invoice list and automations when tools are shown
         (function() {
             var origOnToolViewShown = _onToolViewShown;
@@ -6244,6 +6603,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             openSettings = function() {
                 origOpenSettings.apply(this, arguments);
                 loadAutomationsSettings();
+                loadCustomAutomationsUI();
             };
         })();
 
@@ -7165,6 +7525,231 @@ function scheduleAutomations() {
 
 // Start automations after startup
 setTimeout(scheduleAutomations, 3000);
+
+// ============================================
+// CUSTOM AUTOMATION ENGINE
+// ============================================
+
+function buildAutomationContext() {
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const pending = invoiceStore.filter(i => i.status === 'pending');
+  const overdue = invoiceStore.filter(i => i.status === 'overdue');
+  const paid    = invoiceStore.filter(i => i.status === 'paid');
+  const outstandingTotal = [...pending, ...overdue].reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const overdueTotal     = overdue.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const overdueLines  = overdue.map(i => `- ${i.clientName} | Invoice ${i.invoiceNumber} | $${Number(i.amount).toFixed(2)} | Due: ${i.dueDate || 'N/A'}`).join('\n');
+  const pendingLines  = pending.map(i => `- ${i.clientName} | Invoice ${i.invoiceNumber} | $${Number(i.amount).toFixed(2)} | Due: ${i.dueDate || 'N/A'}`).join('\n');
+  return {
+    date:              now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+    time:              now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    month:             months[now.getMonth()],
+    day_of_week:       days[now.getDay()],
+    overdue_count:     String(overdue.length),
+    pending_count:     String(pending.length),
+    paid_count:        String(paid.length),
+    outstanding_total: '$' + outstandingTotal.toFixed(2),
+    overdue_total:     '$' + overdueTotal.toFixed(2),
+    overdue_invoices:  overdueLines  || 'None',
+    pending_invoices:  pendingLines  || 'None',
+  };
+}
+
+function applyContext(text, ctx) {
+  return String(text || '').replace(/\{\{(\w+)\}\}/g, (_, key) => ctx[key] !== undefined ? ctx[key] : '{{' + key + '}}');
+}
+
+async function postWebhook(url, data) {
+  return new Promise((resolve, reject) => {
+    let parsed;
+    try { parsed = new URL(url); } catch (e) { return reject(new Error('Invalid webhook URL')); }
+    const body = JSON.stringify(data);
+    const options = {
+      hostname: parsed.hostname,
+      port:     parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path:     parsed.pathname + (parsed.search || ''),
+      method:   'POST',
+      headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'User-Agent': 'LegendConstruction-Automation/1.0' }
+    };
+    const mod = parsed.protocol === 'https:' ? https : http;
+    const req = mod.request(options, (res) => {
+      let buf = '';
+      res.on('data', c => buf += c);
+      res.on('end', () => resolve({ status: res.statusCode, body: buf }));
+    });
+    req.on('error', reject);
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Webhook request timed out')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+async function runCustomAutomation(automation) {
+  log('INFO', 'Running custom automation: ' + automation.name + ' (' + automation.id + ')');
+  const ctx    = buildAutomationContext();
+  const prompt = applyContext(automation.prompt, ctx);
+  let result;
+  try { result = await callGemini(prompt, 60000); }
+  catch (err) { throw new Error('AI generation failed: ' + err.message); }
+
+  let actionResult = '';
+  if (automation.action === 'email') {
+    const to      = applyContext(automation.emailTo || '', ctx);
+    const subject = applyContext(automation.emailSubject || 'Automation Report - {{date}}', ctx);
+    if (!to) throw new Error('No email recipient configured');
+    await sendMail({ to, subject, text: result, html: result.replace(/\n/g, '<br>') });
+    actionResult = 'Email sent to ' + to;
+  } else if (automation.action === 'webhook') {
+    if (!automation.webhookUrl) throw new Error('No outbound webhook URL configured');
+    const payload = { automation: automation.name, result, context: ctx, timestamp: new Date().toISOString() };
+    const resp = await postWebhook(automation.webhookUrl, payload);
+    actionResult = 'Posted to webhook (HTTP ' + resp.status + ')';
+  } else {
+    actionResult = 'Result logged (' + result.length + ' chars)';
+  }
+
+  log('INFO', 'Custom automation "' + automation.name + '" completed: ' + actionResult);
+  return { result, actionResult };
+}
+
+let activeCustomCronJobs = {};
+
+function scheduleCustomAutomation(automation) {
+  if (activeCustomCronJobs[automation.id]) {
+    activeCustomCronJobs[automation.id].stop();
+    delete activeCustomCronJobs[automation.id];
+  }
+  if (!automation.enabled) return;
+  let pattern;
+  if (automation.trigger === 'daily') {
+    pattern = '0 ' + (automation.triggerHour || 8) + ' * * *';
+  } else if (automation.trigger === 'weekly') {
+    const dow = automation.triggerDayOfWeek !== undefined ? automation.triggerDayOfWeek : 1;
+    pattern = '0 ' + (automation.triggerHour || 8) + ' * * ' + dow;
+  } else {
+    return; // manual or webhook — no cron needed
+  }
+  const job = cron.schedule(pattern, async () => {
+    try {
+      const { result, actionResult } = await runCustomAutomation(automation);
+      const idx = customAutomations.findIndex(a => a.id === automation.id);
+      if (idx >= 0) {
+        customAutomations[idx].lastRun = Date.now();
+        customAutomations[idx].lastResult = actionResult;
+        customAutomations[idx].lastResultPreview = result.substring(0, 300);
+        saveCustomAutomations();
+      }
+    } catch (err) {
+      log('ERROR', 'Custom automation "' + automation.name + '" cron failed: ' + err.message);
+      const idx = customAutomations.findIndex(a => a.id === automation.id);
+      if (idx >= 0) { customAutomations[idx].lastRun = Date.now(); customAutomations[idx].lastResult = 'Error: ' + err.message; saveCustomAutomations(); }
+    }
+  }, { timezone: 'America/New_York' });
+  activeCustomCronJobs[automation.id] = job;
+  log('INFO', 'Scheduled custom automation "' + automation.name + '": ' + pattern);
+}
+
+function scheduleAllCustomAutomations() {
+  customAutomations.forEach(a => scheduleCustomAutomation(a));
+}
+
+setTimeout(scheduleAllCustomAutomations, 4000);
+
+// ============================================
+// CUSTOM AUTOMATIONS API
+// ============================================
+
+app.get('/api/custom-automations', requireLogin, (req, res) => {
+  res.json({ automations: customAutomations });
+});
+
+app.post('/api/custom-automations', requireLogin, (req, res) => {
+  const { name, trigger, triggerHour, triggerDayOfWeek, prompt, action, emailTo, emailSubject, webhookUrl } = req.body;
+  if (!name || !prompt) return res.status(400).json({ error: 'name and prompt are required' });
+  const automation = {
+    id:                'auto_' + Date.now(),
+    name:              name.trim(),
+    enabled:           true,
+    trigger:           trigger || 'manual',
+    triggerHour:       parseInt(triggerHour) || 8,
+    triggerDayOfWeek:  parseInt(triggerDayOfWeek) || 1,
+    webhookToken:      trigger === 'webhook' ? crypto.randomBytes(24).toString('hex') : null,
+    prompt:            prompt.trim(),
+    action:            action || 'log',
+    emailTo:           emailTo    || '',
+    emailSubject:      emailSubject || 'Automation Report - {{date}}',
+    webhookUrl:        webhookUrl  || '',
+    lastRun:           null,
+    lastResult:        null,
+    lastResultPreview: null,
+    createdAt:         Date.now()
+  };
+  customAutomations.push(automation);
+  saveCustomAutomations();
+  scheduleCustomAutomation(automation);
+  res.json({ automation });
+});
+
+app.put('/api/custom-automations/:id', requireLogin, (req, res) => {
+  const idx = customAutomations.findIndex(a => a.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ error: 'Automation not found' });
+  const allowed = ['name','enabled','trigger','triggerHour','triggerDayOfWeek','prompt','action','emailTo','emailSubject','webhookUrl'];
+  allowed.forEach(k => { if (req.body[k] !== undefined) customAutomations[idx][k] = req.body[k]; });
+  customAutomations[idx].updatedAt = Date.now();
+  saveCustomAutomations();
+  scheduleCustomAutomation(customAutomations[idx]);
+  res.json({ automation: customAutomations[idx] });
+});
+
+app.delete('/api/custom-automations/:id', requireLogin, (req, res) => {
+  const automation = customAutomations.find(a => a.id === req.params.id);
+  if (!automation) return res.status(404).json({ error: 'Automation not found' });
+  if (activeCustomCronJobs[req.params.id]) {
+    activeCustomCronJobs[req.params.id].stop();
+    delete activeCustomCronJobs[req.params.id];
+  }
+  customAutomations = customAutomations.filter(a => a.id !== req.params.id);
+  saveCustomAutomations();
+  res.json({ success: true });
+});
+
+app.post('/api/custom-automations/:id/run', requireLogin, async (req, res) => {
+  const automation = customAutomations.find(a => a.id === req.params.id);
+  if (!automation) return res.status(404).json({ error: 'Automation not found' });
+  try {
+    const { result, actionResult } = await runCustomAutomation(automation);
+    const idx = customAutomations.findIndex(a => a.id === automation.id);
+    if (idx >= 0) {
+      customAutomations[idx].lastRun = Date.now();
+      customAutomations[idx].lastResult = actionResult;
+      customAutomations[idx].lastResultPreview = result.substring(0, 300);
+      saveCustomAutomations();
+    }
+    res.json({ success: true, result, actionResult });
+  } catch (err) {
+    const idx = customAutomations.findIndex(a => a.id === automation.id);
+    if (idx >= 0) { customAutomations[idx].lastRun = Date.now(); customAutomations[idx].lastResult = 'Error: ' + err.message; saveCustomAutomations(); }
+    res.status(500).json({ error: formatError(err) });
+  }
+});
+
+// Incoming webhook trigger (no auth — token IS the auth)
+app.post('/webhooks/:token', async (req, res) => {
+  const automation = customAutomations.find(a => a.trigger === 'webhook' && a.webhookToken === req.params.token && a.enabled);
+  if (!automation) return res.status(404).json({ error: 'Webhook not found or disabled' });
+  log('INFO', 'Incoming webhook trigger for automation: ' + automation.name);
+  res.json({ success: true, message: 'Automation "' + automation.name + '" triggered' });
+  try {
+    const { result, actionResult } = await runCustomAutomation(automation);
+    const idx = customAutomations.findIndex(a => a.id === automation.id);
+    if (idx >= 0) { customAutomations[idx].lastRun = Date.now(); customAutomations[idx].lastResult = actionResult; customAutomations[idx].lastResultPreview = result.substring(0, 300); saveCustomAutomations(); }
+  } catch (err) {
+    log('ERROR', 'Webhook automation "' + automation.name + '" failed: ' + err.message);
+    const idx = customAutomations.findIndex(a => a.id === automation.id);
+    if (idx >= 0) { customAutomations[idx].lastRun = Date.now(); customAutomations[idx].lastResult = 'Error: ' + err.message; saveCustomAutomations(); }
+  }
+});
 
 /**
  * 404 handler
