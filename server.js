@@ -6748,7 +6748,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
 
         function buildAddDrawerHTML(t) {
             var customFields = t.id === 'custom' ? '<div class="connector-field-label">Connector Name</div><input class="connector-field-input" id="cust-name-' + t.id + '" placeholder="e.g. My API" autocomplete="off"><div class="connector-field-label">Base URL</div><input class="connector-field-input" id="cust-url-' + t.id + '" placeholder="https://api.example.com/v1" autocomplete="off"><div class="connector-field-label">Capabilities (describe what it can do)</div><input class="connector-field-input" id="cust-cap-' + t.id + '" placeholder="List users, create records, etc." autocomplete="off">' : '';
-            return '<div class="connector-add-drawer-title">Add ' + t.name + '</div>' + customFields + '<div class="connector-field-label">' + t.apiKeyLabel + '</div><input class="connector-field-input" id="apikey-' + t.id + '" type="password" placeholder="Paste your key here" autocomplete="off"><div class="connector-field-label">Your Password (to encrypt the key)</div><input class="connector-field-input" id="connpwd-' + t.id + '" type="password" placeholder="Your account password" autocomplete="off"><div class="connector-err" id="conn-err-' + t.id + '"></div><div class="connector-add-row"><button class="connector-add-btn" onclick="saveConnector(\'' + t.id + '\')">Save Connector</button><button class="connector-cancel-btn" onclick="toggleDrawer(\'' + t.id + '\')">Cancel</button></div>';
+            return '<div class="connector-add-drawer-title">Add ' + t.name + '</div>' + customFields + '<div class="connector-field-label">' + t.apiKeyLabel + '</div><input class="connector-field-input" id="apikey-' + t.id + '" type="password" placeholder="Paste your key here" autocomplete="off"><div class="connector-field-label">Your Password (to encrypt the key)</div><input class="connector-field-input" id="connpwd-' + t.id + '" type="password" placeholder="Your account password" autocomplete="off"><div class="connector-err" id="conn-err-' + t.id + '"></div><div class="connector-add-row"><button class="connector-add-btn" onclick="saveConnector(\\'' + t.id + '\\')">Save Connector</button><button class="connector-cancel-btn" onclick="toggleDrawer(\\'' + t.id + '\\')">Cancel</button></div>';
         }
 
         function toggleDrawer(templateId) {
@@ -6857,7 +6857,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 var chip = document.createElement('span');
                 chip.className = 'active-connector-chip';
                 chip.title = 'Use ' + conn.name;
-                chip.innerHTML = conn.emoji + ' ' + conn.name + '<span class="chip-remove" onclick="event.stopPropagation();removeConnector(\'' + conn.id + '\')">&#x2715;</span>';
+                chip.innerHTML = conn.emoji + ' ' + conn.name + '<span class="chip-remove" onclick="event.stopPropagation();removeConnector(\\'' + conn.id + '\\')">&#x2715;</span>';
                 chip.onclick = function() { triggerConnectorQuery(conn.id, conn.name); };
                 bar.appendChild(chip);
             });
