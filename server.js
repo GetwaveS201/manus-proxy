@@ -1,6 +1,6 @@
 /**
  * AI Automation Assistant - Production Server
- * Dual AI System: Gemini (Q&A) + OpenClaw (local AI agent)
+ * AI System: Gemini
  *
  * Features:
  * - X-API-Key authentication for all endpoints
@@ -35,8 +35,6 @@ const http  = require('http');
 
 const PORT = process.env.PORT || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const OPENCLAW_URL   = process.env.OPENCLAW_URL   || 'http://localhost:18789';
-const OPENCLAW_TOKEN = process.env.OPENCLAW_TOKEN  || '';
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const API_KEY = process.env.API_KEY || 'your-secure-api-key-here';
@@ -547,144 +545,6 @@ function requireLogin(req, res, next) {
   next();
 }
 
-// ============================================
-// SCORE-BASED AI ROUTING LOGIC
-// ============================================
-
-/**
- * Calculates routing score for each AI based on prompt characteristics
- * Higher score = better match
- *
- * @param {string} prompt - User prompt
- * @returns {Object} { ai: 'gemini'|'openclaw', confidence: number, scores: Object }
- */
-function chooseAI(prompt) {
-  const lower = prompt.toLowerCase().trim();
-  const words = prompt.trim().split(/\s+/);
-
-  let geminiScore = 0;
-  let openclawScore = 0;
-
-  // ===== GEMINI SCORING =====
-
-  // Pure questions without action verbs (+30 points)
-  const pureQuestions = /^(what|why|when|where|who|which|whose|how much|how many|is it|are there|can you explain|tell me about|define)\s/i;
-  if (pureQuestions.test(prompt)) {
-    geminiScore += 30;
-  }
-
-  // Question words at start (+10 points)
-  const questionStarters = ['what is', 'what are', 'what does', 'why is', 'why do', 'when did', 'where is', 'who is', 'who was'];
-  for (const starter of questionStarters) {
-    if (lower.startsWith(starter)) {
-      geminiScore += 10;
-      break;
-    }
-  }
-
-  // Explanation requests (+15 points)
-  if (lower.includes('explain') || lower.includes('definition') || lower.includes('meaning of')) {
-    geminiScore += 15;
-  }
-
-  // Short queries (≤5 words) that are greetings (+20 points)
-  if (words.length <= 5) {
-    const greetings = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'goodbye', 'bye'];
-    if (greetings.some(g => lower === g || lower.startsWith(g + ' '))) {
-      geminiScore += 20;
-    }
-  }
-
-  // ===== OPENCLAW SCORING =====
-
-  // EXECUTION VERBS (highest priority - +50 points each)
-  const executionVerbs = [
-    'build', 'create', 'generate', 'make', 'develop', 'design',
-    'write', 'draft', 'compose', 'author',
-    'calculate', 'compute', 'sum', 'total', 'average', 'count',
-    'find', 'search', 'look up', 'locate', 'discover',
-    'analyze', 'evaluate', 'assess', 'review', 'examine',
-    'implement', 'execute', 'run', 'perform', 'do',
-    'optimize', 'improve', 'enhance', 'refactor',
-    'compare', 'contrast', 'research', 'investigate',
-    'summarize', 'summarise', 'summary', 'list', 'show', 'get'
-  ];
-
-  for (const verb of executionVerbs) {
-    if (lower.includes(verb)) {
-      openclawScore += 50;
-      break; // Only count once
-    }
-  }
-
-  // CRITICAL: "How can you [ACTION_VERB]" patterns should route to OpenClaw (+60 points)
-  const howCanYouPattern = /how (can|could|do) (you|i|we) (build|create|find|make|generate|calculate|analyze|write|design|develop)/i;
-  if (howCanYouPattern.test(prompt)) {
-    openclawScore += 60;
-    geminiScore = 0; // Override gemini score
-  }
-
-  // Data processing keywords (+30 points)
-  const dataKeywords = ['csv', 'spreadsheet', 'data', 'parse', 'process', 'extract', 'transform'];
-  for (const keyword of dataKeywords) {
-    if (lower.includes(keyword)) {
-      openclawScore += 30;
-      break;
-    }
-  }
-
-  // Business/professional tasks (+25 points)
-  const businessKeywords = ['proposal', 'report', 'presentation', 'analysis', 'strategy', 'plan', 'roadmap', 'market research'];
-  for (const keyword of businessKeywords) {
-    if (lower.includes(keyword)) {
-      openclawScore += 25;
-      break;
-    }
-  }
-
-  // User data access (+50 points - VERY IMPORTANT)
-  const dataAccess = ['my emails', 'my calendar', 'my data', 'my files', 'my documents', 'my messages'];
-  for (const keyword of dataAccess) {
-    if (lower.includes(keyword)) {
-      openclawScore += 50;
-      break;
-    }
-  }
-
-  // Generic "my" + data pattern (+40 points)
-  if (/\bmy\s+(last|recent|latest|first|next)\s+\d+\s+\w+/.test(lower)) {
-    // Matches: "my last 5 emails", "my recent 10 messages", etc.
-    openclawScore += 40;
-  }
-
-  // Complex/multi-step indicators (+20 points)
-  const complexityIndicators = ['comprehensive', 'detailed', 'in-depth', 'thorough', 'step-by-step'];
-  for (const indicator of complexityIndicators) {
-    if (lower.includes(indicator)) {
-      openclawScore += 20;
-      break;
-    }
-  }
-
-  // Longer prompts tend to be tasks (+1 point per word over 10)
-  if (words.length > 10) {
-    openclawScore += (words.length - 10);
-  }
-
-  // ===== DECISION =====
-
-  const ai = openclawScore > geminiScore ? 'openclaw' : 'gemini';
-  const confidence = Math.abs(openclawScore - geminiScore);
-
-  return {
-    ai,
-    confidence,
-    scores: {
-      gemini: geminiScore,
-      openclaw: openclawScore
-    }
-  };
-}
 
 // ============================================
 // GEMINI API INTEGRATION
@@ -777,105 +637,6 @@ async function callGemini(prompt, timeoutMs = 30000, systemPrompt = '') {
   }
 
   throw new Error(`GEMINI_FAILED: ${lastError}`);
-}
-
-// ============================================
-// OPENCLAW API INTEGRATION
-// ============================================
-
-/**
- * Calls a locally-running or VPS-hosted OpenClaw instance
- * via its OpenAI-compatible chat completions API.
- *
- * OpenClaw exposes: POST <url>/v1/chat/completions
- * Auth: Bearer token in Authorization header (optional)
- *
- * @param {string} prompt         - User prompt
- * @param {string} openclawUrl    - Base URL, e.g. http://your-vps:18789
- * @param {string} openclawToken  - Bearer token (may be empty)
- * @param {number} timeoutMs      - Request timeout in ms (default: 60s)
- * @returns {Promise<string>} AI response text
- */
-async function callOpenClaw(prompt, openclawUrl, openclawToken, timeoutMs = 25000, isAdmin = false) {
-  // Non-admin users must supply their own credentials — never fall back to env vars
-  const url   = openclawUrl   || (isAdmin ? OPENCLAW_URL   : '');
-  const token = openclawToken || (isAdmin ? OPENCLAW_TOKEN : '');
-
-  if (!url) {
-    throw new Error(isAdmin ? 'OPENCLAW_NOT_CONFIGURED' : 'OPENCLAW_CREDENTIALS_REQUIRED');
-  }
-
-  // Basic SSRF guard: only allow http/https URLs
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    throw new Error('OPENCLAW_NOT_CONFIGURED');
-  }
-
-  const endpoint = `${url.replace(/\/$/, '')}/v1/chat/completions`;
-  log('INFO', `Calling OpenClaw at: ${endpoint}`);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-openclaw-agent-id': 'main'
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: 'openclaw',
-        messages: [{ role: 'user', content: prompt }]
-      }),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (response.status === 401 || response.status === 403) {
-      log('ERROR', `OpenClaw auth failed: HTTP ${response.status}`);
-      throw new Error('OPENCLAW_AUTH_FAILED');
-    }
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      log('ERROR', `OpenClaw HTTP ${response.status}: ${errText}`);
-      throw new Error('OPENCLAW_UNREACHABLE');
-    }
-
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-
-    if (!text) {
-      log('ERROR', 'OpenClaw returned empty response');
-      throw new Error('OPENCLAW_UNREACHABLE');
-    }
-
-    log('INFO', 'OpenClaw responded successfully');
-    return text;
-
-  } catch (err) {
-    clearTimeout(timeoutId);
-
-    if (err.name === 'AbortError') {
-      log('ERROR', `OpenClaw timeout after ${timeoutMs}ms`);
-      throw new Error('OPENCLAW_TIMEOUT');
-    }
-
-    // Re-throw known OpenClaw errors as-is
-    if (err.message.startsWith('OPENCLAW_')) {
-      throw err;
-    }
-
-    // All other network errors (ECONNREFUSED, ENOTFOUND, etc.) = not reachable
-    log('ERROR', `OpenClaw connection error: ${err.message}`);
-    throw new Error('OPENCLAW_UNREACHABLE');
-  }
 }
 
 // ============================================
@@ -1109,56 +870,6 @@ app.get('/', (req, res) => {
             border-color: rgba(5,150,105,0.5);
             color: #34d399;
         }
-        .ai-mode-btn.active.openclaw {
-            background: rgba(217,119,6,0.2);
-            border-color: rgba(217,119,6,0.5);
-            color: #fbbf24;
-        }
-
-        /* OpenClaw Status Bar */
-        .openclaw-status {
-            padding: 6px 14px;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-            background: rgba(0,0,0,0.15);
-            color: rgba(255,255,255,0.45);
-            font-family: var(--mono);
-        }
-        .openclaw-status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--text-dim);
-            flex-shrink: 0;
-        }
-        .openclaw-status-dot.online  { background: var(--green); }
-        .openclaw-status-dot.offline { background: var(--red); }
-        .openclaw-status-dot.checking {
-            background: var(--accent);
-            animation: blink 1.2s ease-in-out infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.25; }
-        }
-        .openclaw-settings-link {
-            margin-left: auto;
-            background: none;
-            border: none;
-            color: rgba(124,58,237,0.8);
-            font-size: 10px;
-            cursor: pointer;
-            padding: 0;
-            font-family: var(--mono);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            letter-spacing: 0.05em;
-        }
-        .openclaw-settings-link:hover { color: var(--text); }
 
         /* ===== FULL SETTINGS PANEL ===== */
         .settings-overlay {
@@ -1953,7 +1664,7 @@ app.get('/', (req, res) => {
             color: var(--green);
             border: 1px solid rgba(5,150,105,0.25);
         }
-        .msg-avatar.bot-av.openclaw-av {
+        .msg-avatar.bot-av.gemini-av {
             background: var(--orange-lo);
             color: var(--orange);
             border: 1px solid rgba(217,119,6,0.25);
@@ -2012,7 +1723,6 @@ app.get('/', (req, res) => {
             box-shadow: var(--shadow-sm);
         }
         .bot.gemini { border-left: 3px solid var(--green); }
-        .bot.openclaw { border-left: 3px solid var(--orange); }
         .ai-badge {
             display: inline-flex;
             align-items: center;
@@ -2029,11 +1739,7 @@ app.get('/', (req, res) => {
             color: var(--green);
             border: 1px solid rgba(5,150,105,0.2);
         }
-        .ai-badge.openclaw {
-            background: var(--orange-lo);
-            color: var(--orange);
-            border: 1px solid rgba(224,112,51,.3);
-        }
+
         .thinking {
             background: var(--bg-panel);
             border: 1px solid var(--border);
@@ -2665,35 +2371,6 @@ app.get('/', (req, res) => {
         </div>
 
         <!-- AI Mode Selector -->
-        <div class="ai-mode-section">
-            <div class="ai-mode-label">AI Mode</div>
-            <div class="ai-mode-tabs" role="tablist" aria-label="Select AI mode">
-                <button class="ai-mode-btn gemini active" id="mode-gemini"
-                        onclick="setAIMode('gemini')"
-                        role="tab" aria-selected="true"
-                        aria-label="Use Chat AI for Q&amp;A">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
-                    Chat
-                </button>
-                <button class="ai-mode-btn openclaw" id="mode-openclaw"
-                        onclick="setAIMode('openclaw')"
-                        role="tab" aria-selected="false"
-                        aria-label="Use Agent AI for automation">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                    Agent
-                </button>
-            </div>
-        </div>
-
-        <!-- OpenClaw Status (only shown in OpenClaw mode) -->
-        <div class="openclaw-status" id="openclaw-status" style="display:none;" aria-live="polite">
-            <div class="openclaw-status-dot checking" id="openclaw-status-dot" aria-hidden="true"></div>
-            <span id="openclaw-status-text">Checking...</span>
-            <button class="openclaw-settings-link" onclick="openSettings()" aria-label="Open OpenClaw settings">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                Settings
-            </button>
-        </div>
 
         <!-- Tool Nav -->
         <div class="sidebar-tools-section">
@@ -2791,10 +2468,6 @@ app.get('/', (req, res) => {
             <button class="stab" id="stab-system" data-tab="system" onclick="switchSettingsTab('system')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 System
-            </button>
-            <button class="stab" id="stab-agent" data-tab="agent" onclick="switchSettingsTab('agent')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                Agent
             </button>
             <button class="stab" id="stab-connectors" data-tab="connectors" onclick="switchSettingsTab('connectors')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -2898,41 +2571,6 @@ app.get('/', (req, res) => {
             </button>
         </div>
 
-        <!-- TAB: Agent (OpenClaw) -->
-        <div class="stab-content" id="stab-content-agent">
-            <div class="stab-section-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef7623" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                Agent Connection
-            </div>
-            <div class="settings-group">
-                <label for="openclaw-url-input">Server URL</label>
-                <input type="text" id="openclaw-url-input" placeholder="http://your-vps-ip:18789" autocomplete="off" />
-                <div class="settings-hint">URL of your Agent VPS. Example: <code style="color:#ef7623">http://1.2.3.4:18789</code></div>
-            </div>
-            <div class="settings-group">
-                <label for="openclaw-token-input">Bearer Token</label>
-                <input type="password" id="openclaw-token-input" placeholder="Leave blank if no auth required" autocomplete="off" />
-                <div class="settings-hint">Your Agent authentication token (if configured).</div>
-            </div>
-            <button class="settings-save-btn" onclick="saveOpenClawSettings()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                Save &amp; Test Connection
-            </button>
-            <div id="agent-test-result" class="settings-test-result" style="display:none;"></div>
-            <hr class="settings-divider">
-            <div class="stab-section-title" style="margin-top:0;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                How to connect
-            </div>
-            <div class="settings-instructions">
-                1. Start your Agent on your VPS server<br>
-                2. Enter your VPS IP/URL above<br>
-                3. Click "Save &amp; Test Connection"<br>
-                4. The status dot turns green when ready<br><br>
-                <strong>Default port:</strong> 18789<br>
-                <strong>Docs:</strong> <a href="https://docs.openclaw.ai" target="_blank" style="color:#ef7623;">docs.openclaw.ai</a>
-            </div>
-        </div>
 
         <!-- TAB: Connectors -->
         <div class="stab-content" id="stab-content-connectors">
@@ -4547,8 +4185,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 avatar.setAttribute('aria-hidden', 'true');
                 avatar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
             } else {
-                const isOC = type === 'bot' && aiType === 'openclaw';
-                avatar.className = 'msg-avatar bot-av' + (isOC ? ' openclaw-av' : '');
+                avatar.className = 'msg-avatar bot-av';
                 avatar.setAttribute('aria-hidden', 'true');
                 avatar.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>';
             }
@@ -4708,50 +4345,6 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         // AI MODE MANAGEMENT
         // ============================================
 
-        let currentAIMode = 'gemini';
-        try { currentAIMode = localStorage.getItem('aiMode') || 'gemini'; } catch(e) {}
-
-        function setAIMode(mode) {
-            currentAIMode = mode;
-            try { localStorage.setItem('aiMode', mode); } catch(e) {}
-
-            // Update tab buttons
-            const geminiBtn = document.getElementById('mode-gemini');
-            const openclawBtn = document.getElementById('mode-openclaw');
-            if (geminiBtn) {
-                geminiBtn.classList.toggle('active', mode === 'gemini');
-                geminiBtn.setAttribute('aria-selected', mode === 'gemini');
-            }
-            if (openclawBtn) {
-                openclawBtn.classList.toggle('active', mode === 'openclaw');
-                openclawBtn.setAttribute('aria-selected', mode === 'openclaw');
-            }
-
-            // Show/hide OpenClaw status bar
-            const statusBar = document.getElementById('openclaw-status');
-            if (statusBar) statusBar.style.display = mode === 'openclaw' ? 'flex' : 'none';
-
-            // Update header display
-            const headerDisplay = document.getElementById('header-ai-display');
-            if (headerDisplay) {
-                headerDisplay.textContent = mode === 'gemini' ? 'Chat' : 'Agent';
-            }
-
-            // Check connection when switching to OpenClaw
-            if (mode === 'openclaw') checkOpenClawStatus();
-        }
-
-        // Apply saved mode on page load
-        setAIMode(currentAIMode);
-
-        // ============================================
-        // OPENCLAW SETTINGS
-        // ============================================
-
-        function getOpenClawSetting(key) {
-            try { return localStorage.getItem('openclaw_' + key) || ''; } catch(e) { return ''; }
-        }
-
         function openSettings(tab) {
             // Populate all form fields from localStorage
             const el = id => document.getElementById(id);
@@ -4773,10 +4366,6 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 if (el('chat-temp-val')) el('chat-temp-val').textContent = temp;
             }
             if (el('chat-lang-input')) el('chat-lang-input').value = localStorage.getItem('chat_language') || 'en';
-
-            // Agent tab
-            if (el('openclaw-url-input')) el('openclaw-url-input').value = getOpenClawSetting('url') || 'http://your-vps-ip:18789';
-            if (el('openclaw-token-input')) el('openclaw-token-input').value = getOpenClawSetting('token');
 
             // Connectors tab
             if (el('gemini-api-key-input')) el('gemini-api-key-input').value = localStorage.getItem('gemini_api_key') || '';
@@ -4805,60 +4394,6 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             document.getElementById('settings-panel')?.classList.remove('open');
             document.getElementById('settings-overlay')?.classList.remove('open');
         }
-
-        async function saveOpenClawSettings() {
-            const url   = document.getElementById('openclaw-url-input')?.value.trim() || '';
-            const token = document.getElementById('openclaw-token-input')?.value.trim() || '';
-            try {
-                localStorage.setItem('openclaw_url', url);
-                localStorage.setItem('openclaw_token', token);
-            } catch(e) { console.error('Failed to save Agent settings:', e); }
-            await checkOpenClawStatus();
-            showSettingsToast('Agent settings saved');
-        }
-
-        // ============================================
-        // OPENCLAW CONNECTION STATUS CHECK
-        // ============================================
-
-        async function checkOpenClawStatus() {
-            const dot  = document.getElementById('openclaw-status-dot');
-            const text = document.getElementById('openclaw-status-text');
-            if (!dot || !text) return;
-
-            dot.className = 'openclaw-status-dot checking';
-            text.textContent = 'Checking...';
-            text.style.color = '#fbbf24';
-
-            try {
-                const res = await fetch('/ping-openclaw', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        openclawUrl:   getOpenClawSetting('url'),
-                        openclawToken: getOpenClawSetting('token')
-                    })
-                });
-                const data = await res.json();
-
-                if (data.reachable) {
-                    dot.className = 'openclaw-status-dot online';
-                    text.textContent = 'Agent connected';
-                    text.style.color = '#4ade80';
-                } else {
-                    dot.className = 'openclaw-status-dot offline';
-                    text.textContent = data.reason || 'Not reachable';
-                    text.style.color = '#f87171';
-                }
-            } catch(e) {
-                dot.className = 'openclaw-status-dot offline';
-                text.textContent = 'Check failed';
-                text.style.color = '#f87171';
-            }
-        }
-
-        // Auto-recheck every 30s while in OpenClaw mode
-        setInterval(() => { if (currentAIMode === 'openclaw') checkOpenClawStatus(); }, 30000);
 
         // ============================================
         // REQUEST MANAGEMENT
@@ -4902,9 +4437,6 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                         },
                         body: JSON.stringify({
                             prompt: userInput,
-                            ai: currentAIMode,
-                            openclawUrl: getOpenClawSetting('url'),
-                            openclawToken: getOpenClawSetting('token'),
                             systemPrompt: localStorage.getItem('system_prompt') || ''
                         }),
                         signal: currentRequest.signal
@@ -5067,7 +4599,6 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             if (!confirm('Reset all settings? This will clear your profile, settings and API keys.')) return;
             ['account_name','account_plan','system_prompt','chat_temperature','chat_language',
              'gemini_api_key','gemini_model','notion_api_key','webhook_url','webhook_secret',
-             'openclaw_url','openclaw_token','aiMode',
              'invoice_system_prompt','adjuster_system_prompt'].forEach(k => localStorage.removeItem(k));
             refreshAccountUI();
             closeSettings();
@@ -6795,7 +6326,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
 /**
  * Public chat endpoint for frontend (no auth required)
  * POST /chat
- * Body: { prompt: string, ai?: 'gemini'|'openclaw', openclawUrl?: string, openclawToken?: string }
+ * Body: { prompt: string }
  */
 // ============================================
 // LOGIN ENDPOINT
@@ -6943,100 +6474,25 @@ app.post('/chat', requireLogin, async (req, res) => {
   const requestId = req.id;
 
   try {
-    const { prompt, ai: forceAI, openclawUrl, openclawToken, systemPrompt } = req.body;
+    const { prompt, systemPrompt } = req.body;
 
-    // Input validation
     if (!prompt || typeof prompt !== 'string') {
-      log('WARN', 'Invalid prompt', requestId);
-      return res.status(400).json({
-        error: 'Invalid request',
-        message: 'Prompt must be a non-empty string'
-      });
+      return res.status(400).json({ error: 'Invalid request', message: 'Prompt must be a non-empty string' });
     }
-
     if (prompt.length > 50000) {
-      log('WARN', 'Prompt too long', requestId);
-      return res.status(400).json({
-        error: 'Invalid request',
-        message: 'Prompt must be less than 50,000 characters'
-      });
+      return res.status(400).json({ error: 'Invalid request', message: 'Prompt must be less than 50,000 characters' });
     }
 
-    // Route to appropriate AI (allow frontend to force a specific AI)
-    const routing = chooseAI(prompt);
-    if (forceAI === 'gemini' || forceAI === 'openclaw') {
-      routing.ai = forceAI;
-      routing.confidence = 100; // manual override
-    }
-    log('INFO', `Routing decision: ${routing.ai.toUpperCase()}`, requestId, routing);
-
-    // Synchronous processing only for public endpoint
-    let response;
-    let actualAI = routing.ai;
-
-    const isAdmin = USERS_MAP.has(req.authenticatedUser) || USERS_MAP.has('__fallback__');
-
-    try {
-      if (routing.ai === 'gemini') {
-        response = await callGemini(prompt, 30000, systemPrompt);
-      } else {
-        response = await callOpenClaw(prompt, openclawUrl, openclawToken, 25000, isAdmin);
-      }
-    } catch (error) {
-      if (error.message === 'OPENCLAW_CREDENTIALS_REQUIRED') {
-        return res.status(403).json({
-          error: 'Agent credentials required',
-          message: 'Please configure your own Agent URL and Bearer Token in Settings → Agent Connection.'
-        });
-      }
-      // Intelligent fallback: if OpenClaw is unreachable, try Gemini
-      if (error.message === 'OPENCLAW_UNREACHABLE' && routing.ai === 'openclaw') {
-        log('WARN', 'OpenClaw unreachable, trying Gemini fallback', requestId);
-        try {
-          response = await callGemini(prompt);
-          actualAI = 'gemini';
-          response = `⚠️ Note: OpenClaw is not reachable. Using Gemini as fallback.\n\n${response}`;
-        } catch (geminiError) {
-          if (geminiError.message === 'GEMINI_QUOTA_EXCEEDED') {
-            throw new Error('BOTH_APIS_EXHAUSTED');
-          }
-          throw geminiError;
-        }
-      } else {
-        throw error;
-      }
-    }
-
+    log('INFO', 'Chat request received', requestId);
+    const response = await callGemini(prompt, 30000, systemPrompt);
     log('INFO', 'Chat response generated successfully', requestId);
 
-    res.json({
-      response,
-      ai: actualAI,
-      routing: {
-        ai: routing.ai,
-        confidence: routing.confidence,
-        scores: routing.scores
-      }
-    });
+    res.json({ response, ai: 'gemini' });
 
   } catch (error) {
     log('ERROR', `Chat error: ${error.message}`, requestId, { stack: error.stack });
-
-    if (error.message === 'OPENCLAW_TIMEOUT') {
-      return res.status(504).json({
-        error: 'OPENCLAW_TIMEOUT',
-        timeout: true,
-        requestId
-      });
-    }
-
     const { status, userMessage } = formatError(error);
-
-    res.status(status).json({
-      error: userMessage,
-      requestId,
-      debugInfo: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(status).json({ error: userMessage, requestId });
   }
 });
 
@@ -7052,93 +6508,27 @@ app.post('/api/chat', requireApiKey, async (req, res) => {
   try {
     const { prompt, async = false } = req.body;
 
-    // Input validation
     if (!prompt || typeof prompt !== 'string') {
-      log('WARN', 'Invalid prompt', requestId);
-      return res.status(400).json({
-        error: 'Invalid request',
-        message: 'Prompt must be a non-empty string'
-      });
+      return res.status(400).json({ error: 'Invalid request', message: 'Prompt must be a non-empty string' });
     }
-
     if (prompt.length > 50000) {
-      log('WARN', 'Prompt too long', requestId);
-      return res.status(400).json({
-        error: 'Invalid request',
-        message: 'Prompt must be less than 50,000 characters'
-      });
+      return res.status(400).json({ error: 'Invalid request', message: 'Prompt must be less than 50,000 characters' });
     }
 
-    // Route to appropriate AI
-    const routing = chooseAI(prompt);
-    log('INFO', `Routing decision: ${routing.ai.toUpperCase()}`, requestId, routing);
-
-    // Handle async requests
     if (async) {
       const taskId = createTask(prompt);
-      log('INFO', `Created async task: ${taskId}`, requestId);
-
-      // Process in background
-      processTaskAsync(taskId, prompt, routing.ai, requestId);
-
-      return res.json({
-        taskId,
-        status: 'processing',
-        message: 'Task created successfully',
-        checkStatusUrl: `/api/task/${taskId}`
-      });
+      processTaskAsync(taskId, prompt, requestId);
+      return res.json({ taskId, status: 'processing', message: 'Task created successfully', checkStatusUrl: `/api/task/${taskId}` });
     }
 
-    // Synchronous processing
-    let response;
-    let actualAI = routing.ai;
-
-    try {
-      if (routing.ai === 'gemini') {
-        response = await callGemini(prompt);
-      } else {
-        response = await callOpenClaw(prompt, req.body.openclawUrl, req.body.openclawToken);
-      }
-    } catch (error) {
-      // Intelligent fallback: if OpenClaw is unreachable, try Gemini
-      if (error.message === 'OPENCLAW_UNREACHABLE' && routing.ai === 'openclaw') {
-        log('WARN', 'OpenClaw unreachable, trying Gemini fallback', requestId);
-        try {
-          response = await callGemini(prompt);
-          actualAI = 'gemini';
-          response = `⚠️ Note: OpenClaw is not reachable. Using Gemini as fallback.\n\n${response}`;
-        } catch (geminiError) {
-          if (geminiError.message === 'GEMINI_QUOTA_EXCEEDED') {
-            throw new Error('BOTH_APIS_EXHAUSTED');
-          }
-          throw geminiError;
-        }
-      } else {
-        throw error;
-      }
-    }
-
+    const response = await callGemini(prompt);
     log('INFO', 'Chat response generated successfully', requestId);
-
-    res.json({
-      response,
-      ai: actualAI,
-      routing: {
-        ai: routing.ai,
-        confidence: routing.confidence,
-        scores: routing.scores
-      }
-    });
+    res.json({ response, ai: 'gemini' });
 
   } catch (error) {
     log('ERROR', `Chat error: ${error.message}`, requestId);
-
     const { status, userMessage } = formatError(error);
-
-    res.status(status).json({
-      error: userMessage,
-      requestId
-    });
+    res.status(status).json({ error: userMessage, requestId });
   }
 });
 
@@ -7188,7 +6578,7 @@ app.get('/health', requireApiKey, (req, res) => {
     timestamp: new Date().toISOString(),
     services: {
       gemini: !!GEMINI_API_KEY,
-      openclaw: !!OPENCLAW_TOKEN,
+
       render: !!RENDER_API_KEY,
       notion: !!NOTION_API_KEY
     },
@@ -7196,56 +6586,6 @@ app.get('/health', requireApiKey, (req, res) => {
   });
 });
 
-/**
- * Ping OpenClaw to check if it's reachable
- * POST /ping-openclaw
- * Body: { openclawUrl?: string, openclawToken?: string }
- */
-app.post('/ping-openclaw', requireLogin, async (req, res) => {
-  const { openclawUrl, openclawToken } = req.body || {};
-  const isAdmin = USERS_MAP.has(req.authenticatedUser) || USERS_MAP.has('__fallback__');
-  const url   = openclawUrl   || (isAdmin ? OPENCLAW_URL   : '');
-  const token = openclawToken || (isAdmin ? OPENCLAW_TOKEN : '');
-
-  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-    return res.json({ reachable: false, reason: 'No Agent URL configured. Add your own in Settings → Agent Connection.' });
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-openclaw-agent-id': 'main'
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const response = await fetch(`${url.replace(/\/$/, '')}/v1/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: 'openclaw',
-        messages: [{ role: 'user', content: 'ping' }],
-        max_tokens: 1
-      }),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    // 200 = success, 400 = bad request but server is up - both mean OpenClaw is reachable
-    if (response.ok || response.status === 400) {
-      return res.json({ reachable: true });
-    }
-
-    return res.json({ reachable: false, reason: `HTTP ${response.status}` });
-
-  } catch (err) {
-    const reason = err.name === 'AbortError' ? 'Timeout (5s)' : 'Connection refused';
-    return res.json({ reachable: false, reason });
-  }
-});
 
 // ============================================
 // INVOICE FOLLOW-UP ENDPOINT
@@ -7968,41 +7308,17 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Process task asynchronously
- * @param {string} taskId - Task ID
- * @param {string} prompt - User prompt
- * @param {string} ai - AI to use ('gemini' or 'openclaw')
- * @param {string} requestId - Request ID for logging
- */
-async function processTaskAsync(taskId, prompt, ai, requestId) {
+async function processTaskAsync(taskId, prompt, requestId) {
   updateTask(taskId, { status: TaskStatus.PROCESSING });
   log('INFO', `Processing async task: ${taskId}`, requestId);
 
   try {
-    let response;
-
-    if (ai === 'gemini') {
-      response = await callGemini(prompt);
-    } else {
-      response = await callOpenClaw(prompt, OPENCLAW_URL, OPENCLAW_TOKEN);
-    }
-
-    updateTask(taskId, {
-      status: TaskStatus.COMPLETED,
-      response,
-      ai
-    });
-
+    const response = await callGemini(prompt);
+    updateTask(taskId, { status: TaskStatus.COMPLETED, response, ai: 'gemini' });
     log('INFO', `Async task completed: ${taskId}`, requestId);
-
   } catch (error) {
     log('ERROR', `Async task failed: ${taskId} - ${error.message}`, requestId);
-
-    updateTask(taskId, {
-      status: TaskStatus.FAILED,
-      error: error.message
-    });
+    updateTask(taskId, { status: TaskStatus.FAILED, error: error.message });
   }
 }
 
@@ -8021,22 +7337,7 @@ function formatError(error) {
       status: 403,
       message: '🔒 Security Alert: The Gemini API key has been flagged as leaked by Google and has been disabled.\n\nTO FIX:\n1. Go to https://ai.google.dev/\n2. Delete the old API key\n3. Create a new API key\n4. Update it in Render environment variables\n5. Redeploy the service\n\nThis happens when API keys are exposed in public repositories or logs.'
     },
-    'OPENCLAW_NOT_CONFIGURED': {
-      status: 503,
-      message: '🟠 OpenClaw URL is not configured. Please click ⚙ Settings in the sidebar and enter your OpenClaw VPS URL.'
-    },
-    'OPENCLAW_UNREACHABLE': {
-      status: 503,
-      message: '🟠 OpenClaw is not reachable. Please make sure OpenClaw is running on your server and check the URL in ⚙ Settings.'
-    },
-    'OPENCLAW_TIMEOUT': {
-      status: 504,
-      message: 'OPENCLAW_TIMEOUT'
-    },
-    'OPENCLAW_AUTH_FAILED': {
-      status: 403,
-      message: '🟠 OpenClaw authentication failed. Please check your Bearer token in ⚙ Settings.'
-    },
+
     'GEMINI_QUOTA_EXCEEDED': {
       status: 503,
       message: 'Gemini API quota exceeded. The service quota resets daily. Please try again later or contact support.'
@@ -8101,24 +7402,17 @@ app.listen(PORT, () => {
   console.log('');
   console.log('🤖 AI Services Status:');
   console.log(`   ${GEMINI_API_KEY ? '🟢' : '🔴'} Gemini: ${GEMINI_API_KEY ? 'Ready' : 'Not Configured'}`);
-  console.log(`   🟠 OpenClaw: Proxy target → ${OPENCLAW_URL}`);
   console.log(`   ${RENDER_API_KEY ? '🟢' : '🔴'} Render: ${RENDER_API_KEY ? 'Ready' : 'Not Configured'}`);
   console.log(`   ${NOTION_API_KEY ? '🟢' : '🔴'} Notion: ${NOTION_API_KEY ? 'Ready' : 'Not Configured'}`);
   console.log('');
-  console.log('🎯 Routing System:');
-  console.log('   📊 Score-based routing (not keyword matching)');
-  console.log('   🔵 Gemini: Fast Q&A, explanations');
-  console.log('   🟠 OpenClaw: Execution tasks, automation, complex analysis');
-  console.log('   ⚡ Execution verbs ALWAYS route to OpenClaw');
-  console.log('');
+  console.log('🎯 AI:');
+  console.log('   🔵 Gemini: All requests');
   console.log('📡 API Endpoints:');
   console.log('   POST /chat - Public chat endpoint');
-  console.log('   POST /ping-openclaw - OpenClaw connection check');
   console.log('   GET /health - Health check (requires auth)');
   console.log('');
   console.log('⏱️  Timeouts:');
   console.log('   Gemini: 30 seconds');
-  console.log('   OpenClaw: 60 seconds');
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
