@@ -6552,10 +6552,15 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             document.getElementById('conn-pwd-modal').style.display = 'none';
             if (connPwdReject) { connPwdReject(new Error('cancelled')); connPwdResolve = null; connPwdReject = null; }
         }
-        document.getElementById('conn-pwd-input').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') connPwdConfirm();
-            if (e.key === 'Escape') connPwdCancel();
-        });
+        setTimeout(function() {
+            var inp = document.getElementById('conn-pwd-input');
+            if (inp) {
+                inp.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') connPwdConfirm();
+                    if (e.key === 'Escape') connPwdCancel();
+                });
+            }
+        }, 100);
 
         async function loadConnectorTemplates() {
             try {
