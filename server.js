@@ -255,6 +255,47 @@ loadAutomationsConfig();
 
 const TOKEN_SECRET = API_KEY;
 
+// ============================================
+// CONNECTOR STORE (AES-256-GCM encrypted keys)
+// ============================================
+
+const CONNECTORS_FILE = process.env.CONNECTORS_FILE || path.join('/data', 'connectors.json');
+let connectorStore = [];
+
+function deriveEncKey() {
+  return crypto.scryptSync(TOKEN_SECRET + 'conn', 'connector-salt-v1', 32);
+}
+
+function encryptConnectorKey(plaintext) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', deriveEncKey(), iv);
+  const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  return iv.toString('hex') + ':' + enc.toString('hex') + ':' + cipher.getAuthTag().toString('hex');
+}
+
+function decryptConnectorKey(stored) {
+  const [ivHex, encHex, tagHex] = stored.split(':');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', deriveEncKey(), Buffer.from(ivHex, 'hex'));
+  decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+  return Buffer.concat([decipher.update(Buffer.from(encHex, 'hex')), decipher.final()]).toString('utf8');
+}
+
+function loadConnectorStore() {
+  try {
+    if (fs.existsSync(CONNECTORS_FILE)) connectorStore = JSON.parse(fs.readFileSync(CONNECTORS_FILE, 'utf8'));
+  } catch (e) { log('WARN', `Could not load connectors file: ${e.message}`); connectorStore = []; }
+}
+
+function saveConnectorStore() {
+  try {
+    const dir = path.dirname(CONNECTORS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CONNECTORS_FILE, JSON.stringify(connectorStore, null, 2), 'utf8');
+  } catch (e) { log('ERROR', `Could not save connectors file: ${e.message}`); }
+}
+
+loadConnectorStore();
+
 function createLoginToken(username) {
   const issuedAt  = Date.now();
   const expiresAt = issuedAt + TOKEN_EXPIRY_MS;
@@ -638,6 +679,74 @@ async function callGemini(prompt, timeoutMs = 30000, systemPrompt = '') {
 
   throw new Error(`GEMINI_FAILED: ${lastError}`);
 }
+
+// ============================================
+// CONNECTOR TEMPLATES (50 pre-built connectors)
+// ============================================
+
+const CONNECTOR_TEMPLATES = [
+  // Productivity
+  { id: 'notion', name: 'Notion', emoji: '📝', category: 'Productivity', baseUrl: 'https://api.notion.com/v1', apiKeyLabel: 'Integration Token', capabilities: 'Search pages, create and update pages and database entries. Use Notion-Version: 2022-06-28 header and Bearer auth.' },
+  { id: 'airtable', name: 'Airtable', emoji: '📊', category: 'Productivity', baseUrl: 'https://api.airtable.com/v0', apiKeyLabel: 'API Key', capabilities: 'List, create, update, and delete records in Airtable bases. Base ID and table name go in URL path. Use Bearer auth.' },
+  { id: 'trello', name: 'Trello', emoji: '🃏', category: 'Productivity', baseUrl: 'https://api.trello.com/1', apiKeyLabel: 'API Key:Token', capabilities: 'Manage Trello boards, lists, and cards. Split key/token on colon. Both go as query params key= and token=.' },
+  { id: 'asana', name: 'Asana', emoji: '✅', category: 'Productivity', baseUrl: 'https://app.asana.com/api/1.0', apiKeyLabel: 'Personal Access Token', capabilities: 'Create, update, and list tasks, projects, and workspaces. Use Bearer auth.' },
+  { id: 'clickup', name: 'ClickUp', emoji: '🖱️', category: 'Productivity', baseUrl: 'https://api.clickup.com/api/v2', apiKeyLabel: 'API Token', capabilities: 'Create and list tasks, spaces, and lists. Put token directly in Authorization header.' },
+  { id: 'todoist', name: 'Todoist', emoji: '✔️', category: 'Productivity', baseUrl: 'https://api.todoist.com/rest/v2', apiKeyLabel: 'API Token', capabilities: 'List, create, update, and close tasks and projects. Use Bearer auth.' },
+  { id: 'linear', name: 'Linear', emoji: '🔷', category: 'Productivity', baseUrl: 'https://api.linear.app/graphql', apiKeyLabel: 'API Key', capabilities: 'Query and mutate Linear issues, projects, and teams via GraphQL POST. Use Authorization header with key.' },
+  { id: 'monday', name: 'Monday.com', emoji: '📅', category: 'Productivity', baseUrl: 'https://api.monday.com/v2', apiKeyLabel: 'API Token', capabilities: 'Read and update boards and items via GraphQL POST. Use Authorization Bearer.' },
+  // Communication
+  { id: 'slack', name: 'Slack', emoji: '💬', category: 'Communication', baseUrl: 'https://slack.com/api', apiKeyLabel: 'Bot Token (xoxb-...)', capabilities: 'Post messages to channels, list channels, read channel history. Use Bearer auth with bot token.' },
+  { id: 'discord', name: 'Discord', emoji: '🎮', category: 'Communication', baseUrl: 'https://discord.com/api/v10', apiKeyLabel: 'Bot Token', capabilities: 'Send messages to channels, read guild info, list channels. Authorization header value: "Bot TOKEN".' },
+  { id: 'telegram', name: 'Telegram Bot', emoji: '✈️', category: 'Communication', baseUrl: 'https://api.telegram.org', apiKeyLabel: 'Bot Token', capabilities: 'Send messages via Telegram Bot API. URL: /bot{TOKEN}/sendMessage. No extra auth header needed - token is in URL.' },
+  { id: 'twilio', name: 'Twilio SMS', emoji: '📱', category: 'Communication', baseUrl: 'https://api.twilio.com/2010-04-01', apiKeyLabel: 'AccountSID:AuthToken', capabilities: 'Send SMS via Twilio. Split on colon to get AccountSID and AuthToken. Use Basic auth. URL: /Accounts/{SID}/Messages.' },
+  { id: 'mailgun', name: 'Mailgun', emoji: '📧', category: 'Communication', baseUrl: 'https://api.mailgun.net/v3', apiKeyLabel: 'API Key', capabilities: 'Send emails and check email stats. Use Basic auth with username "api" and API key as password.' },
+  { id: 'sendgrid', name: 'SendGrid', emoji: '📨', category: 'Communication', baseUrl: 'https://api.sendgrid.com/v3', apiKeyLabel: 'API Key', capabilities: 'Send transactional emails and manage contacts. Use Bearer auth.' },
+  { id: 'postmark', name: 'Postmark', emoji: '📮', category: 'Communication', baseUrl: 'https://api.postmarkapp.com', apiKeyLabel: 'Server API Token', capabilities: 'Send emails and check delivery stats. Use X-Postmark-Server-Token header.' },
+  // Data/Storage
+  { id: 'supabase', name: 'Supabase', emoji: '⚡', category: 'Data/Storage', baseUrl: 'https://xyzproject.supabase.co', apiKeyLabel: 'Project URL + Service Key (URL|KEY)', capabilities: 'Query Supabase database tables via REST. Split key on pipe - first part is project URL, second is service_role key. Use apikey and Authorization Bearer headers.' },
+  { id: 'upstash', name: 'Upstash Redis', emoji: '🔴', category: 'Data/Storage', baseUrl: 'https://redis.upstash.io', apiKeyLabel: 'REST URL + Token (URL|TOKEN)', capabilities: 'Get and set Redis keys via Upstash REST. Split on pipe - first part is endpoint URL, second is token. Use Authorization Bearer.' },
+  { id: 'planetscale', name: 'PlanetScale', emoji: '🪐', category: 'Data/Storage', baseUrl: 'https://api.planetscale.com/v1', apiKeyLabel: 'Service Token', capabilities: 'Manage databases, branches, and deploy requests. Use Authorization Bearer.' },
+  { id: 'neon', name: 'Neon', emoji: '🌿', category: 'Data/Storage', baseUrl: 'https://console.neon.tech/api/v2', apiKeyLabel: 'API Key', capabilities: 'Manage Postgres projects, branches, and endpoints. Use Authorization Bearer.' },
+  { id: 'cloudflare-kv', name: 'Cloudflare KV', emoji: '☁️', category: 'Data/Storage', baseUrl: 'https://api.cloudflare.com/client/v4', apiKeyLabel: 'Account ID:API Token (ID:TOKEN)', capabilities: 'Read and write KV namespace values. Split on colon for account ID and token. Use Authorization Bearer. URL: /accounts/{accountId}/storage/kv/namespaces.' },
+  // Dev Tools
+  { id: 'github', name: 'GitHub', emoji: '🐙', category: 'Dev Tools', baseUrl: 'https://api.github.com', apiKeyLabel: 'Personal Access Token', capabilities: 'List repos, issues, PRs, commits. Create issues. Use Bearer auth. Set Accept: application/vnd.github+json header.' },
+  { id: 'gitlab', name: 'GitLab', emoji: '🦊', category: 'Dev Tools', baseUrl: 'https://gitlab.com/api/v4', apiKeyLabel: 'Personal Access Token', capabilities: 'List projects, issues, merge requests, pipelines. Use PRIVATE-TOKEN header.' },
+  { id: 'vercel', name: 'Vercel', emoji: '▲', category: 'Dev Tools', baseUrl: 'https://api.vercel.com', apiKeyLabel: 'API Token', capabilities: 'List deployments, projects, domains. Trigger redeploys. Use Bearer auth.' },
+  { id: 'netlify', name: 'Netlify', emoji: '🌐', category: 'Dev Tools', baseUrl: 'https://api.netlify.com/api/v1', apiKeyLabel: 'Personal Access Token', capabilities: 'List sites, deploys. Trigger deploys. Use Authorization Bearer.' },
+  { id: 'railway', name: 'Railway', emoji: '🚂', category: 'Dev Tools', baseUrl: 'https://backboard.railway.app/graphql/v2', apiKeyLabel: 'API Token', capabilities: 'Query projects, services, deployments via GraphQL POST. Use Bearer auth.' },
+  { id: 'cloudflare', name: 'Cloudflare', emoji: '🛡️', category: 'Dev Tools', baseUrl: 'https://api.cloudflare.com/client/v4', apiKeyLabel: 'API Token', capabilities: 'Manage DNS records, zones, pages deployments, workers. Use Authorization Bearer.' },
+  { id: 'render', name: 'Render', emoji: '🎨', category: 'Dev Tools', baseUrl: 'https://api.render.com/v1', apiKeyLabel: 'API Key', capabilities: 'List services, deployments, environment variables. Trigger deploys. Use Authorization Bearer.' },
+  // AI/ML
+  { id: 'openai', name: 'OpenAI', emoji: '🤖', category: 'AI/ML', baseUrl: 'https://api.openai.com/v1', apiKeyLabel: 'API Key', capabilities: 'Call GPT models for chat completions, generate embeddings, create images. Use Bearer auth.' },
+  { id: 'anthropic', name: 'Anthropic', emoji: '🧠', category: 'AI/ML', baseUrl: 'https://api.anthropic.com/v1', apiKeyLabel: 'API Key', capabilities: 'Call Claude models for messages. Use x-api-key header and anthropic-version: 2023-06-01 header.' },
+  { id: 'replicate', name: 'Replicate', emoji: '🔁', category: 'AI/ML', baseUrl: 'https://api.replicate.com/v1', apiKeyLabel: 'API Token', capabilities: 'Run and list AI model predictions for images, audio, text. Use Bearer auth.' },
+  { id: 'stability', name: 'Stability AI', emoji: '🖼️', category: 'AI/ML', baseUrl: 'https://api.stability.ai/v1', apiKeyLabel: 'API Key', capabilities: 'Generate images with Stable Diffusion. Use Bearer auth.' },
+  { id: 'elevenlabs', name: 'ElevenLabs', emoji: '🔊', category: 'AI/ML', baseUrl: 'https://api.elevenlabs.io/v1', apiKeyLabel: 'API Key', capabilities: 'Generate speech from text, list voices. Use xi-api-key header.' },
+  { id: 'deepgram', name: 'Deepgram', emoji: '🎤', category: 'AI/ML', baseUrl: 'https://api.deepgram.com/v1', apiKeyLabel: 'API Key', capabilities: 'Transcribe audio, get usage stats. Use Token auth in Authorization header.' },
+  { id: 'assemblyai', name: 'AssemblyAI', emoji: '🎧', category: 'AI/ML', baseUrl: 'https://api.assemblyai.com/v2', apiKeyLabel: 'API Key', capabilities: 'Submit audio for transcription, retrieve transcripts. Use authorization header with API key.' },
+  // Finance/Business
+  { id: 'stripe', name: 'Stripe', emoji: '💳', category: 'Finance', baseUrl: 'https://api.stripe.com/v1', apiKeyLabel: 'Secret Key (sk_...)', capabilities: 'List customers, charges, invoices, subscriptions. Create payment intents. Use Bearer auth with secret key.' },
+  { id: 'hubspot', name: 'HubSpot', emoji: '🧡', category: 'Finance', baseUrl: 'https://api.hubapi.com', apiKeyLabel: 'Private App Token', capabilities: 'Manage CRM contacts, companies, deals, and tickets. Use Bearer auth.' },
+  { id: 'salesforce', name: 'Salesforce', emoji: '☁️', category: 'Finance', baseUrl: 'https://login.salesforce.com', apiKeyLabel: 'Access Token + Instance URL (TOKEN|URL)', capabilities: 'Query Salesforce records via SOQL and REST. Split on pipe for token and instance URL. Use Bearer auth against instance URL.' },
+  { id: 'quickbooks', name: 'QuickBooks', emoji: '📚', category: 'Finance', baseUrl: 'https://quickbooks.api.intuit.com/v3', apiKeyLabel: 'OAuth Token + Company ID (TOKEN|CID)', capabilities: 'Read invoices, customers, expenses. Split on pipe for token and company ID. Use Bearer auth. URL: /company/{companyId}/...' },
+  { id: 'freshbooks', name: 'FreshBooks', emoji: '💼', category: 'Finance', baseUrl: 'https://api.freshbooks.com', apiKeyLabel: 'OAuth Access Token', capabilities: 'Manage invoices, clients, expenses. Use Bearer auth.' },
+  // Maps/Weather
+  { id: 'googlemaps', name: 'Google Maps', emoji: '🗺️', category: 'Maps/Weather', baseUrl: 'https://maps.googleapis.com/maps/api', apiKeyLabel: 'API Key', capabilities: 'Geocode addresses, get directions, find nearby places. API key goes in query param as key=.' },
+  { id: 'mapbox', name: 'Mapbox', emoji: '🧭', category: 'Maps/Weather', baseUrl: 'https://api.mapbox.com', apiKeyLabel: 'Access Token', capabilities: 'Geocode addresses, get directions, static maps. Access token goes in query param as access_token=.' },
+  { id: 'openweather', name: 'OpenWeatherMap', emoji: '🌤️', category: 'Maps/Weather', baseUrl: 'https://api.openweathermap.org/data/2.5', apiKeyLabel: 'API Key', capabilities: 'Get current weather, forecasts for any city. API key goes in query param as appid=.' },
+  // Social/Media
+  { id: 'twitter', name: 'Twitter/X', emoji: '🐦', category: 'Social/Media', baseUrl: 'https://api.twitter.com/2', apiKeyLabel: 'Bearer Token', capabilities: 'Search tweets, get user info and timelines. Use Bearer auth.' },
+  { id: 'youtube', name: 'YouTube Data', emoji: '▶️', category: 'Social/Media', baseUrl: 'https://www.googleapis.com/youtube/v3', apiKeyLabel: 'API Key', capabilities: 'Search videos, get video and channel info, list comments. API key goes in query param as key=.' },
+  { id: 'spotify', name: 'Spotify', emoji: '🎵', category: 'Social/Media', baseUrl: 'https://api.spotify.com/v1', apiKeyLabel: 'Access Token', capabilities: 'Get user playlists, recently played tracks, search. Use Bearer auth.' },
+  // File Storage
+  { id: 'dropbox', name: 'Dropbox', emoji: '📦', category: 'File Storage', baseUrl: 'https://api.dropboxapi.com/2', apiKeyLabel: 'Access Token', capabilities: 'List files and folders, get metadata, search files. Use Bearer auth.' },
+  { id: 'box', name: 'Box', emoji: '📭', category: 'File Storage', baseUrl: 'https://api.box.com/2.0', apiKeyLabel: 'Access Token', capabilities: 'List items in folders, get file info, search. Use Bearer auth.' },
+  // Construction
+  { id: 'procore', name: 'Procore', emoji: '🏗️', category: 'Construction', baseUrl: 'https://api.procore.com/rest/v1.0', apiKeyLabel: 'Access Token', capabilities: 'Access construction projects, RFIs, submittals, daily logs, budgets. Use Bearer auth.' },
+  { id: 'buildertrend', name: 'Buildertrend', emoji: '🔨', category: 'Construction', baseUrl: 'https://api.buildertrend.net', apiKeyLabel: 'API Key', capabilities: 'Access construction job data, schedules, client communications, and change orders. Use Authorization header.' },
+  // Custom
+  { id: 'custom', name: 'Custom Connector', emoji: '🔧', category: 'Custom', baseUrl: '', apiKeyLabel: 'API Key / Token', capabilities: 'Custom REST API connector. You provide the base URL and describe what the API can do.' }
+];
 
 // ============================================
 // API ENDPOINTS
@@ -1786,12 +1895,12 @@ app.get('/', (req, res) => {
             margin: 0 auto;
             display: flex;
             align-items: center;
-            gap: 0;
+            gap: 8px;
             background: var(--bg-raised);
             border: 1.5px solid var(--border-mid);
             border-radius: var(--radius-lg);
             transition: border-color 0.15s, box-shadow 0.15s;
-            padding: 4px 6px 4px 16px;
+            padding: 4px 6px 4px 10px;
         }
         .input-wrap:focus-within {
             border-color: var(--accent);
@@ -2319,6 +2428,61 @@ app.get('/', (req, res) => {
         .dash-chat-icon { width: 34px; height: 34px; background: var(--accent-lo); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; }
         .dash-chat-label { font-size: 13px; font-weight: 600; color: var(--text); }
         .dash-chat-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+        /* ---- Connectors ---- */
+        .connector-plus-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-raised); border: 1px solid var(--border); color: var(--text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; }
+        .connector-plus-btn:hover { background: var(--accent-lo); border-color: var(--accent); color: var(--accent); }
+        .active-connectors-bar { padding: 6px 16px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+        .active-connector-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 8px; background: var(--accent-lo); border: 1px solid rgba(124,58,237,0.25); border-radius: 20px; font-size: 11px; color: var(--accent); cursor: pointer; transition: background 0.15s; }
+        .active-connector-chip:hover { background: rgba(124,58,237,0.15); }
+        .active-connector-chip .chip-remove { margin-left: 4px; opacity: 0.6; font-size: 12px; line-height: 1; }
+        .connector-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .connector-panel { background: var(--bg-card); border-radius: 16px; box-shadow: var(--shadow-lg); width: 640px; max-width: 94vw; max-height: 82vh; display: flex; flex-direction: column; overflow: hidden; }
+        .connector-panel-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .connector-panel-title { font-size: 16px; font-weight: 700; color: var(--text); }
+        .connector-panel-close { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; border-radius: 6px; font-size: 18px; line-height: 1; display: flex; align-items: center; }
+        .connector-panel-close:hover { color: var(--text); background: var(--bg-raised); }
+        .connector-search { margin: 12px 16px 0; padding: 8px 12px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-raised); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; width: calc(100% - 32px); }
+        .connector-search:focus { border-color: var(--accent); }
+        .connector-cat-tabs { padding: 10px 16px 0; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+        .connector-cat-tab { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-raised); color: var(--text-mid); transition: all 0.12s; }
+        .connector-cat-tab:hover, .connector-cat-tab.active { background: var(--accent-lo); border-color: rgba(124,58,237,0.3); color: var(--accent); }
+        .connector-list-scroll { flex: 1; overflow-y: auto; padding: 12px 16px 16px; }
+        .connector-section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); margin: 12px 0 8px; }
+        .connector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .connector-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: all 0.12s; position: relative; }
+        .connector-card:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+        .connector-card.connected { border-color: rgba(5,150,105,0.4); background: rgba(5,150,105,0.04); }
+        .connector-card-emoji { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+        .connector-card-name { font-size: 12px; font-weight: 600; color: var(--text); }
+        .connector-card-cat { font-size: 10px; color: var(--text-dim); }
+        .connector-card-badge { position: absolute; top: 8px; right: 8px; font-size: 10px; background: rgba(5,150,105,0.12); color: #059669; border-radius: 4px; padding: 1px 5px; font-weight: 600; }
+        .connector-add-drawer { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); display: none; }
+        .connector-add-drawer.open { display: block; }
+        .connector-add-drawer-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+        .connector-field-label { font-size: 11px; color: var(--text-mid); font-weight: 500; margin-bottom: 4px; }
+        .connector-field-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-raised); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; box-sizing: border-box; margin-bottom: 8px; }
+        .connector-field-input:focus { border-color: var(--accent); }
+        .connector-add-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+        .connector-add-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans); transition: opacity 0.15s; }
+        .connector-add-btn:hover { opacity: 0.9; }
+        .connector-add-btn:disabled { opacity: 0.5; cursor: default; }
+        .connector-cancel-btn { background: var(--bg-raised); color: var(--text-mid); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; font-family: var(--sans); }
+        .connector-err { font-size: 11px; color: var(--red); margin-top: 4px; }
+        .connector-remove-btn { font-size: 11px; color: var(--red); background: var(--red-lo); border: 1px solid rgba(220,38,38,0.2); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-family: var(--sans); margin-top: 6px; display: inline-block; }
+        .connector-remove-btn:hover { background: rgba(220,38,38,0.15); }
+        .connector-show-key-btn { font-size: 11px; color: var(--text-mid); background: var(--bg-raised); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-family: var(--sans); margin-top: 6px; display: inline-block; }
+        .connector-key-reveal { font-size: 11px; color: var(--text-mid); background: var(--bg-raised); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-top: 6px; word-break: break-all; display: none; }
+        .connector-key-reveal.visible { display: block; }
+        .conn-pwd-modal { position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 1100; display: flex; align-items: center; justify-content: center; }
+        .conn-pwd-card { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 24px; width: 340px; max-width: 94vw; }
+        .conn-pwd-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+        .conn-pwd-desc { font-size: 12px; color: var(--text-mid); margin-bottom: 14px; }
+        .conn-pwd-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-raised); color: var(--text); font-size: 14px; outline: none; box-sizing: border-box; font-family: var(--sans); margin-bottom: 10px; }
+        .conn-pwd-input:focus { border-color: var(--accent); }
+        .conn-pwd-row { display: flex; gap: 8px; justify-content: flex-end; }
+        .conn-pwd-ok { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans); }
+        .conn-pwd-cancel { background: var(--bg-raised); color: var(--text-mid); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: var(--sans); }
     </style>
 </head>
 <body>
@@ -3051,9 +3215,13 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             </div>
             </div>
         </div>
+        <div id="active-connectors-bar" class="active-connectors-bar" style="display:none"></div>
         <div class="input-area" role="region" aria-label="Message input">
             <form id="chat-form" onsubmit="return false;">
                 <div class="input-wrap">
+                    <button type="button" id="connector-plus-btn" class="connector-plus-btn" onclick="openConnectorOverlay()" title="Connectors" aria-label="Open connectors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
                     <input
                         type="text"
                         id="input"
@@ -3071,6 +3239,36 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         </div>
         </div>
     </main>
+
+    <!-- Connector Overlay -->
+    <div id="connector-overlay" class="connector-overlay" style="display:none" onclick="connectorOverlayBgClick(event)">
+        <div class="connector-panel" id="connector-panel-inner">
+            <div class="connector-panel-header">
+                <span class="connector-panel-title">Connectors</span>
+                <button class="connector-panel-close" onclick="closeConnectorOverlay()" aria-label="Close">&#x2715;</button>
+            </div>
+            <input id="connector-search" class="connector-search" type="text" placeholder="Search connectors..." oninput="filterConnectors()" autocomplete="off">
+            <div id="connector-cat-tabs" class="connector-cat-tabs"></div>
+            <div class="connector-list-scroll" id="connector-list-scroll">
+                <div id="connector-grid-my"></div>
+                <div id="connector-grid-all"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connector password modal -->
+    <div id="conn-pwd-modal" class="conn-pwd-modal" style="display:none">
+        <div class="conn-pwd-card">
+            <div class="conn-pwd-title" id="conn-pwd-title">Confirm with Password</div>
+            <div class="conn-pwd-desc" id="conn-pwd-desc">Enter your account password to continue.</div>
+            <input type="password" class="conn-pwd-input" id="conn-pwd-input" placeholder="Password" autocomplete="current-password">
+            <div class="connector-err" id="conn-pwd-err" style="margin-bottom:6px"></div>
+            <div class="conn-pwd-row">
+                <button class="conn-pwd-cancel" onclick="connPwdCancel()">Cancel</button>
+                <button class="conn-pwd-ok" onclick="connPwdConfirm()">Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ===== TOOL VIEW: Invoice Follow-up ===== -->
     <div class="tool-view" id="tool-view-invoices" role="main" aria-label="Invoice Follow-up Tool">
@@ -6318,6 +6516,404 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             };
         })();
 
+        // ============================================================
+        // CONNECTORS SYSTEM
+        // ============================================================
+
+        var connTemplates = [];      // 50 templates from server
+        var myConnectors = [];       // user's added connectors
+        var connFilterCat = 'All';
+        var connSearchQ = '';
+        var openDrawerId = null;     // templateId with drawer open
+
+        // password modal state
+        var connPwdResolve = null;
+        var connPwdReject = null;
+
+        function connPwdPrompt(title, desc) {
+            return new Promise(function(resolve, reject) {
+                connPwdResolve = resolve;
+                connPwdReject = reject;
+                document.getElementById('conn-pwd-title').textContent = title || 'Confirm with Password';
+                document.getElementById('conn-pwd-desc').textContent = desc || 'Enter your account password to continue.';
+                document.getElementById('conn-pwd-input').value = '';
+                document.getElementById('conn-pwd-err').textContent = '';
+                document.getElementById('conn-pwd-modal').style.display = 'flex';
+                setTimeout(function() { document.getElementById('conn-pwd-input').focus(); }, 50);
+            });
+        }
+        function connPwdConfirm() {
+            var val = document.getElementById('conn-pwd-input').value;
+            if (!val) { document.getElementById('conn-pwd-err').textContent = 'Password required'; return; }
+            document.getElementById('conn-pwd-modal').style.display = 'none';
+            if (connPwdResolve) { connPwdResolve(val); connPwdResolve = null; connPwdReject = null; }
+        }
+        function connPwdCancel() {
+            document.getElementById('conn-pwd-modal').style.display = 'none';
+            if (connPwdReject) { connPwdReject(new Error('cancelled')); connPwdResolve = null; connPwdReject = null; }
+        }
+        document.getElementById('conn-pwd-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') connPwdConfirm();
+            if (e.key === 'Escape') connPwdCancel();
+        });
+
+        async function loadConnectorTemplates() {
+            try {
+                var token = getAuthToken();
+                var r = await fetch('/api/connector-templates', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (r.ok) { var d = await r.json(); connTemplates = d.templates || []; }
+            } catch(e) {}
+        }
+
+        async function loadMyConnectors() {
+            try {
+                var token = getAuthToken();
+                var r = await fetch('/api/connectors', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (r.ok) { var d = await r.json(); myConnectors = d.connectors || []; updateActiveConnectorsBar(); }
+            } catch(e) {}
+        }
+
+        function openConnectorOverlay() {
+            document.getElementById('connector-overlay').style.display = 'flex';
+            document.getElementById('connector-search').value = '';
+            connSearchQ = '';
+            connFilterCat = 'All';
+            openDrawerId = null;
+            if (connTemplates.length === 0) {
+                loadConnectorTemplates().then(function() { loadMyConnectors().then(renderConnectorOverlay); });
+            } else {
+                loadMyConnectors().then(renderConnectorOverlay);
+            }
+        }
+
+        function closeConnectorOverlay() {
+            document.getElementById('connector-overlay').style.display = 'none';
+            openDrawerId = null;
+        }
+
+        function connectorOverlayBgClick(e) {
+            if (e.target === document.getElementById('connector-overlay')) closeConnectorOverlay();
+        }
+
+        function filterConnectors() {
+            connSearchQ = document.getElementById('connector-search').value.toLowerCase();
+            renderConnectorOverlay();
+        }
+
+        function setCatFilter(cat) {
+            connFilterCat = cat;
+            connSearchQ = document.getElementById('connector-search').value.toLowerCase();
+            renderConnectorOverlay();
+        }
+
+        function renderConnectorOverlay() {
+            // Category tabs
+            var allCats = ['All'];
+            connTemplates.forEach(function(t) { if (allCats.indexOf(t.category) === -1) allCats.push(t.category); });
+            var tabsEl = document.getElementById('connector-cat-tabs');
+            tabsEl.innerHTML = '';
+            allCats.forEach(function(cat) {
+                var btn = document.createElement('button');
+                btn.className = 'connector-cat-tab' + (connFilterCat === cat ? ' active' : '');
+                btn.textContent = cat;
+                btn.onclick = function() { setCatFilter(cat); };
+                tabsEl.appendChild(btn);
+            });
+
+            // Filter templates
+            var filtered = connTemplates.filter(function(t) {
+                var matchCat = connFilterCat === 'All' || t.category === connFilterCat;
+                var matchQ = !connSearchQ || t.name.toLowerCase().indexOf(connSearchQ) !== -1 || t.category.toLowerCase().indexOf(connSearchQ) !== -1;
+                return matchCat && matchQ;
+            });
+
+            // My connectors section
+            var myEl = document.getElementById('connector-grid-my');
+            var myFiltered = myConnectors.filter(function(c) {
+                return !connSearchQ || c.name.toLowerCase().indexOf(connSearchQ) !== -1;
+            });
+            if (myFiltered.length > 0 && (connFilterCat === 'All' || myFiltered.some(function(c){ return c.category === connFilterCat; }))) {
+                var myLabel = document.createElement('div');
+                myLabel.className = 'connector-section-label';
+                myLabel.textContent = 'My Connectors';
+                myEl.innerHTML = '';
+                myEl.appendChild(myLabel);
+                var myGrid = document.createElement('div');
+                myGrid.className = 'connector-grid';
+                myFiltered.forEach(function(conn) {
+                    if (connFilterCat !== 'All' && conn.category !== connFilterCat) return;
+                    myGrid.appendChild(buildConnectedCard(conn));
+                });
+                myEl.appendChild(myGrid);
+            } else {
+                myEl.innerHTML = '';
+            }
+
+            // All templates section
+            var allEl = document.getElementById('connector-grid-all');
+            allEl.innerHTML = '';
+            if (filtered.length > 0) {
+                var allLabel = document.createElement('div');
+                allLabel.className = 'connector-section-label';
+                allLabel.textContent = connFilterCat === 'All' ? 'All Connectors' : connFilterCat;
+                allEl.appendChild(allLabel);
+                var allGrid = document.createElement('div');
+                allGrid.className = 'connector-grid';
+                filtered.forEach(function(t) {
+                    // skip if already connected (show in My Connectors)
+                    var already = myConnectors.find(function(c) { return c.templateId === t.id; });
+                    allGrid.appendChild(buildTemplateCard(t, !!already));
+                });
+                allEl.appendChild(allGrid);
+            }
+        }
+
+        function buildTemplateCard(t, connected) {
+            var card = document.createElement('div');
+            card.className = 'connector-card' + (connected ? ' connected' : '');
+            card.id = 'conn-tpl-' + t.id;
+            var emojiEl = document.createElement('div');
+            emojiEl.className = 'connector-card-emoji';
+            emojiEl.textContent = t.emoji;
+            var nameEl = document.createElement('div');
+            nameEl.className = 'connector-card-name';
+            nameEl.textContent = t.name;
+            var catEl = document.createElement('div');
+            catEl.className = 'connector-card-cat';
+            catEl.textContent = t.category;
+            card.appendChild(emojiEl);
+            card.appendChild(nameEl);
+            card.appendChild(catEl);
+            if (connected) {
+                var badge = document.createElement('div');
+                badge.className = 'connector-card-badge';
+                badge.textContent = 'Connected';
+                card.appendChild(badge);
+            } else {
+                // Add drawer
+                var drawer = document.createElement('div');
+                drawer.className = 'connector-add-drawer' + (openDrawerId === t.id ? ' open' : '');
+                drawer.id = 'drawer-' + t.id;
+                drawer.innerHTML = buildAddDrawerHTML(t);
+                card.appendChild(drawer);
+                card.onclick = function(e) {
+                    if (e.target.closest('.connector-add-drawer')) return;
+                    toggleDrawer(t.id);
+                };
+            }
+            return card;
+        }
+
+        function buildConnectedCard(conn) {
+            var card = document.createElement('div');
+            card.className = 'connector-card connected';
+            card.id = 'conn-my-' + conn.id;
+            var emojiEl = document.createElement('div');
+            emojiEl.className = 'connector-card-emoji';
+            emojiEl.textContent = conn.emoji;
+            var nameEl = document.createElement('div');
+            nameEl.className = 'connector-card-name';
+            nameEl.textContent = conn.name;
+            var catEl = document.createElement('div');
+            catEl.className = 'connector-card-cat';
+            catEl.textContent = conn.category;
+            var badge = document.createElement('div');
+            badge.className = 'connector-card-badge';
+            badge.textContent = 'Connected';
+            card.appendChild(emojiEl);
+            card.appendChild(nameEl);
+            card.appendChild(catEl);
+            card.appendChild(badge);
+            // Actions row
+            var removeBtn = document.createElement('button');
+            removeBtn.className = 'connector-remove-btn';
+            removeBtn.textContent = 'Remove';
+            removeBtn.onclick = function(e) { e.stopPropagation(); removeConnector(conn.id); };
+            card.appendChild(removeBtn);
+            var showKeyBtn = document.createElement('button');
+            showKeyBtn.className = 'connector-show-key-btn';
+            showKeyBtn.style.marginLeft = '6px';
+            showKeyBtn.textContent = 'Show Key';
+            var keyReveal = document.createElement('div');
+            keyReveal.className = 'connector-key-reveal';
+            keyReveal.id = 'keyreveal-' + conn.id;
+            showKeyBtn.onclick = function(e) {
+                e.stopPropagation();
+                revealConnectorKey(conn.id, keyReveal, showKeyBtn);
+            };
+            card.appendChild(showKeyBtn);
+            card.appendChild(keyReveal);
+            return card;
+        }
+
+        function buildAddDrawerHTML(t) {
+            var customFields = t.id === 'custom' ? '<div class="connector-field-label">Connector Name</div><input class="connector-field-input" id="cust-name-' + t.id + '" placeholder="e.g. My API" autocomplete="off"><div class="connector-field-label">Base URL</div><input class="connector-field-input" id="cust-url-' + t.id + '" placeholder="https://api.example.com/v1" autocomplete="off"><div class="connector-field-label">Capabilities (describe what it can do)</div><input class="connector-field-input" id="cust-cap-' + t.id + '" placeholder="List users, create records, etc." autocomplete="off">' : '';
+            return '<div class="connector-add-drawer-title">Add ' + t.name + '</div>' + customFields + '<div class="connector-field-label">' + t.apiKeyLabel + '</div><input class="connector-field-input" id="apikey-' + t.id + '" type="password" placeholder="Paste your key here" autocomplete="off"><div class="connector-field-label">Your Password (to encrypt the key)</div><input class="connector-field-input" id="connpwd-' + t.id + '" type="password" placeholder="Your account password" autocomplete="off"><div class="connector-err" id="conn-err-' + t.id + '"></div><div class="connector-add-row"><button class="connector-add-btn" onclick="saveConnector(\'' + t.id + '\')">Save Connector</button><button class="connector-cancel-btn" onclick="toggleDrawer(\'' + t.id + '\')">Cancel</button></div>';
+        }
+
+        function toggleDrawer(templateId) {
+            if (openDrawerId === templateId) {
+                openDrawerId = null;
+            } else {
+                openDrawerId = templateId;
+            }
+            renderConnectorOverlay();
+            // Scroll drawer into view
+            setTimeout(function() {
+                var d = document.getElementById('drawer-' + templateId);
+                if (d && openDrawerId === templateId) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 50);
+        }
+
+        async function saveConnector(templateId) {
+            var apiKey = document.getElementById('apikey-' + templateId);
+            var pwd = document.getElementById('connpwd-' + templateId);
+            var errEl = document.getElementById('conn-err-' + templateId);
+            if (!apiKey || !apiKey.value.trim()) { errEl.textContent = 'API key is required'; return; }
+            if (!pwd || !pwd.value.trim()) { errEl.textContent = 'Password is required'; return; }
+            errEl.textContent = '';
+            var body = { templateId: templateId, apiKey: apiKey.value.trim(), password: pwd.value };
+            if (templateId === 'custom') {
+                var custName = document.getElementById('cust-name-' + templateId);
+                var custUrl = document.getElementById('cust-url-' + templateId);
+                var custCap = document.getElementById('cust-cap-' + templateId);
+                body.customName = custName ? custName.value.trim() : '';
+                body.customBaseUrl = custUrl ? custUrl.value.trim() : '';
+                body.customCapabilities = custCap ? custCap.value.trim() : '';
+                if (!body.customBaseUrl) { errEl.textContent = 'Base URL is required for custom connectors'; return; }
+                if (!body.customCapabilities) { errEl.textContent = 'Capabilities description is required'; return; }
+            }
+            var addBtn = document.querySelector('#drawer-' + templateId + ' .connector-add-btn');
+            if (addBtn) { addBtn.disabled = true; addBtn.textContent = 'Saving...'; }
+            try {
+                var token = getAuthToken();
+                var r = await fetch('/api/connectors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(body)
+                });
+                var d = await r.json();
+                if (r.ok) {
+                    openDrawerId = null;
+                    await loadMyConnectors();
+                    renderConnectorOverlay();
+                } else {
+                    errEl.textContent = d.error || 'Failed to save connector';
+                    if (addBtn) { addBtn.disabled = false; addBtn.textContent = 'Save Connector'; }
+                }
+            } catch(e) {
+                errEl.textContent = 'Network error';
+                if (addBtn) { addBtn.disabled = false; addBtn.textContent = 'Save Connector'; }
+            }
+        }
+
+        async function removeConnector(connId) {
+            if (!confirm('Remove this connector? The API key will be deleted.')) return;
+            try {
+                var token = getAuthToken();
+                await fetch('/api/connectors/' + connId, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                await loadMyConnectors();
+                renderConnectorOverlay();
+            } catch(e) {}
+        }
+
+        async function revealConnectorKey(connId, revealEl, btnEl) {
+            if (revealEl.classList.contains('visible')) {
+                revealEl.classList.remove('visible');
+                btnEl.textContent = 'Show Key';
+                return;
+            }
+            try {
+                var pwd = await connPwdPrompt('Show API Key', 'Enter your password to reveal the stored API key.');
+                var token = getAuthToken();
+                var r = await fetch('/api/connectors/' + connId + '/key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ password: pwd })
+                });
+                var d = await r.json();
+                if (r.ok) {
+                    revealEl.textContent = d.key;
+                    revealEl.classList.add('visible');
+                    btnEl.textContent = 'Hide Key';
+                } else {
+                    alert(d.error || 'Failed to retrieve key');
+                }
+            } catch(e) {
+                if (e.message !== 'cancelled') alert('Error: ' + e.message);
+            }
+        }
+
+        function updateActiveConnectorsBar() {
+            var bar = document.getElementById('active-connectors-bar');
+            if (!bar) return;
+            if (myConnectors.length === 0) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+            bar.style.display = 'flex';
+            bar.innerHTML = '';
+            myConnectors.forEach(function(conn) {
+                var chip = document.createElement('span');
+                chip.className = 'active-connector-chip';
+                chip.title = 'Use ' + conn.name;
+                chip.innerHTML = conn.emoji + ' ' + conn.name + '<span class="chip-remove" onclick="event.stopPropagation();removeConnector(\'' + conn.id + '\')">&#x2715;</span>';
+                chip.onclick = function() { triggerConnectorQuery(conn.id, conn.name); };
+                bar.appendChild(chip);
+            });
+        }
+
+        async function triggerConnectorQuery(connId, connName) {
+            var userMsg = prompt('What do you want to do with ' + connName + '?\n\nExample: "list my 5 most recent items"');
+            if (!userMsg || !userMsg.trim()) return;
+            try {
+                var pwd = await connPwdPrompt('Authorize API Call', 'Enter your password to let ' + connName + ' execute this request.');
+                closeConnectorOverlay();
+                // Show user message in chat
+                addMessage(userMsg, 'user');
+                // Show loading
+                var loadingRow = addMessage('Connecting to ' + connName + '...', 'bot', 'gemini');
+                var token = getAuthToken();
+                var r = await fetch('/api/connector/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ connectorId: connId, userMessage: userMsg.trim(), password: pwd })
+                });
+                var d = await r.json();
+                // Remove loading message
+                if (loadingRow && loadingRow.parentNode) loadingRow.parentNode.removeChild(loadingRow);
+                if (r.ok) {
+                    addMessage(d.response, 'bot', 'gemini');
+                } else {
+                    addMessage('Connector error: ' + (d.error || 'Unknown error'), 'error');
+                }
+                // Show chat (hide dashboard)
+                var dash = document.getElementById('dashboard-home');
+                if (dash) dash.style.display = 'none';
+            } catch(e) {
+                if (e.message !== 'cancelled') addMessage('Connector error: ' + e.message, 'error');
+            }
+        }
+
+        // Load connectors on startup (after login)
+        var origLoadUI = typeof loadUI === 'function' ? loadUI : null;
+        (function() {
+            var origAfterLogin = typeof afterLogin === 'function' ? afterLogin : null;
+            if (origAfterLogin) {
+                afterLogin = function() {
+                    origAfterLogin.apply(this, arguments);
+                    loadConnectorTemplates();
+                    loadMyConnectors();
+                };
+            }
+            // Also try on DOMContentLoaded in case already logged in
+            document.addEventListener('DOMContentLoaded', function() {
+                if (getAuthToken()) { loadConnectorTemplates(); loadMyConnectors(); }
+            });
+            // Fallback: poll once after short delay
+            setTimeout(function() { if (getAuthToken()) { loadConnectorTemplates(); loadMyConnectors(); } }, 2000);
+        })();
+
     </script>
 </body>
 </html>`);
@@ -6464,6 +7060,163 @@ app.post('/admin/delete-user', requireAdminKey, (req, res) => {
   saveUserStore();
   log('INFO', `Admin deleted user: ${user}`, req.id);
   res.json({ success: true, message: `${user} deleted` });
+});
+
+// ============================================
+// CONNECTOR ENDPOINTS
+// ============================================
+
+// GET /api/connectors - list user's connectors (no keys)
+app.get('/api/connectors', requireLogin, (req, res) => {
+  const username = req.authenticatedUser;
+  const list = connectorStore
+    .filter(c => c.addedBy === username)
+    .map(c => ({
+      id: c.id, templateId: c.templateId, name: c.name, emoji: c.emoji,
+      category: c.category, apiKeyLabel: c.apiKeyLabel, addedAt: c.addedAt,
+      hasKey: !!c.encryptedKey
+    }));
+  res.json({ connectors: list });
+});
+
+// GET /api/connector-templates - all 50 templates (no keys)
+app.get('/api/connector-templates', requireLogin, (req, res) => {
+  res.json({ templates: CONNECTOR_TEMPLATES.map(t => ({
+    id: t.id, name: t.name, emoji: t.emoji, category: t.category, apiKeyLabel: t.apiKeyLabel
+  }))});
+});
+
+// POST /api/connectors - add a connector
+app.post('/api/connectors', requireLogin, async (req, res) => {
+  const username = req.authenticatedUser;
+  const { templateId, password, apiKey, customName, customBaseUrl, customCapabilities } = req.body;
+  if (!templateId || !password || !apiKey) {
+    return res.status(400).json({ error: 'templateId, password, and apiKey are required' });
+  }
+  const user = userStore.users.find(u => u.username === username);
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+  const template = CONNECTOR_TEMPLATES.find(t => t.id === templateId);
+  if (!template) return res.status(400).json({ error: 'Unknown template ID' });
+  const existing = connectorStore.find(c => c.templateId === templateId && c.addedBy === username);
+  if (existing) return res.status(409).json({ error: 'Connector already added' });
+  const encryptedKey = encryptConnectorKey(apiKey);
+  const entry = {
+    id: crypto.randomBytes(16).toString('hex'),
+    templateId,
+    name: templateId === 'custom' ? (customName || 'Custom Connector') : template.name,
+    emoji: template.emoji,
+    category: template.category,
+    apiKeyLabel: template.apiKeyLabel,
+    baseUrl: templateId === 'custom' ? (customBaseUrl || '') : template.baseUrl,
+    capabilities: templateId === 'custom' ? (customCapabilities || '') : template.capabilities,
+    encryptedKey,
+    addedBy: username,
+    addedAt: Date.now()
+  };
+  connectorStore.push(entry);
+  saveConnectorStore();
+  log('INFO', `Connector added: ${entry.name} by ${username}`, req.id);
+  res.json({ success: true, connector: { id: entry.id, templateId, name: entry.name, emoji: entry.emoji, category: entry.category, addedAt: entry.addedAt, hasKey: true } });
+});
+
+// DELETE /api/connectors/:id
+app.delete('/api/connectors/:id', requireLogin, (req, res) => {
+  const username = req.authenticatedUser;
+  const idx = connectorStore.findIndex(c => c.id === req.params.id && c.addedBy === username);
+  if (idx === -1) return res.status(404).json({ error: 'Connector not found' });
+  connectorStore.splice(idx, 1);
+  saveConnectorStore();
+  res.json({ success: true });
+});
+
+// POST /api/connectors/:id/key - reveal key (password required)
+app.post('/api/connectors/:id/key', requireLogin, (req, res) => {
+  const username = req.authenticatedUser;
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  const user = userStore.users.find(u => u.username === username);
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+  const conn = connectorStore.find(c => c.id === req.params.id && c.addedBy === username);
+  if (!conn) return res.status(404).json({ error: 'Connector not found' });
+  try {
+    const key = decryptConnectorKey(conn.encryptedKey);
+    res.json({ key });
+  } catch (e) {
+    res.status(500).json({ error: 'Could not decrypt key' });
+  }
+});
+
+// POST /api/connector/execute - run a connector query
+app.post('/api/connector/execute', requireLogin, async (req, res) => {
+  const username = req.authenticatedUser;
+  const { connectorId, userMessage, password } = req.body;
+  if (!connectorId || !userMessage || !password) {
+    return res.status(400).json({ error: 'connectorId, userMessage, and password are required' });
+  }
+  const user = userStore.users.find(u => u.username === username);
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+  const conn = connectorStore.find(c => c.id === connectorId && c.addedBy === username);
+  if (!conn) return res.status(404).json({ error: 'Connector not found' });
+  let apiKey;
+  try {
+    apiKey = decryptConnectorKey(conn.encryptedKey);
+  } catch (e) {
+    return res.status(500).json({ error: 'Could not decrypt API key' });
+  }
+  // Step 1: Gemini generates the API call
+  const genPrompt = 'You are an API agent for a construction business app. The user wants: "' + userMessage + '". API: ' + conn.name + ' at base URL: ' + (conn.baseUrl || 'user-defined') + '. Capabilities: ' + conn.capabilities + '. API key/token value: ' + apiKey + '. Generate ONE specific API call as a JSON object with fields: method (string), url (full URL), headers (object), body (object or null). Return ONLY the raw JSON object, no markdown fences, no explanation.';
+  let apiCallJson;
+  try {
+    const raw = await callGemini(genPrompt, 20000);
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON in response');
+    apiCallJson = JSON.parse(match[0]);
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to generate API call: ' + e.message });
+  }
+  // Security: validate URL starts with connector baseUrl (skip for dynamic URLs)
+  if (conn.baseUrl && !conn.baseUrl.includes('YOUR-') && !conn.baseUrl.includes('xyzproject')) {
+    if (!apiCallJson.url || !apiCallJson.url.startsWith(conn.baseUrl)) {
+      return res.status(400).json({ error: 'Security: generated URL does not match connector base URL' });
+    }
+  }
+  // Step 2: Execute the API call
+  let apiResponse;
+  try {
+    const fetchOpts = {
+      method: (apiCallJson.method || 'GET').toUpperCase(),
+      headers: apiCallJson.headers || {}
+    };
+    if (apiCallJson.body && fetchOpts.method !== 'GET') {
+      fetchOpts.body = JSON.stringify(apiCallJson.body);
+      if (!fetchOpts.headers['Content-Type']) fetchOpts.headers['Content-Type'] = 'application/json';
+    }
+    const controller = new AbortController();
+    const tmo = setTimeout(() => controller.abort(), 15000);
+    fetchOpts.signal = controller.signal;
+    const resp = await fetch(apiCallJson.url, fetchOpts);
+    clearTimeout(tmo);
+    const text = await resp.text();
+    apiResponse = text.length > 8000 ? text.slice(0, 8000) + '... [truncated]' : text;
+  } catch (e) {
+    return res.status(500).json({ error: 'API request failed: ' + e.message });
+  }
+  // Step 3: Gemini formats the response
+  const formatPrompt = 'The user asked: "' + userMessage + '". The ' + conn.name + ' API returned: ' + apiResponse + '. Summarize this clearly and helpfully. If there is an error, explain what went wrong. Focus on information relevant to the user\'s request.';
+  let formatted;
+  try {
+    formatted = await callGemini(formatPrompt, 20000);
+  } catch (e) {
+    formatted = 'API call completed. Raw response: ' + apiResponse.slice(0, 500);
+  }
+  log('INFO', `Connector executed: ${conn.name} by ${username}`, req.id);
+  res.json({ response: formatted, connectorName: conn.name });
 });
 
 // ============================================
