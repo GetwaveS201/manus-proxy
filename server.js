@@ -2436,44 +2436,48 @@ app.get('/', (req, res) => {
         .active-connector-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 8px; background: var(--accent-lo); border: 1px solid rgba(124,58,237,0.25); border-radius: 20px; font-size: 11px; color: var(--accent); cursor: pointer; transition: background 0.15s; }
         .active-connector-chip:hover { background: rgba(124,58,237,0.15); }
         .active-connector-chip .chip-remove { margin-left: 4px; opacity: 0.6; font-size: 12px; line-height: 1; }
-        .connector-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .connector-panel { background: var(--bg-card); border-radius: 16px; box-shadow: var(--shadow-lg); width: 640px; max-width: 94vw; max-height: 82vh; display: flex; flex-direction: column; overflow: hidden; }
-        .connector-panel-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .connector-panel-title { font-size: 16px; font-weight: 700; color: var(--text); }
-        .connector-panel-close { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; border-radius: 6px; font-size: 18px; line-height: 1; display: flex; align-items: center; }
+        .connector-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .connector-panel { background: var(--bg-card); border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,0.4); border: 1px solid var(--border-mid); width: 760px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+        .connector-panel-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0; gap: 12px; }
+        .connector-panel-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+        .connector-panel-subtitle { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+        .connector-panel-close { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 6px; border-radius: 6px; font-size: 18px; line-height: 1; display: flex; align-items: center; flex-shrink: 0; transition: color 0.15s, background 0.15s; }
         .connector-panel-close:hover { color: var(--text); background: var(--bg-raised); }
-        .connector-search { margin: 12px 16px 0; padding: 8px 12px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-raised); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; width: calc(100% - 32px); }
+        .connector-tabs-search-row { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 16px; }
+        .connector-cat-tabs { display: flex; gap: 0; overflow-x: auto; flex-shrink: 1; }
+        .connector-cat-tab { padding: 12px 14px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text-dim); white-space: nowrap; transition: color 0.15s, border-color 0.15s; margin-bottom: -1px; }
+        .connector-cat-tab:hover { color: var(--text); }
+        .connector-cat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .connector-search { padding: 7px 12px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-raised); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; width: 200px; flex-shrink: 0; margin: 10px 0; }
         .connector-search:focus { border-color: var(--accent); }
-        .connector-cat-tabs { padding: 10px 16px 0; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
-        .connector-cat-tab { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-raised); color: var(--text-mid); transition: all 0.12s; }
-        .connector-cat-tab:hover, .connector-cat-tab.active { background: var(--accent-lo); border-color: rgba(124,58,237,0.3); color: var(--accent); }
-        .connector-list-scroll { flex: 1; overflow-y: auto; padding: 12px 16px 16px; }
-        .connector-section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); margin: 12px 0 8px; }
-        .connector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .connector-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: all 0.12s; position: relative; }
-        .connector-card:hover { border-color: var(--accent); box-shadow: var(--shadow); }
-        .connector-card.connected { border-color: rgba(5,150,105,0.4); background: rgba(5,150,105,0.04); }
-        .connector-card-emoji { font-size: 20px; line-height: 1; margin-bottom: 2px; }
-        .connector-card-name { font-size: 12px; font-weight: 600; color: var(--text); }
-        .connector-card-cat { font-size: 10px; color: var(--text-dim); }
-        .connector-card-badge { position: absolute; top: 8px; right: 8px; font-size: 10px; background: rgba(5,150,105,0.12); color: #059669; border-radius: 4px; padding: 1px 5px; font-weight: 600; }
-        .connector-add-drawer { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); display: none; }
-        .connector-add-drawer.open { display: block; }
-        .connector-add-drawer-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
-        .connector-field-label { font-size: 11px; color: var(--text-mid); font-weight: 500; margin-bottom: 4px; }
-        .connector-field-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-raised); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; box-sizing: border-box; margin-bottom: 8px; }
-        .connector-field-input:focus { border-color: var(--accent); }
-        .connector-add-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+        .connector-list-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 24px; }
+        .connector-section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); margin: 0 0 12px; }
+        .connector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .connector-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; position: relative; }
+        .connector-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(124,58,237,0.1); }
+        .connector-card.connected { border-color: rgba(5,150,105,0.4); background: rgba(5,150,105,0.03); }
+        .connector-card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+        .connector-card-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--bg-hover); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+        .connector-card-info { flex: 1; min-width: 0; padding-top: 2px; }
+        .connector-card-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+        .connector-card-cat { font-size: 11px; color: var(--text-dim); }
+        .connector-card-caps { font-size: 12px; color: var(--text-mid); line-height: 1.5; margin-left: 52px; }
+        .connector-card-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: var(--green-lo); color: var(--green); }
+        .connector-card-actions { display: flex; gap: 6px; margin-top: 10px; margin-left: 52px; }
+        .connector-connected-badge { font-size: 11px; background: var(--green-lo); color: var(--green); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
+        .connector-add-drawer { margin-top: 10px; margin-left: 52px; padding-top: 10px; border-top: 1px solid var(--border); display: none; }
         .connector-add-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans); transition: opacity 0.15s; }
         .connector-add-btn:hover { opacity: 0.9; }
         .connector-add-btn:disabled { opacity: 0.5; cursor: default; }
-        .connector-cancel-btn { background: var(--bg-raised); color: var(--text-mid); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; font-family: var(--sans); }
         .connector-err { font-size: 11px; color: var(--red); margin-top: 4px; }
-        .connector-remove-btn { font-size: 11px; color: var(--red); background: var(--red-lo); border: 1px solid rgba(220,38,38,0.2); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-family: var(--sans); margin-top: 6px; display: inline-block; }
+        .connector-remove-btn { font-size: 12px; color: var(--red); background: var(--red-lo); border: 1px solid rgba(220,38,38,0.2); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: var(--sans); }
         .connector-remove-btn:hover { background: rgba(220,38,38,0.15); }
-        .connector-show-key-btn { font-size: 11px; color: var(--text-mid); background: var(--bg-raised); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-family: var(--sans); margin-top: 6px; display: inline-block; }
-        .connector-key-reveal { font-size: 11px; color: var(--text-mid); background: var(--bg-raised); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-top: 6px; word-break: break-all; display: none; }
+        .connector-reveal-btn { font-size: 12px; color: var(--text-mid); background: var(--bg-hover); border: 1px solid var(--border-mid); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: var(--sans); }
+        .connector-reveal-btn:hover { background: var(--bg-raised); }
+        .connector-key-reveal { font-size: 11px; color: var(--text-mid); background: var(--bg-hover); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-top: 6px; word-break: break-all; display: none; }
         .connector-key-reveal.visible { display: block; }
+        .conn-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border-mid); border-radius: 8px; background: var(--bg-hover); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; box-sizing: border-box; margin-bottom: 8px; }
+        .conn-input:focus { border-color: var(--accent); }
         .conn-pwd-modal { position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 1100; display: flex; align-items: center; justify-content: center; }
         .conn-pwd-card { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 24px; width: 340px; max-width: 94vw; }
         .conn-pwd-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
@@ -3165,11 +3169,16 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
     <div id="connector-overlay" class="connector-overlay" style="display:none" onclick="connectorOverlayBgClick(event)">
         <div class="connector-panel" id="connector-panel-inner">
             <div class="connector-panel-header">
-                <span class="connector-panel-title">Connectors</span>
+                <div>
+                    <div class="connector-panel-title">Connections</div>
+                    <div class="connector-panel-subtitle">Connect your APIs and services to your AI assistant.</div>
+                </div>
                 <button class="connector-panel-close" onclick="closeConnectorOverlay()" aria-label="Close">&#x2715;</button>
             </div>
-            <input id="connector-search" class="connector-search" type="text" placeholder="Search connectors..." oninput="renderConnectorGrid()" autocomplete="off">
-            <div id="connector-tabs" class="connector-cat-tabs"></div>
+            <div class="connector-tabs-search-row">
+                <div id="connector-tabs" class="connector-cat-tabs"></div>
+                <input id="connector-search" class="connector-search" type="text" placeholder="Search..." oninput="renderConnectorGrid()" autocomplete="off">
+            </div>
             <div class="connector-list-scroll" id="connector-list-scroll">
                 <div id="connector-grid" class="connector-grid"></div>
             </div>
@@ -6225,20 +6234,23 @@ function renderConnectorGrid(filterText, filterCat) {
 
 function buildTemplateCard(t, conn) {
   var connId = conn ? conn.id : null;
-  return '<div class="connector-card" id="cc-' + t.id + '">' +
+  var capsText = t.capabilities ? t.capabilities.substring(0, 110) + (t.capabilities.length > 110 ? '...' : '') : '';
+  return '<div class="connector-card' + (conn ? ' connected' : '') + '" id="cc-' + t.id + '">' +
+    (conn ? '<span class="connector-card-badge">&#10003; Connected</span>' : '') +
     '<div class="connector-card-top">' +
-    '<span class="connector-card-emoji">' + t.emoji + '</span>' +
-    '<div class="connector-card-info"><div class="connector-card-name">' + t.name + '</div>' +
-    '<div class="connector-card-cat">' + t.category + '</div></div>' +
+    '<div class="connector-card-icon">' + t.emoji + '</div>' +
+    '<div class="connector-card-info">' +
+    '<div class="connector-card-name">' + t.name + '</div>' +
+    '<div class="connector-card-cat">' + t.category + '</div>' +
     '</div>' +
-    '<div class="connector-card-caps">' + t.capabilities.substring(0, 80) + '...</div>' +
+    '</div>' +
+    '<div class="connector-card-caps">' + capsText + '</div>' +
     (conn
       ? '<div class="connector-card-actions">' +
-        '<span class="connector-connected-badge">Connected</span>' +
         '<button class="connector-reveal-btn" data-cid="' + connId + '" data-name="' + (t.name || '').replace(/"/g, '') + '" onclick="revealConnectorKey(this.dataset.cid, this.dataset.name)">Show Key</button>' +
         '<button class="connector-remove-btn" data-cid="' + connId + '" data-tid="' + t.id + '" onclick="removeConnector(this.dataset.cid, this.dataset.tid)">Remove</button>' +
         '</div>'
-      : '<button class="connector-add-btn" data-tmpl="' + t.id + '" onclick="toggleDrawer(this.dataset.tmpl)">Add</button>'
+      : '<div class="connector-card-actions"><button class="connector-add-btn" data-tmpl="' + t.id + '" onclick="toggleDrawer(this.dataset.tmpl)">Connect</button></div>'
     ) +
     '<div class="connector-add-drawer" id="drawer-' + t.id + '" style="display:none">' + buildAddDrawerHTML(t) + '</div>' +
     '</div>';
