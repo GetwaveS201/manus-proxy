@@ -5833,7 +5833,11 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var btnLabel = document.getElementById(tool + '-send-btn-label');
             var statusEl = document.getElementById(tool + '-send-status');
 
-            if (!to || !subject || !body.trim()) {
+            if (!body.trim()) {
+                showSettingsToast('Generate the email first, then click Send Email');
+                return;
+            }
+            if (!to || !subject) {
                 showSettingsToast('Fill in recipient email and subject');
                 return;
             }
@@ -7434,8 +7438,9 @@ app.post('/send-email', requireLogin, async (req, res) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       return res.status(400).json({ error: 'Invalid recipient email address' });
     }
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-      return res.status(503).json({ error: 'Email not configured. Add SMTP_HOST, SMTP_USER, SMTP_PASS environment variables.' });
+    const smtpCfg = getEffectiveSmtp();
+    if (!smtpCfg.configured) {
+      return res.status(503).json({ error: 'Email not configured. Go to Settings → Email Connection to set up SMTP.' });
     }
     await sendMail({ to, subject, text: body, html: body.replace(/\n/g, '<br>') });
     log('INFO', `Email sent to ${to} by ${req.authenticatedUser}`, requestId);
