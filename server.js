@@ -3373,7 +3373,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             <!-- Optional notes -->
             <div class="tool-field">
                 <label for="invoice-notes-input">Additional Context (optional)</label>
-                <textarea id="invoice-notes-input" placeholder="Client name, project name, invoice number, any special circumstances..." rows="3"></textarea>
+                <textarea id="invoice-notes-input" placeholder="Client name, project name, invoice number, any special circumstances..." rows="3" oninput="updateEscalationBadge()"></textarea>
             </div>
 
             <!-- Generate button -->
@@ -4967,10 +4967,12 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         }
 
         async function generateInvoiceFollowup() {
-            if (!invoiceFileContent) { alert('Please upload an invoice file first.'); return; }
-
             const days = parseInt(document.getElementById('invoice-days-input')?.value, 10);
             const notes = document.getElementById('invoice-notes-input')?.value.trim() || '';
+            // Allow generating from notes/tracker selection even without a file upload
+            const contextToSend = invoiceFileContent || (notes ? '[Invoice details: ' + notes + ']' : '');
+            if (!contextToSend) { alert('Please select a saved invoice, upload an invoice file, or fill in the Additional Context field.'); return; }
+
             const outputEl = document.getElementById('invoice-output');
             const outputBody = document.getElementById('invoice-output-body');
             const generateBtn = document.getElementById('invoice-generate-btn');
@@ -4997,7 +4999,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 const res = await fetch('/generate-invoice-followup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (getAuthToken() || '') },
-                    body: JSON.stringify({ invoiceContent: invoiceFileContent, fileName: invoiceFileName, daysOverdue: isNaN(days) ? 0 : days, escalationTone: level.tone, additionalNotes: notes, customSystemPrompt: customPrompt })
+                    body: JSON.stringify({ invoiceContent: contextToSend, fileName: invoiceFileName, daysOverdue: isNaN(days) ? 0 : days, escalationTone: level.tone, additionalNotes: notes, customSystemPrompt: customPrompt })
                 });
                 thinkingEl.style.display = 'none';
                 if (outputBody) outputBody.style.display = '';
