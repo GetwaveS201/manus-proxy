@@ -3133,11 +3133,10 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 <span class="connector-panel-title">Connectors</span>
                 <button class="connector-panel-close" onclick="closeConnectorOverlay()" aria-label="Close">&#x2715;</button>
             </div>
-            <input id="connector-search" class="connector-search" type="text" placeholder="Search connectors..." oninput="filterConnectors()" autocomplete="off">
-            <div id="connector-cat-tabs" class="connector-cat-tabs"></div>
+            <input id="connector-search" class="connector-search" type="text" placeholder="Search connectors..." oninput="renderConnectorGrid()" autocomplete="off">
+            <div id="connector-tabs" class="connector-cat-tabs"></div>
             <div class="connector-list-scroll" id="connector-list-scroll">
-                <div id="connector-grid-my"></div>
-                <div id="connector-grid-all"></div>
+                <div id="connector-grid" class="connector-grid"></div>
             </div>
         </div>
     </div>
@@ -6133,7 +6132,7 @@ function renderConnectorGrid(filterText, filterCat) {
   var tabsEl = document.getElementById('connector-tabs');
   if (tabsEl) {
     tabsEl.innerHTML = cats.map(function(c) {
-      return '<button class="connector-cat-tab' + (c === cat ? ' active' : '') + '" onclick="filterConnectorCat(\\'' + c.replace(/'/g, "\\\\'") + '\\')">' + c + '</button>';
+      return '<button class="connector-cat-tab' + (c === cat ? ' active' : '') + '" data-cat="' + c.replace(/"/g, '') + '" onclick="filterConnectorCat(this.dataset.cat)">' + c + '</button>';
     }).join('');
   }
 
