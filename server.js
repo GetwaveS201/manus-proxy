@@ -6516,412 +6516,292 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             };
         })();
 
-        // ============================================================
-        // CONNECTORS SYSTEM
-        // ============================================================
-
-        var connTemplates = [];      // 50 templates from server
-        var myConnectors = [];       // user's added connectors
-        var connFilterCat = 'All';
-        var connSearchQ = '';
-        var openDrawerId = null;     // templateId with drawer open
-
-        // password modal state
-        var connPwdResolve = null;
-        var connPwdReject = null;
-
-        function connPwdPrompt(title, desc) {
-            return new Promise(function(resolve, reject) {
-                connPwdResolve = resolve;
-                connPwdReject = reject;
-                document.getElementById('conn-pwd-title').textContent = title || 'Confirm with Password';
-                document.getElementById('conn-pwd-desc').textContent = desc || 'Enter your account password to continue.';
-                document.getElementById('conn-pwd-input').value = '';
-                document.getElementById('conn-pwd-err').textContent = '';
-                document.getElementById('conn-pwd-modal').style.display = 'flex';
-                setTimeout(function() { document.getElementById('conn-pwd-input').focus(); }, 50);
-            });
-        }
-        function connPwdConfirm() {
-            var val = document.getElementById('conn-pwd-input').value;
-            if (!val) { document.getElementById('conn-pwd-err').textContent = 'Password required'; return; }
-            document.getElementById('conn-pwd-modal').style.display = 'none';
-            if (connPwdResolve) { connPwdResolve(val); connPwdResolve = null; connPwdReject = null; }
-        }
-        function connPwdCancel() {
-            document.getElementById('conn-pwd-modal').style.display = 'none';
-            if (connPwdReject) { connPwdReject(new Error('cancelled')); connPwdResolve = null; connPwdReject = null; }
-        }
-        setTimeout(function() {
-            var inp = document.getElementById('conn-pwd-input');
-            if (inp) {
-                inp.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') connPwdConfirm();
-                    if (e.key === 'Escape') connPwdCancel();
-                });
-            }
-        }, 100);
-
-        async function loadConnectorTemplates() {
-            try {
-                var token = getAuthToken();
-                var r = await fetch('/api/connector-templates', { headers: { 'Authorization': 'Bearer ' + token } });
-                if (r.ok) { var d = await r.json(); connTemplates = d.templates || []; }
-            } catch(e) {}
-        }
-
-        async function loadMyConnectors() {
-            try {
-                var token = getAuthToken();
-                var r = await fetch('/api/connectors', { headers: { 'Authorization': 'Bearer ' + token } });
-                if (r.ok) { var d = await r.json(); myConnectors = d.connectors || []; updateActiveConnectorsBar(); }
-            } catch(e) {}
-        }
-
-        function openConnectorOverlay() {
-            document.getElementById('connector-overlay').style.display = 'flex';
-            document.getElementById('connector-search').value = '';
-            connSearchQ = '';
-            connFilterCat = 'All';
-            openDrawerId = null;
-            if (connTemplates.length === 0) {
-                loadConnectorTemplates().then(function() { loadMyConnectors().then(renderConnectorOverlay); });
-            } else {
-                loadMyConnectors().then(renderConnectorOverlay);
-            }
-        }
-
-        function closeConnectorOverlay() {
-            document.getElementById('connector-overlay').style.display = 'none';
-            openDrawerId = null;
-        }
-
-        function connectorOverlayBgClick(e) {
-            if (e.target === document.getElementById('connector-overlay')) closeConnectorOverlay();
-        }
-
-        function filterConnectors() {
-            connSearchQ = document.getElementById('connector-search').value.toLowerCase();
-            renderConnectorOverlay();
-        }
-
-        function setCatFilter(cat) {
-            connFilterCat = cat;
-            connSearchQ = document.getElementById('connector-search').value.toLowerCase();
-            renderConnectorOverlay();
-        }
-
-        function renderConnectorOverlay() {
-            // Category tabs
-            var allCats = ['All'];
-            connTemplates.forEach(function(t) { if (allCats.indexOf(t.category) === -1) allCats.push(t.category); });
-            var tabsEl = document.getElementById('connector-cat-tabs');
-            tabsEl.innerHTML = '';
-            allCats.forEach(function(cat) {
-                var btn = document.createElement('button');
-                btn.className = 'connector-cat-tab' + (connFilterCat === cat ? ' active' : '');
-                btn.textContent = cat;
-                btn.onclick = function() { setCatFilter(cat); };
-                tabsEl.appendChild(btn);
-            });
-
-            // Filter templates
-            var filtered = connTemplates.filter(function(t) {
-                var matchCat = connFilterCat === 'All' || t.category === connFilterCat;
-                var matchQ = !connSearchQ || t.name.toLowerCase().indexOf(connSearchQ) !== -1 || t.category.toLowerCase().indexOf(connSearchQ) !== -1;
-                return matchCat && matchQ;
-            });
-
-            // My connectors section
-            var myEl = document.getElementById('connector-grid-my');
-            var myFiltered = myConnectors.filter(function(c) {
-                return !connSearchQ || c.name.toLowerCase().indexOf(connSearchQ) !== -1;
-            });
-            if (myFiltered.length > 0 && (connFilterCat === 'All' || myFiltered.some(function(c){ return c.category === connFilterCat; }))) {
-                var myLabel = document.createElement('div');
-                myLabel.className = 'connector-section-label';
-                myLabel.textContent = 'My Connectors';
-                myEl.innerHTML = '';
-                myEl.appendChild(myLabel);
-                var myGrid = document.createElement('div');
-                myGrid.className = 'connector-grid';
-                myFiltered.forEach(function(conn) {
-                    if (connFilterCat !== 'All' && conn.category !== connFilterCat) return;
-                    myGrid.appendChild(buildConnectedCard(conn));
-                });
-                myEl.appendChild(myGrid);
-            } else {
-                myEl.innerHTML = '';
-            }
-
-            // All templates section
-            var allEl = document.getElementById('connector-grid-all');
-            allEl.innerHTML = '';
-            if (filtered.length > 0) {
-                var allLabel = document.createElement('div');
-                allLabel.className = 'connector-section-label';
-                allLabel.textContent = connFilterCat === 'All' ? 'All Connectors' : connFilterCat;
-                allEl.appendChild(allLabel);
-                var allGrid = document.createElement('div');
-                allGrid.className = 'connector-grid';
-                filtered.forEach(function(t) {
-                    // skip if already connected (show in My Connectors)
-                    var already = myConnectors.find(function(c) { return c.templateId === t.id; });
-                    allGrid.appendChild(buildTemplateCard(t, !!already));
-                });
-                allEl.appendChild(allGrid);
-            }
-        }
-
-        function buildTemplateCard(t, connected) {
-            var card = document.createElement('div');
-            card.className = 'connector-card' + (connected ? ' connected' : '');
-            card.id = 'conn-tpl-' + t.id;
-            var emojiEl = document.createElement('div');
-            emojiEl.className = 'connector-card-emoji';
-            emojiEl.textContent = t.emoji;
-            var nameEl = document.createElement('div');
-            nameEl.className = 'connector-card-name';
-            nameEl.textContent = t.name;
-            var catEl = document.createElement('div');
-            catEl.className = 'connector-card-cat';
-            catEl.textContent = t.category;
-            card.appendChild(emojiEl);
-            card.appendChild(nameEl);
-            card.appendChild(catEl);
-            if (connected) {
-                var badge = document.createElement('div');
-                badge.className = 'connector-card-badge';
-                badge.textContent = 'Connected';
-                card.appendChild(badge);
-            } else {
-                // Add drawer
-                var drawer = document.createElement('div');
-                drawer.className = 'connector-add-drawer' + (openDrawerId === t.id ? ' open' : '');
-                drawer.id = 'drawer-' + t.id;
-                drawer.innerHTML = buildAddDrawerHTML(t);
-                card.appendChild(drawer);
-                card.onclick = function(e) {
-                    if (e.target.closest('.connector-add-drawer')) return;
-                    toggleDrawer(t.id);
-                };
-            }
-            return card;
-        }
-
-        function buildConnectedCard(conn) {
-            var card = document.createElement('div');
-            card.className = 'connector-card connected';
-            card.id = 'conn-my-' + conn.id;
-            var emojiEl = document.createElement('div');
-            emojiEl.className = 'connector-card-emoji';
-            emojiEl.textContent = conn.emoji;
-            var nameEl = document.createElement('div');
-            nameEl.className = 'connector-card-name';
-            nameEl.textContent = conn.name;
-            var catEl = document.createElement('div');
-            catEl.className = 'connector-card-cat';
-            catEl.textContent = conn.category;
-            var badge = document.createElement('div');
-            badge.className = 'connector-card-badge';
-            badge.textContent = 'Connected';
-            card.appendChild(emojiEl);
-            card.appendChild(nameEl);
-            card.appendChild(catEl);
-            card.appendChild(badge);
-            // Actions row
-            var removeBtn = document.createElement('button');
-            removeBtn.className = 'connector-remove-btn';
-            removeBtn.textContent = 'Remove';
-            removeBtn.onclick = function(e) { e.stopPropagation(); removeConnector(conn.id); };
-            card.appendChild(removeBtn);
-            var showKeyBtn = document.createElement('button');
-            showKeyBtn.className = 'connector-show-key-btn';
-            showKeyBtn.style.marginLeft = '6px';
-            showKeyBtn.textContent = 'Show Key';
-            var keyReveal = document.createElement('div');
-            keyReveal.className = 'connector-key-reveal';
-            keyReveal.id = 'keyreveal-' + conn.id;
-            showKeyBtn.onclick = function(e) {
-                e.stopPropagation();
-                revealConnectorKey(conn.id, keyReveal, showKeyBtn);
-            };
-            card.appendChild(showKeyBtn);
-            card.appendChild(keyReveal);
-            return card;
-        }
-
-        function buildAddDrawerHTML(t) {
-            var customFields = t.id === 'custom' ? '<div class="connector-field-label">Connector Name</div><input class="connector-field-input" id="cust-name-' + t.id + '" placeholder="e.g. My API" autocomplete="off"><div class="connector-field-label">Base URL</div><input class="connector-field-input" id="cust-url-' + t.id + '" placeholder="https://api.example.com/v1" autocomplete="off"><div class="connector-field-label">Capabilities (describe what it can do)</div><input class="connector-field-input" id="cust-cap-' + t.id + '" placeholder="List users, create records, etc." autocomplete="off">' : '';
-            return '<div class="connector-add-drawer-title">Add ' + t.name + '</div>' + customFields + '<div class="connector-field-label">' + t.apiKeyLabel + '</div><input class="connector-field-input" id="apikey-' + t.id + '" type="password" placeholder="Paste your key here" autocomplete="off"><div class="connector-field-label">Your Password (to encrypt the key)</div><input class="connector-field-input" id="connpwd-' + t.id + '" type="password" placeholder="Your account password" autocomplete="off"><div class="connector-err" id="conn-err-' + t.id + '"></div><div class="connector-add-row"><button class="connector-add-btn" onclick="saveConnector(\\'' + t.id + '\\')">Save Connector</button><button class="connector-cancel-btn" onclick="toggleDrawer(\\'' + t.id + '\\')">Cancel</button></div>';
-        }
-
-        function toggleDrawer(templateId) {
-            if (openDrawerId === templateId) {
-                openDrawerId = null;
-            } else {
-                openDrawerId = templateId;
-            }
-            renderConnectorOverlay();
-            // Scroll drawer into view
-            setTimeout(function() {
-                var d = document.getElementById('drawer-' + templateId);
-                if (d && openDrawerId === templateId) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 50);
-        }
-
-        async function saveConnector(templateId) {
-            var apiKey = document.getElementById('apikey-' + templateId);
-            var pwd = document.getElementById('connpwd-' + templateId);
-            var errEl = document.getElementById('conn-err-' + templateId);
-            if (!apiKey || !apiKey.value.trim()) { errEl.textContent = 'API key is required'; return; }
-            if (!pwd || !pwd.value.trim()) { errEl.textContent = 'Password is required'; return; }
-            errEl.textContent = '';
-            var body = { templateId: templateId, apiKey: apiKey.value.trim(), password: pwd.value };
-            if (templateId === 'custom') {
-                var custName = document.getElementById('cust-name-' + templateId);
-                var custUrl = document.getElementById('cust-url-' + templateId);
-                var custCap = document.getElementById('cust-cap-' + templateId);
-                body.customName = custName ? custName.value.trim() : '';
-                body.customBaseUrl = custUrl ? custUrl.value.trim() : '';
-                body.customCapabilities = custCap ? custCap.value.trim() : '';
-                if (!body.customBaseUrl) { errEl.textContent = 'Base URL is required for custom connectors'; return; }
-                if (!body.customCapabilities) { errEl.textContent = 'Capabilities description is required'; return; }
-            }
-            var addBtn = document.querySelector('#drawer-' + templateId + ' .connector-add-btn');
-            if (addBtn) { addBtn.disabled = true; addBtn.textContent = 'Saving...'; }
-            try {
-                var token = getAuthToken();
-                var r = await fetch('/api/connectors', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify(body)
-                });
-                var d = await r.json();
-                if (r.ok) {
-                    openDrawerId = null;
-                    await loadMyConnectors();
-                    renderConnectorOverlay();
-                } else {
-                    errEl.textContent = d.error || 'Failed to save connector';
-                    if (addBtn) { addBtn.disabled = false; addBtn.textContent = 'Save Connector'; }
-                }
-            } catch(e) {
-                errEl.textContent = 'Network error';
-                if (addBtn) { addBtn.disabled = false; addBtn.textContent = 'Save Connector'; }
-            }
-        }
-
-        async function removeConnector(connId) {
-            if (!confirm('Remove this connector? The API key will be deleted.')) return;
-            try {
-                var token = getAuthToken();
-                await fetch('/api/connectors/' + connId, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                await loadMyConnectors();
-                renderConnectorOverlay();
-            } catch(e) {}
-        }
-
-        async function revealConnectorKey(connId, revealEl, btnEl) {
-            if (revealEl.classList.contains('visible')) {
-                revealEl.classList.remove('visible');
-                btnEl.textContent = 'Show Key';
-                return;
-            }
-            try {
-                var pwd = await connPwdPrompt('Show API Key', 'Enter your password to reveal the stored API key.');
-                var token = getAuthToken();
-                var r = await fetch('/api/connectors/' + connId + '/key', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ password: pwd })
-                });
-                var d = await r.json();
-                if (r.ok) {
-                    revealEl.textContent = d.key;
-                    revealEl.classList.add('visible');
-                    btnEl.textContent = 'Hide Key';
-                } else {
-                    alert(d.error || 'Failed to retrieve key');
-                }
-            } catch(e) {
-                if (e.message !== 'cancelled') alert('Error: ' + e.message);
-            }
-        }
-
-        function updateActiveConnectorsBar() {
-            var bar = document.getElementById('active-connectors-bar');
-            if (!bar) return;
-            if (myConnectors.length === 0) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
-            bar.style.display = 'flex';
-            bar.innerHTML = '';
-            myConnectors.forEach(function(conn) {
-                var chip = document.createElement('span');
-                chip.className = 'active-connector-chip';
-                chip.title = 'Use ' + conn.name;
-                chip.innerHTML = conn.emoji + ' ' + conn.name + '<span class="chip-remove" onclick="event.stopPropagation();removeConnector(\\'' + conn.id + '\\')">&#x2715;</span>';
-                chip.onclick = function() { triggerConnectorQuery(conn.id, conn.name); };
-                bar.appendChild(chip);
-            });
-        }
-
-        async function triggerConnectorQuery(connId, connName) {
-            var userMsg = prompt('What do you want to do with ' + connName + '?\\n\\nExample: "list my 5 most recent items"');
-            if (!userMsg || !userMsg.trim()) return;
-            try {
-                var pwd = await connPwdPrompt('Authorize API Call', 'Enter your password to let ' + connName + ' execute this request.');
-                closeConnectorOverlay();
-                // Show user message in chat
-                addMessage(userMsg, 'user');
-                // Show loading
-                var loadingRow = addMessage('Connecting to ' + connName + '...', 'bot', 'gemini');
-                var token = getAuthToken();
-                var r = await fetch('/api/connector/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ connectorId: connId, userMessage: userMsg.trim(), password: pwd })
-                });
-                var d = await r.json();
-                // Remove loading message
-                if (loadingRow && loadingRow.parentNode) loadingRow.parentNode.removeChild(loadingRow);
-                if (r.ok) {
-                    addMessage(d.response, 'bot', 'gemini');
-                } else {
-                    addMessage('Connector error: ' + (d.error || 'Unknown error'), 'error');
-                }
-                // Show chat (hide dashboard)
-                var dash = document.getElementById('dashboard-home');
-                if (dash) dash.style.display = 'none';
-            } catch(e) {
-                if (e.message !== 'cancelled') addMessage('Connector error: ' + e.message, 'error');
-            }
-        }
-
-        // Load connectors on startup (after login)
-        var origLoadUI = typeof loadUI === 'function' ? loadUI : null;
-        (function() {
-            var origAfterLogin = typeof afterLogin === 'function' ? afterLogin : null;
-            if (origAfterLogin) {
-                afterLogin = function() {
-                    origAfterLogin.apply(this, arguments);
-                    loadConnectorTemplates();
-                    loadMyConnectors();
-                };
-            }
-            // Also try on DOMContentLoaded in case already logged in
-            document.addEventListener('DOMContentLoaded', function() {
-                if (getAuthToken()) { loadConnectorTemplates(); loadMyConnectors(); }
-            });
-            // Fallback: poll once after short delay
-            setTimeout(function() { if (getAuthToken()) { loadConnectorTemplates(); loadMyConnectors(); } }, 2000);
-        })();
-
     </script>
+    <script src="/connector-js"></script>
 </body>
 </html>`);
+});
+
+// ============================================================
+// CONNECTOR JS ENDPOINT — served separately to avoid template literal escaping
+// ============================================================
+app.get('/connector-js', (req, res) => {
+  res.setHeader('Content-Type', 'text/javascript');
+  res.send(`
+// ============================================================
+// CONNECTORS SYSTEM
+// ============================================================
+var connTemplates = [];
+var myConnectors = [];
+var connOverlayOpen = false;
+var connPwdResolve = null;
+
+function connPwdPrompt(msg) {
+  return new Promise(function(resolve) {
+    connPwdResolve = resolve;
+    var modal = document.getElementById('conn-pwd-modal');
+    var label = document.getElementById('conn-pwd-label');
+    var input = document.getElementById('conn-pwd-input');
+    if (label) label.textContent = msg || 'Enter your password to continue:';
+    if (input) input.value = '';
+    if (modal) modal.style.display = 'flex';
+    if (input) setTimeout(function(){ input.focus(); }, 50);
+  });
+}
+
+function connPwdSubmit() {
+  var input = document.getElementById('conn-pwd-input');
+  var val = input ? input.value : '';
+  var modal = document.getElementById('conn-pwd-modal');
+  if (modal) modal.style.display = 'none';
+  if (connPwdResolve) { connPwdResolve(val); connPwdResolve = null; }
+}
+
+function connPwdCancel() {
+  var modal = document.getElementById('conn-pwd-modal');
+  if (modal) modal.style.display = 'none';
+  if (connPwdResolve) { connPwdResolve(null); connPwdResolve = null; }
+}
+
+(function() {
+  var input = document.getElementById('conn-pwd-input');
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') connPwdSubmit();
+      if (e.key === 'Escape') connPwdCancel();
+    });
+  }
+})();
+
+function openConnectorOverlay() {
+  connOverlayOpen = true;
+  var ov = document.getElementById('connector-overlay');
+  if (ov) ov.style.display = 'flex';
+  loadAndRenderConnectors();
+}
+
+function closeConnectorOverlay() {
+  connOverlayOpen = false;
+  var ov = document.getElementById('connector-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function connectorOverlayBgClick(e) {
+  if (e.target === document.getElementById('connector-overlay')) closeConnectorOverlay();
+}
+
+async function loadAndRenderConnectors() {
+  try {
+    var [tmplRes, myRes] = await Promise.all([
+      fetch('/api/connector-templates', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') } }),
+      fetch('/api/connectors', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') } })
+    ]);
+    if (tmplRes.ok) connTemplates = await tmplRes.json();
+    if (myRes.ok) myConnectors = await myRes.json();
+  } catch(e) { console.error('loadConnectors:', e); }
+  renderConnectorGrid();
+  updateActiveConnectorsBar();
+}
+
+function renderConnectorGrid(filterText, filterCat) {
+  var grid = document.getElementById('connector-grid');
+  if (!grid) return;
+  var search = (filterText || (document.getElementById('connector-search') || {}).value || '').toLowerCase();
+  var cat = filterCat || window._connActiveCat || 'All';
+
+  // Build set of connected template IDs
+  var connectedIds = {};
+  myConnectors.forEach(function(c) { connectedIds[c.templateId] = c; });
+
+  var cats = ['All'].concat([...new Set(connTemplates.map(function(t){ return t.category; }))]);
+  var tabsEl = document.getElementById('connector-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = cats.map(function(c) {
+      return '<button class="connector-cat-tab' + (c === cat ? ' active' : '') + '" onclick="filterConnectorCat(\\'' + c.replace(/'/g, "\\\\'") + '\\')">' + c + '</button>';
+    }).join('');
+  }
+
+  var filtered = connTemplates.filter(function(t) {
+    var matchCat = cat === 'All' || t.category === cat;
+    var matchSearch = !search || t.name.toLowerCase().includes(search) || t.category.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-muted);padding:24px;text-align:center;">No connectors found.</p>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(function(t) {
+    var conn = connectedIds[t.id];
+    return buildTemplateCard(t, conn);
+  }).join('');
+}
+
+function buildTemplateCard(t, conn) {
+  var connId = conn ? conn.id : null;
+  return '<div class="connector-card" id="cc-' + t.id + '">' +
+    '<div class="connector-card-top">' +
+    '<span class="connector-card-emoji">' + t.emoji + '</span>' +
+    '<div class="connector-card-info"><div class="connector-card-name">' + t.name + '</div>' +
+    '<div class="connector-card-cat">' + t.category + '</div></div>' +
+    '</div>' +
+    '<div class="connector-card-caps">' + t.capabilities.substring(0, 80) + '...</div>' +
+    (conn
+      ? '<div class="connector-card-actions">' +
+        '<span class="connector-connected-badge">Connected</span>' +
+        '<button class="connector-reveal-btn" onclick="revealConnectorKey(\'' + connId + '\', \'' + t.name + '\')">Show Key</button>' +
+        '<button class="connector-remove-btn" onclick="removeConnector(\'' + connId + '\', \'' + t.id + '\')">Remove</button>' +
+        '</div>'
+      : '<button class="connector-add-btn" onclick="toggleDrawer(\'' + t.id + '\')">Add</button>'
+    ) +
+    '<div class="connector-add-drawer" id="drawer-' + t.id + '" style="display:none">' + buildAddDrawerHTML(t) + '</div>' +
+    '</div>';
+}
+
+function buildAddDrawerHTML(t) {
+  var customFields = t.id === 'custom'
+    ? '<input id="conn-custom-url-' + t.id + '" class="conn-input" placeholder="Base URL (e.g. https://api.example.com)" style="margin-bottom:6px">' +
+      '<textarea id="conn-custom-caps-' + t.id + '" class="conn-input" placeholder="Describe what this API can do..." rows="2" style="margin-bottom:6px;resize:vertical"></textarea>'
+    : '';
+  return '<div style="padding:12px 0 4px">' +
+    customFields +
+    '<input type="password" id="conn-key-' + t.id + '" class="conn-input" placeholder="' + t.apiKeyLabel + '" style="margin-bottom:6px">' +
+    '<input type="password" id="conn-pwd-' + t.id + '" class="conn-input" placeholder="Your account password" style="margin-bottom:8px">' +
+    '<div style="display:flex;gap:8px">' +
+    '<button class="connector-add-btn" onclick="saveConnector(\'' + t.id + '\')">Save</button>' +
+    '<button class="connector-remove-btn" onclick="toggleDrawer(\'' + t.id + '\')">Cancel</button>' +
+    '</div></div>';
+}
+
+function toggleDrawer(templateId) {
+  var drawer = document.getElementById('drawer-' + templateId);
+  if (!drawer) return;
+  drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveConnector(templateId) {
+  var keyEl = document.getElementById('conn-key-' + templateId);
+  var pwdEl = document.getElementById('conn-pwd-' + templateId);
+  var apiKey = keyEl ? keyEl.value.trim() : '';
+  var pwd = pwdEl ? pwdEl.value : '';
+  if (!apiKey) { alert('Please enter the API key.'); return; }
+  if (!pwd) { alert('Please enter your account password.'); return; }
+
+  var body = { templateId: templateId, apiKey: apiKey, password: pwd };
+  if (templateId === 'custom') {
+    var urlEl = document.getElementById('conn-custom-url-' + templateId);
+    var capsEl = document.getElementById('conn-custom-caps-' + templateId);
+    body.customBaseUrl = urlEl ? urlEl.value.trim() : '';
+    body.customCapabilities = capsEl ? capsEl.value.trim() : '';
+    if (!body.customBaseUrl) { alert('Please enter the Base URL.'); return; }
+  }
+
+  try {
+    var res = await fetch('/api/connectors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+      body: JSON.stringify(body)
+    });
+    var data = await res.json();
+    if (!res.ok) { alert(data.error || 'Failed to add connector.'); return; }
+    await loadAndRenderConnectors();
+  } catch(e) { alert('Error saving connector: ' + e.message); }
+}
+
+async function removeConnector(connId, templateId) {
+  if (!confirm('Remove this connector?')) return;
+  try {
+    var res = await fetch('/api/connectors/' + connId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+    });
+    if (!res.ok) { var d = await res.json(); alert(d.error || 'Failed to remove.'); return; }
+    await loadAndRenderConnectors();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function revealConnectorKey(connId, connName) {
+  var pwd = await connPwdPrompt('Enter your password to reveal the API key for ' + connName + ':');
+  if (!pwd) return;
+  try {
+    var res = await fetch('/api/connectors/' + connId + '/key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+      body: JSON.stringify({ password: pwd })
+    });
+    var data = await res.json();
+    if (!res.ok) { alert(data.error || 'Failed.'); return; }
+    alert('API Key for ' + connName + ':\\n\\n' + data.apiKey);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function filterConnectorCat(cat) {
+  window._connActiveCat = cat;
+  renderConnectorGrid();
+}
+
+function updateActiveConnectorsBar() {
+  var bar = document.getElementById('active-connectors-bar');
+  if (!bar) return;
+  if (!myConnectors || myConnectors.length === 0) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = '<span style="font-size:12px;color:var(--text-muted);margin-right:8px;white-space:nowrap;">Connectors:</span>' +
+    myConnectors.map(function(c) {
+      return '<span class="active-connector-chip" onclick="triggerConnectorQuery(\\'' + c.id + '\\', \\'' + (c.name || '').replace(/'/g, "\\\\'") + '\\')">' +
+        (c.emoji || '') + ' ' + (c.name || c.templateId) +
+        '</span>';
+    }).join('');
+}
+
+async function triggerConnectorQuery(connId, connName) {
+  var input = document.getElementById('input') || document.querySelector('textarea[name="input"]') || document.querySelector('.input-wrap textarea');
+  var userMsg = input ? input.value.trim() : '';
+  if (!userMsg) {
+    userMsg = prompt('What do you want to do with ' + connName + '?');
+    if (!userMsg) return;
+  }
+  var pwd = await connPwdPrompt('Enter your password to use ' + connName + ':');
+  if (!pwd) return;
+
+  try {
+    var res = await fetch('/api/connector/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+      body: JSON.stringify({ connectorId: connId, userMessage: userMsg, password: pwd })
+    });
+    var data = await res.json();
+    if (!res.ok) { alert(data.error || 'Connector failed.'); return; }
+    // Append result to chat
+    if (typeof appendMessage === 'function') {
+      appendMessage('user', userMsg);
+      appendMessage('assistant', data.result || data.response || JSON.stringify(data));
+    } else {
+      alert(data.result || data.response || JSON.stringify(data));
+    }
+    if (input) input.value = '';
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Init on load
+(function() {
+  loadAndRenderConnectors();
+  // Wire up password input enter key
+  setTimeout(function() {
+    var inp = document.getElementById('conn-pwd-input');
+    if (inp) {
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') connPwdSubmit();
+        if (e.key === 'Escape') connPwdCancel();
+      });
+    }
+  }, 200);
+})();
+  `);
 });
 
 /**
