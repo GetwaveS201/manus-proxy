@@ -1,6 +1,6 @@
 /**
  * AI Automation Assistant - Production Server
- * AI System: Gemini
+ * AI System: Groq (Llama 4 Scout)
  *
  * Features:
  * - X-API-Key authentication for all endpoints
@@ -34,7 +34,7 @@ const http  = require('http');
 // ============================================
 
 const PORT = process.env.PORT || 3000;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const API_KEY = process.env.API_KEY || 'your-secure-api-key-here';
@@ -588,29 +588,28 @@ function requireLogin(req, res, next) {
 
 
 // ============================================
-// GEMINI API INTEGRATION
+// GROQ API INTEGRATION (Llama 4 / Llama 3.3)
 // ============================================
 
 /**
- * Calls Gemini API with timeout and AbortController
- * @param {string} prompt - User prompt
- * @param {number} timeoutMs - Timeout in milliseconds (default: 30s)
- * @returns {Promise<string>} AI response
+ * Calls Groq API with timeout and AbortController
+ * Uses OpenAI-compatible endpoint with Llama 4 Scout as primary model.
+ * Free tier: 14,400 req/day, no credit card needed — get key at console.groq.com
  */
 async function callGemini(prompt, timeoutMs = 30000, systemPrompt = '') {
-  if (!GEMINI_API_KEY) {
+  if (!GROQ_API_KEY) {
     throw new Error('GEMINI_NOT_CONFIGURED');
   }
 
-  log('INFO', 'Calling Gemini API');
+  log('INFO', 'Calling Groq API');
 
   const models = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-2.5-flash'
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant'
   ];
 
-  let quotaError = false;
+  let rateLimitError = false;
   let lastError = '';
 
   for (const model of models) {
@@ -618,62 +617,56 @@ async function callGemini(prompt, timeoutMs = 30000, systemPrompt = '') {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...(systemPrompt ? { system_instruction: { parts: [{ text: systemPrompt }] } } : {}),
-            contents: [{
-              parts: [{ text: prompt }]
-            }]
-          }),
-          signal: controller.signal
-        }
-      );
+      const messages = [];
+      if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+      messages.push({ role: 'user', content: prompt });
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({ model, messages, max_tokens: 4096 }),
+        signal: controller.signal
+      });
 
       clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
+        const text = data.choices?.[0]?.message?.content;
         if (text) {
-          log('INFO', `Gemini (${model}) responded successfully`);
+          log('INFO', `Groq (${model}) responded successfully`);
           return text;
         }
-      } else if (response.status === 403) {
-        const errorData = await response.json();
-        if (errorData.error?.message?.includes('leaked') || errorData.error?.message?.includes('PERMISSION_DENIED')) {
-          log('ERROR', 'Gemini API key has been flagged as leaked!');
-          throw new Error('GEMINI_API_KEY_LEAKED');
-        }
       } else if (response.status === 429) {
-        quotaError = true;
-        const errorData = await response.json();
-        lastError = errorData.error?.message || 'Quota exceeded';
-        log('WARN', `Gemini quota exceeded for ${model}`);
+        rateLimitError = true;
+        const errorData = await response.json().catch(() => ({}));
+        lastError = errorData.error?.message || 'Rate limit exceeded';
+        log('WARN', `Groq rate limit for ${model}, trying next`);
+        continue;
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        lastError = errorData.error?.message || `Status ${response.status}`;
+        log('WARN', `Groq model ${model} failed: ${lastError}`);
         continue;
       }
 
-      log('WARN', `Gemini model ${model} failed (status ${response.status})`);
-
     } catch (err) {
       clearTimeout(timeoutId);
-
       if (err.name === 'AbortError') {
-        log('ERROR', `Gemini ${model} timeout after ${timeoutMs}ms`);
+        log('ERROR', `Groq ${model} timeout after ${timeoutMs}ms`);
         lastError = 'Request timeout';
       } else {
-        log('ERROR', `Gemini ${model} error: ${err.message}`);
+        log('ERROR', `Groq ${model} error: ${err.message}`);
         lastError = err.message;
       }
       continue;
     }
   }
 
-  if (quotaError) {
+  if (rateLimitError) {
     throw new Error('GEMINI_QUOTA_EXCEEDED');
   }
 
@@ -2743,15 +2736,15 @@ app.get('/', (req, res) => {
                 API Connectors
             </div>
 
-            <!-- Gemini -->
+            <!-- Groq -->
             <div class="connector-card">
                 <div class="connector-card-header">
                     <div class="connector-icon gemini-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
                     </div>
                     <div class="connector-info">
-                        <div class="connector-name">Chat (Gemini)</div>
-                        <div class="connector-desc">Google Gemini AI — powers the Chat mode</div>
+                        <div class="connector-name">Chat (Groq — Llama 4)</div>
+                        <div class="connector-desc">Groq + Llama 4 Scout — powers all AI features. Free at console.groq.com</div>
                     </div>
                     <div class="connector-status" id="gemini-connector-status">
                         <span class="connector-dot connected"></span>
@@ -2760,16 +2753,16 @@ app.get('/', (req, res) => {
                 </div>
                 <div class="connector-body">
                     <div class="settings-group">
-                        <label for="gemini-api-key-input">API Key</label>
-                        <input type="password" id="gemini-api-key-input" placeholder="AIza..." autocomplete="off" />
-                        <div class="settings-hint">Get your key at <a href="https://aistudio.google.com/" target="_blank" style="color:#10a37f;">aistudio.google.com</a></div>
+                        <label for="gemini-api-key-input">Groq API Key</label>
+                        <input type="password" id="gemini-api-key-input" placeholder="gsk_..." autocomplete="off" />
+                        <div class="settings-hint">Get your free key at <a href="https://console.groq.com/keys" target="_blank" style="color:#10a37f;">console.groq.com/keys</a> — no credit card needed</div>
                     </div>
                     <div class="settings-group">
                         <label for="gemini-model-select">Model</label>
                         <select id="gemini-model-select">
-                            <option value="gemini-2.0-flash">gemini-2.0-flash (default)</option>
-                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                            <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout (default, fastest)</option>
+                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (highest quality)</option>
+                            <option value="llama-3.1-8b-instant">Llama 3.1 8B (ultra fast)</option>
                         </select>
                     </div>
                     <button class="settings-save-btn-sm" onclick="saveGeminiSettings()">Save Chat Config</button>
@@ -3114,7 +3107,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                         <span>Online</span>
                     </div>
                     <div class="ai-models" aria-label="Active AI mode">
-                        <span id="header-ai-display">Gemini</span>
+                        <span id="header-ai-display">Groq</span>
                     </div>
                 </div>
             </header>
@@ -7225,7 +7218,7 @@ app.get('/health', requireApiKey, (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     services: {
-      gemini: !!GEMINI_API_KEY,
+      groq: !!GROQ_API_KEY,
 
       render: !!RENDER_API_KEY,
       notion: !!NOTION_API_KEY
@@ -7980,16 +7973,16 @@ function formatError(error) {
   const errorMap = {
     'GEMINI_NOT_CONFIGURED': {
       status: 503,
-      message: 'Gemini AI is not configured. Please contact the administrator.'
+      message: 'AI not configured. Add your GROQ_API_KEY in Render environment variables. Get a free key at console.groq.com/keys'
     },
     'GEMINI_API_KEY_LEAKED': {
       status: 403,
-      message: '🔒 Security Alert: The Gemini API key has been flagged as leaked by Google and has been disabled.\n\nTO FIX:\n1. Go to https://ai.google.dev/\n2. Delete the old API key\n3. Create a new API key\n4. Update it in Render environment variables\n5. Redeploy the service\n\nThis happens when API keys are exposed in public repositories or logs.'
+      message: 'AI API key error. Please check your GROQ_API_KEY in Render environment variables.'
     },
 
     'GEMINI_QUOTA_EXCEEDED': {
       status: 503,
-      message: 'Gemini API quota exceeded. The service quota resets daily. Please try again later or contact support.'
+      message: 'Groq rate limit reached. The free tier resets daily. Please try again in a moment.'
     },
     'BOTH_APIS_EXHAUSTED': {
       status: 503,
@@ -7997,7 +7990,7 @@ function formatError(error) {
     },
     'GEMINI_FAILED': {
       status: 503,
-      message: '⚠️ Gemini AI is temporarily unavailable. Please try again in a moment.'
+      message: '⚠️ AI is temporarily unavailable. Please try again in a moment.'
     }
   };
 
@@ -8050,18 +8043,18 @@ app.listen(PORT, () => {
   console.log('   ✅ Request timeouts with AbortController');
   console.log('');
   console.log('🤖 AI Services Status:');
-  console.log(`   ${GEMINI_API_KEY ? '🟢' : '🔴'} Gemini: ${GEMINI_API_KEY ? 'Ready' : 'Not Configured'}`);
+  console.log(`   ${GROQ_API_KEY ? '🟢' : '🔴'} Groq (Llama 4): ${GROQ_API_KEY ? 'Ready' : 'Not Configured — add GROQ_API_KEY'}`);
   console.log(`   ${RENDER_API_KEY ? '🟢' : '🔴'} Render: ${RENDER_API_KEY ? 'Ready' : 'Not Configured'}`);
   console.log(`   ${NOTION_API_KEY ? '🟢' : '🔴'} Notion: ${NOTION_API_KEY ? 'Ready' : 'Not Configured'}`);
   console.log('');
   console.log('🎯 AI:');
-  console.log('   🔵 Gemini: All requests');
+  console.log('   🟠 Groq / Llama 4 Scout: All requests (free tier: 14,400 req/day)');
   console.log('📡 API Endpoints:');
   console.log('   POST /chat - Public chat endpoint');
   console.log('   GET /health - Health check (requires auth)');
   console.log('');
   console.log('⏱️  Timeouts:');
-  console.log('   Gemini: 30 seconds');
+  console.log('   Groq: 30 seconds');
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
