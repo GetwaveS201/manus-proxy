@@ -6869,7 +6869,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         }
 
         async function triggerConnectorQuery(connId, connName) {
-            var userMsg = prompt('What do you want to do with ' + connName + '?\n\nExample: "list my 5 most recent items"');
+            var userMsg = prompt('What do you want to do with ' + connName + '?\\n\\nExample: "list my 5 most recent items"');
             if (!userMsg || !userMsg.trim()) return;
             try {
                 var pwd = await connPwdPrompt('Authorize API Call', 'Enter your password to let ' + connName + ' execute this request.');
