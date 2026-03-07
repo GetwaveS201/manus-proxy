@@ -4906,13 +4906,17 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         function updateEscalationBadge() {
             const days = parseInt(document.getElementById('invoice-days-input')?.value, 10);
             const wrap = document.getElementById('escalation-badge-wrap');
-            if (!wrap) return;
-            if (isNaN(days) || days < 0) { wrap.innerHTML = ''; return; }
-            const level = getEscalationLevel(days);
-            wrap.innerHTML = '<span class="escalation-badge ' + level.cls + '">' + level.label + '</span>';
+            if (wrap) {
+                if (!isNaN(days) && days >= 0) {
+                    const level = getEscalationLevel(days);
+                    wrap.innerHTML = '<span class="escalation-badge ' + level.cls + '">' + level.label + '</span>';
+                } else {
+                    wrap.innerHTML = '';
+                }
+            }
             const btn = document.getElementById('invoice-generate-btn');
             const hasContext = invoiceFileContent || (document.getElementById('invoice-notes-input')?.value?.trim());
-            if (btn && hasContext) btn.disabled = false;
+            if (btn) btn.disabled = !hasContext;
         }
 
         function handleInvoiceDragOver(e) {
