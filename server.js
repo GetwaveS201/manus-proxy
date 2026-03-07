@@ -6653,10 +6653,10 @@ function buildTemplateCard(t, conn) {
     (conn
       ? '<div class="connector-card-actions">' +
         '<span class="connector-connected-badge">Connected</span>' +
-        '<button class="connector-reveal-btn" onclick="revealConnectorKey(\'' + connId + '\', \'' + t.name + '\')">Show Key</button>' +
-        '<button class="connector-remove-btn" onclick="removeConnector(\'' + connId + '\', \'' + t.id + '\')">Remove</button>' +
+        '<button class="connector-reveal-btn" onclick="revealConnectorKey(\\'' + connId + '\\', \\'' + t.name.replace(/'/g, '') + '\\')">Show Key</button>' +
+        '<button class="connector-remove-btn" onclick="removeConnector(\\'' + connId + '\\', \\'' + t.id + '\\')">Remove</button>' +
         '</div>'
-      : '<button class="connector-add-btn" onclick="toggleDrawer(\'' + t.id + '\')">Add</button>'
+      : '<button class="connector-add-btn" onclick="toggleDrawer(\\'' + t.id + '\\')">Add</button>'
     ) +
     '<div class="connector-add-drawer" id="drawer-' + t.id + '" style="display:none">' + buildAddDrawerHTML(t) + '</div>' +
     '</div>';
@@ -6672,8 +6672,8 @@ function buildAddDrawerHTML(t) {
     '<input type="password" id="conn-key-' + t.id + '" class="conn-input" placeholder="' + t.apiKeyLabel + '" style="margin-bottom:6px">' +
     '<input type="password" id="conn-pwd-' + t.id + '" class="conn-input" placeholder="Your account password" style="margin-bottom:8px">' +
     '<div style="display:flex;gap:8px">' +
-    '<button class="connector-add-btn" onclick="saveConnector(\'' + t.id + '\')">Save</button>' +
-    '<button class="connector-remove-btn" onclick="toggleDrawer(\'' + t.id + '\')">Cancel</button>' +
+    '<button class="connector-add-btn" onclick="saveConnector(\\'' + t.id + '\\')">Save</button>' +
+    '<button class="connector-remove-btn" onclick="toggleDrawer(\\'' + t.id + '\\')">Cancel</button>' +
     '</div></div>';
 }
 
