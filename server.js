@@ -674,69 +674,44 @@ async function callGemini(prompt, timeoutMs = 30000, systemPrompt = '') {
 }
 
 // ============================================
-// CONNECTOR TEMPLATES (50 pre-built connectors)
+// CONNECTOR TEMPLATES (25 pre-built + custom)
 // ============================================
 
 const CONNECTOR_TEMPLATES = [
-  // Productivity
-  { id: 'notion', name: 'Notion', emoji: '📝', category: 'Productivity', baseUrl: 'https://api.notion.com/v1', apiKeyLabel: 'Integration Token', capabilities: 'Search pages, create and update pages and database entries. Use Notion-Version: 2022-06-28 header and Bearer auth.' },
-  { id: 'airtable', name: 'Airtable', emoji: '📊', category: 'Productivity', baseUrl: 'https://api.airtable.com/v0', apiKeyLabel: 'API Key', capabilities: 'List, create, update, and delete records in Airtable bases. Base ID and table name go in URL path. Use Bearer auth.' },
-  { id: 'trello', name: 'Trello', emoji: '🃏', category: 'Productivity', baseUrl: 'https://api.trello.com/1', apiKeyLabel: 'API Key:Token', capabilities: 'Manage Trello boards, lists, and cards. Split key/token on colon. Both go as query params key= and token=.' },
-  { id: 'asana', name: 'Asana', emoji: '✅', category: 'Productivity', baseUrl: 'https://app.asana.com/api/1.0', apiKeyLabel: 'Personal Access Token', capabilities: 'Create, update, and list tasks, projects, and workspaces. Use Bearer auth.' },
-  { id: 'clickup', name: 'ClickUp', emoji: '🖱️', category: 'Productivity', baseUrl: 'https://api.clickup.com/api/v2', apiKeyLabel: 'API Token', capabilities: 'Create and list tasks, spaces, and lists. Put token directly in Authorization header.' },
-  { id: 'todoist', name: 'Todoist', emoji: '✔️', category: 'Productivity', baseUrl: 'https://api.todoist.com/rest/v2', apiKeyLabel: 'API Token', capabilities: 'List, create, update, and close tasks and projects. Use Bearer auth.' },
-  { id: 'linear', name: 'Linear', emoji: '🔷', category: 'Productivity', baseUrl: 'https://api.linear.app/graphql', apiKeyLabel: 'API Key', capabilities: 'Query and mutate Linear issues, projects, and teams via GraphQL POST. Use Authorization header with key.' },
-  { id: 'monday', name: 'Monday.com', emoji: '📅', category: 'Productivity', baseUrl: 'https://api.monday.com/v2', apiKeyLabel: 'API Token', capabilities: 'Read and update boards and items via GraphQL POST. Use Authorization Bearer.' },
-  // Communication
-  { id: 'slack', name: 'Slack', emoji: '💬', category: 'Communication', baseUrl: 'https://slack.com/api', apiKeyLabel: 'Bot Token (xoxb-...)', capabilities: 'Post messages to channels, list channels, read channel history. Use Bearer auth with bot token.' },
-  { id: 'discord', name: 'Discord', emoji: '🎮', category: 'Communication', baseUrl: 'https://discord.com/api/v10', apiKeyLabel: 'Bot Token', capabilities: 'Send messages to channels, read guild info, list channels. Authorization header value: "Bot TOKEN".' },
-  { id: 'telegram', name: 'Telegram Bot', emoji: '✈️', category: 'Communication', baseUrl: 'https://api.telegram.org', apiKeyLabel: 'Bot Token', capabilities: 'Send messages via Telegram Bot API. URL: /bot{TOKEN}/sendMessage. No extra auth header needed - token is in URL.' },
-  { id: 'twilio', name: 'Twilio SMS', emoji: '📱', category: 'Communication', baseUrl: 'https://api.twilio.com/2010-04-01', apiKeyLabel: 'AccountSID:AuthToken', capabilities: 'Send SMS via Twilio. Split on colon to get AccountSID and AuthToken. Use Basic auth. URL: /Accounts/{SID}/Messages.' },
-  { id: 'mailgun', name: 'Mailgun', emoji: '📧', category: 'Communication', baseUrl: 'https://api.mailgun.net/v3', apiKeyLabel: 'API Key', capabilities: 'Send emails and check email stats. Use Basic auth with username "api" and API key as password.' },
-  { id: 'sendgrid', name: 'SendGrid', emoji: '📨', category: 'Communication', baseUrl: 'https://api.sendgrid.com/v3', apiKeyLabel: 'API Key', capabilities: 'Send transactional emails and manage contacts. Use Bearer auth.' },
-  { id: 'postmark', name: 'Postmark', emoji: '📮', category: 'Communication', baseUrl: 'https://api.postmarkapp.com', apiKeyLabel: 'Server API Token', capabilities: 'Send emails and check delivery stats. Use X-Postmark-Server-Token header.' },
-  // Data/Storage
-  { id: 'supabase', name: 'Supabase', emoji: '⚡', category: 'Data/Storage', baseUrl: 'https://xyzproject.supabase.co', apiKeyLabel: 'Project URL + Service Key (URL|KEY)', capabilities: 'Query Supabase database tables via REST. Split key on pipe - first part is project URL, second is service_role key. Use apikey and Authorization Bearer headers.' },
-  { id: 'upstash', name: 'Upstash Redis', emoji: '🔴', category: 'Data/Storage', baseUrl: 'https://redis.upstash.io', apiKeyLabel: 'REST URL + Token (URL|TOKEN)', capabilities: 'Get and set Redis keys via Upstash REST. Split on pipe - first part is endpoint URL, second is token. Use Authorization Bearer.' },
-  { id: 'planetscale', name: 'PlanetScale', emoji: '🪐', category: 'Data/Storage', baseUrl: 'https://api.planetscale.com/v1', apiKeyLabel: 'Service Token', capabilities: 'Manage databases, branches, and deploy requests. Use Authorization Bearer.' },
-  { id: 'neon', name: 'Neon', emoji: '🌿', category: 'Data/Storage', baseUrl: 'https://console.neon.tech/api/v2', apiKeyLabel: 'API Key', capabilities: 'Manage Postgres projects, branches, and endpoints. Use Authorization Bearer.' },
-  { id: 'cloudflare-kv', name: 'Cloudflare KV', emoji: '☁️', category: 'Data/Storage', baseUrl: 'https://api.cloudflare.com/client/v4', apiKeyLabel: 'Account ID:API Token (ID:TOKEN)', capabilities: 'Read and write KV namespace values. Split on colon for account ID and token. Use Authorization Bearer. URL: /accounts/{accountId}/storage/kv/namespaces.' },
-  // Dev Tools
-  { id: 'github', name: 'GitHub', emoji: '🐙', category: 'Dev Tools', baseUrl: 'https://api.github.com', apiKeyLabel: 'Personal Access Token', capabilities: 'List repos, issues, PRs, commits. Create issues. Use Bearer auth. Set Accept: application/vnd.github+json header.' },
-  { id: 'gitlab', name: 'GitLab', emoji: '🦊', category: 'Dev Tools', baseUrl: 'https://gitlab.com/api/v4', apiKeyLabel: 'Personal Access Token', capabilities: 'List projects, issues, merge requests, pipelines. Use PRIVATE-TOKEN header.' },
-  { id: 'vercel', name: 'Vercel', emoji: '▲', category: 'Dev Tools', baseUrl: 'https://api.vercel.com', apiKeyLabel: 'API Token', capabilities: 'List deployments, projects, domains. Trigger redeploys. Use Bearer auth.' },
-  { id: 'netlify', name: 'Netlify', emoji: '🌐', category: 'Dev Tools', baseUrl: 'https://api.netlify.com/api/v1', apiKeyLabel: 'Personal Access Token', capabilities: 'List sites, deploys. Trigger deploys. Use Authorization Bearer.' },
-  { id: 'railway', name: 'Railway', emoji: '🚂', category: 'Dev Tools', baseUrl: 'https://backboard.railway.app/graphql/v2', apiKeyLabel: 'API Token', capabilities: 'Query projects, services, deployments via GraphQL POST. Use Bearer auth.' },
-  { id: 'cloudflare', name: 'Cloudflare', emoji: '🛡️', category: 'Dev Tools', baseUrl: 'https://api.cloudflare.com/client/v4', apiKeyLabel: 'API Token', capabilities: 'Manage DNS records, zones, pages deployments, workers. Use Authorization Bearer.' },
-  { id: 'render', name: 'Render', emoji: '🎨', category: 'Dev Tools', baseUrl: 'https://api.render.com/v1', apiKeyLabel: 'API Key', capabilities: 'List services, deployments, environment variables. Trigger deploys. Use Authorization Bearer.' },
-  // AI/ML
-  { id: 'openai', name: 'OpenAI', emoji: '🤖', category: 'AI/ML', baseUrl: 'https://api.openai.com/v1', apiKeyLabel: 'API Key', capabilities: 'Call GPT models for chat completions, generate embeddings, create images. Use Bearer auth.' },
-  { id: 'anthropic', name: 'Anthropic', emoji: '🧠', category: 'AI/ML', baseUrl: 'https://api.anthropic.com/v1', apiKeyLabel: 'API Key', capabilities: 'Call Claude models for messages. Use x-api-key header and anthropic-version: 2023-06-01 header.' },
-  { id: 'replicate', name: 'Replicate', emoji: '🔁', category: 'AI/ML', baseUrl: 'https://api.replicate.com/v1', apiKeyLabel: 'API Token', capabilities: 'Run and list AI model predictions for images, audio, text. Use Bearer auth.' },
-  { id: 'stability', name: 'Stability AI', emoji: '🖼️', category: 'AI/ML', baseUrl: 'https://api.stability.ai/v1', apiKeyLabel: 'API Key', capabilities: 'Generate images with Stable Diffusion. Use Bearer auth.' },
-  { id: 'elevenlabs', name: 'ElevenLabs', emoji: '🔊', category: 'AI/ML', baseUrl: 'https://api.elevenlabs.io/v1', apiKeyLabel: 'API Key', capabilities: 'Generate speech from text, list voices. Use xi-api-key header.' },
-  { id: 'deepgram', name: 'Deepgram', emoji: '🎤', category: 'AI/ML', baseUrl: 'https://api.deepgram.com/v1', apiKeyLabel: 'API Key', capabilities: 'Transcribe audio, get usage stats. Use Token auth in Authorization header.' },
-  { id: 'assemblyai', name: 'AssemblyAI', emoji: '🎧', category: 'AI/ML', baseUrl: 'https://api.assemblyai.com/v2', apiKeyLabel: 'API Key', capabilities: 'Submit audio for transcription, retrieve transcripts. Use authorization header with API key.' },
-  // Finance/Business
-  { id: 'stripe', name: 'Stripe', emoji: '💳', category: 'Finance', baseUrl: 'https://api.stripe.com/v1', apiKeyLabel: 'Secret Key (sk_...)', capabilities: 'List customers, charges, invoices, subscriptions. Create payment intents. Use Bearer auth with secret key.' },
-  { id: 'hubspot', name: 'HubSpot', emoji: '🧡', category: 'Finance', baseUrl: 'https://api.hubapi.com', apiKeyLabel: 'Private App Token', capabilities: 'Manage CRM contacts, companies, deals, and tickets. Use Bearer auth.' },
-  { id: 'salesforce', name: 'Salesforce', emoji: '☁️', category: 'Finance', baseUrl: 'https://login.salesforce.com', apiKeyLabel: 'Access Token + Instance URL (TOKEN|URL)', capabilities: 'Query Salesforce records via SOQL and REST. Split on pipe for token and instance URL. Use Bearer auth against instance URL.' },
-  { id: 'quickbooks', name: 'QuickBooks', emoji: '📚', category: 'Finance', baseUrl: 'https://quickbooks.api.intuit.com/v3', apiKeyLabel: 'OAuth Token + Company ID (TOKEN|CID)', capabilities: 'Read invoices, customers, expenses. Split on pipe for token and company ID. Use Bearer auth. URL: /company/{companyId}/...' },
-  { id: 'freshbooks', name: 'FreshBooks', emoji: '💼', category: 'Finance', baseUrl: 'https://api.freshbooks.com', apiKeyLabel: 'OAuth Access Token', capabilities: 'Manage invoices, clients, expenses. Use Bearer auth.' },
-  // Maps/Weather
-  { id: 'googlemaps', name: 'Google Maps', emoji: '🗺️', category: 'Maps/Weather', baseUrl: 'https://maps.googleapis.com/maps/api', apiKeyLabel: 'API Key', capabilities: 'Geocode addresses, get directions, find nearby places. API key goes in query param as key=.' },
-  { id: 'mapbox', name: 'Mapbox', emoji: '🧭', category: 'Maps/Weather', baseUrl: 'https://api.mapbox.com', apiKeyLabel: 'Access Token', capabilities: 'Geocode addresses, get directions, static maps. Access token goes in query param as access_token=.' },
-  { id: 'openweather', name: 'OpenWeatherMap', emoji: '🌤️', category: 'Maps/Weather', baseUrl: 'https://api.openweathermap.org/data/2.5', apiKeyLabel: 'API Key', capabilities: 'Get current weather, forecasts for any city. API key goes in query param as appid=.' },
-  // Social/Media
-  { id: 'twitter', name: 'Twitter/X', emoji: '🐦', category: 'Social/Media', baseUrl: 'https://api.twitter.com/2', apiKeyLabel: 'Bearer Token', capabilities: 'Search tweets, get user info and timelines. Use Bearer auth.' },
-  { id: 'youtube', name: 'YouTube Data', emoji: '▶️', category: 'Social/Media', baseUrl: 'https://www.googleapis.com/youtube/v3', apiKeyLabel: 'API Key', capabilities: 'Search videos, get video and channel info, list comments. API key goes in query param as key=.' },
-  { id: 'spotify', name: 'Spotify', emoji: '🎵', category: 'Social/Media', baseUrl: 'https://api.spotify.com/v1', apiKeyLabel: 'Access Token', capabilities: 'Get user playlists, recently played tracks, search. Use Bearer auth.' },
-  // File Storage
-  { id: 'dropbox', name: 'Dropbox', emoji: '📦', category: 'File Storage', baseUrl: 'https://api.dropboxapi.com/2', apiKeyLabel: 'Access Token', capabilities: 'List files and folders, get metadata, search files. Use Bearer auth.' },
-  { id: 'box', name: 'Box', emoji: '📭', category: 'File Storage', baseUrl: 'https://api.box.com/2.0', apiKeyLabel: 'Access Token', capabilities: 'List items in folders, get file info, search. Use Bearer auth.' },
   // Construction
   { id: 'procore', name: 'Procore', emoji: '🏗️', category: 'Construction', baseUrl: 'https://api.procore.com/rest/v1.0', apiKeyLabel: 'Access Token', capabilities: 'Access construction projects, RFIs, submittals, daily logs, budgets. Use Bearer auth.' },
   { id: 'buildertrend', name: 'Buildertrend', emoji: '🔨', category: 'Construction', baseUrl: 'https://api.buildertrend.net', apiKeyLabel: 'API Key', capabilities: 'Access construction job data, schedules, client communications, and change orders. Use Authorization header.' },
+  // Productivity
+  { id: 'notion', name: 'Notion', emoji: '📝', category: 'Productivity', baseUrl: 'https://api.notion.com/v1', apiKeyLabel: 'Integration Token', capabilities: 'Search pages, create and update pages and database entries. Use Notion-Version: 2022-06-28 header and Bearer auth.' },
+  { id: 'airtable', name: 'Airtable', emoji: '📊', category: 'Productivity', baseUrl: 'https://api.airtable.com/v0', apiKeyLabel: 'API Key', capabilities: 'List, create, update, and delete records in Airtable bases. Base ID and table name go in URL path. Use Bearer auth.' },
+  { id: 'asana', name: 'Asana', emoji: '✅', category: 'Productivity', baseUrl: 'https://app.asana.com/api/1.0', apiKeyLabel: 'Personal Access Token', capabilities: 'Create, update, and list tasks, projects, and workspaces. Use Bearer auth.' },
+  { id: 'trello', name: 'Trello', emoji: '🃏', category: 'Productivity', baseUrl: 'https://api.trello.com/1', apiKeyLabel: 'API Key:Token', capabilities: 'Manage Trello boards, lists, and cards. Split key/token on colon. Both go as query params key= and token=.' },
+  { id: 'clickup', name: 'ClickUp', emoji: '🖱️', category: 'Productivity', baseUrl: 'https://api.clickup.com/api/v2', apiKeyLabel: 'API Token', capabilities: 'Create and list tasks, spaces, and lists. Put token directly in Authorization header.' },
+  { id: 'monday', name: 'Monday.com', emoji: '📅', category: 'Productivity', baseUrl: 'https://api.monday.com/v2', apiKeyLabel: 'API Token', capabilities: 'Read and update boards and items via GraphQL POST. Use Authorization Bearer.' },
+  // Communication
+  { id: 'slack', name: 'Slack', emoji: '💬', category: 'Communication', baseUrl: 'https://slack.com/api', apiKeyLabel: 'Bot Token (xoxb-...)', capabilities: 'Post messages to channels, list channels, read channel history. Use Bearer auth with bot token.' },
+  { id: 'twilio', name: 'Twilio SMS', emoji: '📱', category: 'Communication', baseUrl: 'https://api.twilio.com/2010-04-01', apiKeyLabel: 'AccountSID:AuthToken', capabilities: 'Send SMS via Twilio. Split on colon to get AccountSID and AuthToken. Use Basic auth. URL: /Accounts/{SID}/Messages.' },
+  { id: 'sendgrid', name: 'SendGrid', emoji: '📨', category: 'Communication', baseUrl: 'https://api.sendgrid.com/v3', apiKeyLabel: 'API Key', capabilities: 'Send transactional emails and manage contacts. Use Bearer auth.' },
+  { id: 'discord', name: 'Discord', emoji: '🎮', category: 'Communication', baseUrl: 'https://discord.com/api/v10', apiKeyLabel: 'Bot Token', capabilities: 'Send messages to channels, read guild info, list channels. Authorization header value: "Bot TOKEN".' },
+  // Finance
+  { id: 'stripe', name: 'Stripe', emoji: '💳', category: 'Finance', baseUrl: 'https://api.stripe.com/v1', apiKeyLabel: 'Secret Key (sk_...)', capabilities: 'List customers, charges, invoices, subscriptions. Create payment intents. Use Bearer auth with secret key.' },
+  { id: 'quickbooks', name: 'QuickBooks', emoji: '📚', category: 'Finance', baseUrl: 'https://quickbooks.api.intuit.com/v3', apiKeyLabel: 'OAuth Token + Company ID (TOKEN|CID)', capabilities: 'Read invoices, customers, expenses. Split on pipe for token and company ID. Use Bearer auth. URL: /company/{companyId}/...' },
+  { id: 'hubspot', name: 'HubSpot', emoji: '🧡', category: 'Finance', baseUrl: 'https://api.hubapi.com', apiKeyLabel: 'Private App Token', capabilities: 'Manage CRM contacts, companies, deals, and tickets. Use Bearer auth.' },
+  { id: 'freshbooks', name: 'FreshBooks', emoji: '💼', category: 'Finance', baseUrl: 'https://api.freshbooks.com', apiKeyLabel: 'OAuth Access Token', capabilities: 'Manage invoices, clients, expenses. Use Bearer auth.' },
+  // Dev Tools
+  { id: 'github', name: 'GitHub', emoji: '🐙', category: 'Dev Tools', baseUrl: 'https://api.github.com', apiKeyLabel: 'Personal Access Token', capabilities: 'List repos, issues, PRs, commits. Create issues. Use Bearer auth. Set Accept: application/vnd.github+json header.' },
+  { id: 'render', name: 'Render', emoji: '🎨', category: 'Dev Tools', baseUrl: 'https://api.render.com/v1', apiKeyLabel: 'API Key', capabilities: 'List services, deployments, environment variables. Trigger deploys. Use Authorization Bearer.' },
+  { id: 'cloudflare', name: 'Cloudflare', emoji: '🛡️', category: 'Dev Tools', baseUrl: 'https://api.cloudflare.com/client/v4', apiKeyLabel: 'API Token', capabilities: 'Manage DNS records, zones, pages deployments, workers. Use Authorization Bearer.' },
+  // AI/ML
+  { id: 'openai', name: 'OpenAI', emoji: '🤖', category: 'AI/ML', baseUrl: 'https://api.openai.com/v1', apiKeyLabel: 'API Key', capabilities: 'Call GPT models for chat completions, generate embeddings, create images. Use Bearer auth.' },
+  { id: 'anthropic', name: 'Anthropic', emoji: '🧠', category: 'AI/ML', baseUrl: 'https://api.anthropic.com/v1', apiKeyLabel: 'API Key', capabilities: 'Call Claude models for messages. Use x-api-key header and anthropic-version: 2023-06-01 header.' },
+  // Maps/Weather
+  { id: 'googlemaps', name: 'Google Maps', emoji: '🗺️', category: 'Maps/Weather', baseUrl: 'https://maps.googleapis.com/maps/api', apiKeyLabel: 'API Key', capabilities: 'Geocode addresses, get directions, find nearby places. API key goes in query param as key=.' },
+  { id: 'openweather', name: 'OpenWeatherMap', emoji: '🌤️', category: 'Maps/Weather', baseUrl: 'https://api.openweathermap.org/data/2.5', apiKeyLabel: 'API Key', capabilities: 'Get current weather, forecasts for any city. API key goes in query param as appid=.' },
+  // File Storage
+  { id: 'dropbox', name: 'Dropbox', emoji: '📦', category: 'File Storage', baseUrl: 'https://api.dropboxapi.com/2', apiKeyLabel: 'Access Token', capabilities: 'List files and folders, get metadata, search files. Use Bearer auth.' },
+  // Data
+  { id: 'supabase', name: 'Supabase', emoji: '⚡', category: 'Data', baseUrl: 'https://xyzproject.supabase.co', apiKeyLabel: 'Project URL + Service Key (URL|KEY)', capabilities: 'Query Supabase database tables via REST. Split key on pipe - first part is project URL, second is service_role key. Use apikey and Authorization Bearer headers.' },
   // Custom
   { id: 'custom', name: 'Custom Connector', emoji: '🔧', category: 'Custom', baseUrl: '', apiKeyLabel: 'API Key / Token', capabilities: 'Custom REST API connector. You provide the base URL and describe what the API can do.' }
 ];
@@ -6128,7 +6103,9 @@ function renderConnectorGrid(filterText, filterCat) {
   var connectedIds = {};
   myConnectors.forEach(function(c) { connectedIds[c.templateId] = c; });
 
-  var cats = ['All'].concat([...new Set(connTemplates.map(function(t){ return t.category; }))]);
+  // Build category tabs (exclude Custom from tabs)
+  var nonCustom = connTemplates.filter(function(t) { return t.id !== 'custom'; });
+  var cats = ['All'].concat([...new Set(nonCustom.map(function(t){ return t.category; }))]);
   var tabsEl = document.getElementById('connector-tabs');
   if (tabsEl) {
     tabsEl.innerHTML = cats.map(function(c) {
@@ -6136,21 +6113,26 @@ function renderConnectorGrid(filterText, filterCat) {
     }).join('');
   }
 
-  var filtered = connTemplates.filter(function(t) {
+  var filtered = nonCustom.filter(function(t) {
     var matchCat = cat === 'All' || t.category === cat;
     var matchSearch = !search || t.name.toLowerCase().includes(search) || t.category.toLowerCase().includes(search);
     return matchCat && matchSearch;
   });
 
-  if (filtered.length === 0) {
-    grid.innerHTML = '<p style="color:var(--text-muted);padding:24px;text-align:center;">No connectors found.</p>';
-    return;
-  }
+  // Always show Custom Connector card at top
+  var customTmpl = connTemplates.find(function(t) { return t.id === 'custom'; });
+  var customConn = customTmpl ? connectedIds['custom'] : null;
+  var customCard = customTmpl
+    ? '<div class="connector-section-label" style="grid-column:1/-1;margin-top:0;">Add Your Own API</div>' + buildTemplateCard(customTmpl, customConn)
+    : '';
 
-  grid.innerHTML = filtered.map(function(t) {
-    var conn = connectedIds[t.id];
-    return buildTemplateCard(t, conn);
-  }).join('');
+  var mainCards = filtered.length === 0
+    ? '<p style="color:var(--text-muted);padding:24px;text-align:center;grid-column:1/-1;">No connectors found.</p>'
+    : filtered.map(function(t) { return buildTemplateCard(t, connectedIds[t.id]); }).join('');
+
+  grid.innerHTML = customCard +
+    (filtered.length > 0 ? '<div class="connector-section-label" style="grid-column:1/-1;">Pre-built Connectors (' + filtered.length + ')</div>' : '') +
+    mainCards;
 }
 
 function buildTemplateCard(t, conn) {
