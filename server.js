@@ -2362,6 +2362,38 @@ app.get('/', (req, res) => {
         .automation-card-status { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; }
         .automation-card-status.on { background: var(--green-lo); color: var(--green); }
         .automation-card-status.off { background: var(--bg-hover); color: var(--text-dim); }
+        /* Tasklet-style automation cards */
+        .tasklet-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 10px; transition: border-color 0.15s; }
+        .tasklet-card:hover { border-color: var(--border-mid); }
+        .tasklet-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .tasklet-card-info { flex: 1; min-width: 0; }
+        .tasklet-card-name { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; }
+        .tasklet-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
+        .tasklet-trigger-pill { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+        .tasklet-trigger-pill.schedule { background: rgba(99,102,241,0.15); color: #818cf8; }
+        .tasklet-trigger-pill.webhook { background: rgba(16,185,129,0.15); color: #34d399; }
+        .tasklet-trigger-pill.manual { background: rgba(156,163,175,0.12); color: #9ca3af; }
+        .tasklet-meta-sep { color: var(--text-dim); font-size: 10px; }
+        .tasklet-meta-text { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+        .tasklet-card-lastrun { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+        .tasklet-card-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .tasklet-status-badge { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px; }
+        .tasklet-status-badge.on { background: rgba(16,185,129,0.15); color: #34d399; }
+        .tasklet-status-badge.off { background: rgba(156,163,175,0.1); color: var(--text-dim); }
+        .tasklet-card-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .tasklet-action-btn { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--text-dim); background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; transition: all 0.15s; }
+        .tasklet-action-btn:hover { color: var(--text); border-color: var(--border-mid); background: var(--bg-hover); }
+        .tasklet-action-btn.danger:hover { color: var(--red); border-color: var(--red); }
+        .tasklet-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .tasklet-modal-card { background: var(--bg-raised); border: 1px solid var(--border-mid); border-radius: 14px; width: 100%; max-width: 520px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+        .tasklet-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text); }
+        .tasklet-modal-close { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; display: flex; align-items: center; border-radius: 4px; transition: color 0.15s; }
+        .tasklet-modal-close:hover { color: var(--text); }
+        .tasklet-modal-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+        .tasklet-modal-body label { font-family: var(--mono); font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 5px; letter-spacing: 0.05em; }
+        .tasklet-modal-body input, .tasklet-modal-body select, .tasklet-modal-body textarea { width: 100%; box-sizing: border-box; background: var(--bg-hover); border: 1px solid var(--border-mid); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-size: 13px; font-family: var(--mono); }
+        .tasklet-modal-body textarea { resize: vertical; }
+        .tasklet-modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
         .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .toggle-slider { position: absolute; inset: 0; background: var(--bg-hover); border-radius: 20px; transition: 0.2s; }
@@ -2815,183 +2847,131 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         </div><!-- /adjusters -->
 
 
-        <!-- TAB: Automations -->
+        <!-- TAB: Automations (Tasklet-style) -->
         <div class="stab-content" id="stab-content-automations">
-            <div class="stab-section-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M21 12h-2M5 12H3"/></svg>
-                AI Workflow Automations
+
+            <!-- Header row -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
+                <div class="stab-section-title" style="margin-bottom:0;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M21 12h-2M5 12H3"/></svg>
+                    Automations
+                </div>
+                <button class="settings-save-btn" onclick="openNewAutomationModal()" style="width:auto;padding:8px 16px;margin:0;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Automation
+                </button>
             </div>
 
-            <!-- Email SMTP wizard -->
-            <div class="automation-card">
-                <div class="automation-card-header">
-                    <span class="automation-card-title">Email Connection (SMTP)</span>
-                    <span id="email-status-badge" class="automation-card-status off">Not Configured</span>
-                </div>
-                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Configure SMTP to send emails from automations and tool outputs. Gmail: use App Password with smtp.gmail.com:587. Outlook: smtp.office365.com:587.</p>
-                <div id="smtp-env-notice" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text-dim);background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;">
-                    <strong style="color:var(--accent);">Note:</strong> SMTP is configured via environment variables on this server. Settings below are read-only.
-                </div>
-                <div class="tool-field-row" style="margin-bottom:8px;">
-                    <div class="tool-field">
-                        <label for="smtp-host-input">SMTP Host</label>
-                        <input type="text" id="smtp-host-input" placeholder="smtp.gmail.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+            <!-- Built-in: Daily Overdue Invoice Follow-Up -->
+            <div class="tasklet-card">
+                <div class="tasklet-card-top">
+                    <div class="tasklet-card-info">
+                        <span class="tasklet-card-name">Daily Overdue Invoice Follow-Up</span>
+                        <div class="tasklet-card-meta">
+                            <span class="tasklet-trigger-pill schedule">&#128336; Daily at <span id="builtin-hour-display">9</span>:00</span>
+                            <span class="tasklet-meta-sep">&bull;</span>
+                            <span class="tasklet-meta-text">Send Email</span>
+                            <span class="tasklet-meta-sep">&bull;</span>
+                            <span class="tasklet-meta-text" style="color:var(--accent);">Built-in</span>
+                        </div>
+                        <div class="tasklet-card-lastrun" id="auto-last-run">Never run</div>
                     </div>
-                    <div class="tool-field" style="max-width:100px;">
-                        <label for="smtp-port-input">Port</label>
-                        <input type="number" id="smtp-port-input" placeholder="587" min="1" max="65535" value="587" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
-                    </div>
-                </div>
-                <div class="tool-field-row" style="margin-bottom:8px;">
-                    <div class="tool-field">
-                        <label for="smtp-user-input">Username / Email</label>
-                        <input type="email" id="smtp-user-input" placeholder="you@gmail.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
-                    </div>
-                    <div class="tool-field">
-                        <label for="smtp-pass-input">Password / App Password</label>
-                        <input type="password" id="smtp-pass-input" placeholder="••••••••••••" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
-                    </div>
-                </div>
-                <div class="tool-field" style="margin-bottom:12px;">
-                    <label for="smtp-from-input">From Name / Email (optional)</label>
-                    <input type="text" id="smtp-from-input" placeholder="Legend Construction Services &lt;invoices@legendconstruction.com&gt;" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <button class="settings-save-btn" onclick="saveSmtpConfigUI()" style="width:auto;padding:9px 20px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-                        Save
-                    </button>
-                    <button class="agent-action-btn" id="smtp-test-btn" onclick="testSmtpConnection()" style="padding:9px 16px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Test Connection
-                    </button>
-                </div>
-                <div id="smtp-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
-                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:10px 0 0;">Sending as: <span id="email-from-display" style="color:var(--accent);">Not set</span></p>
-            </div>
-
-            <!-- Overdue invoice auto follow-up -->
-            <div class="automation-card">
-                <div class="automation-card-header">
-                    <span class="automation-card-title">Daily Overdue Invoice Follow-Up</span>
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <span id="overdue-followup-status" class="automation-card-status off">OFF</span>
-                        <label class="toggle-switch">
+                    <div class="tasklet-card-controls">
+                        <span id="overdue-followup-status" class="tasklet-status-badge off">OFF</span>
+                        <label class="toggle-switch" style="margin:0;">
                             <input type="checkbox" id="overdue-followup-toggle" onchange="saveAutomationConfig()">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                 </div>
-                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">AI automatically generates and sends follow-up emails to clients with overdue invoices (from your Invoice Tracker). Runs once daily at the scheduled time.</p>
-                <div class="tool-field-row" style="margin-bottom:12px;">
-                    <div class="tool-field">
-                        <label>Run Time (Hour, 24h)</label>
-                        <input type="number" id="auto-hour" placeholder="9" min="0" max="23" value="9" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
-                    </div>
-                    <div class="tool-field">
-                        <label>CC Email (optional)</label>
-                        <input type="email" id="auto-cc-email" placeholder="you@yourcompany.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
-                    </div>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <button class="settings-save-btn" onclick="saveAutomationConfig()" style="width:auto;padding:9px 20px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-                        Save
-                    </button>
-                    <button class="agent-action-btn" id="auto-run-now-btn" onclick="runAutomationNow()" style="padding:9px 16px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <div class="tasklet-card-actions">
+                    <button class="tasklet-action-btn" id="auto-run-now-btn" onclick="runAutomationNow()">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Run Now
                     </button>
-                </div>
-                <div id="auto-last-run" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:6px;display:none;"></div>
-                <div id="auto-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
-            </div>
-
-            <!-- Custom Automations Builder -->
-            <div class="automation-card" style="border-color:var(--accent);padding-bottom:0;">
-                <div class="automation-card-header" style="margin-bottom:6px;">
-                    <span class="automation-card-title" style="font-size:14px;">Custom Automations</span>
-                    <button class="agent-action-btn" onclick="openCustomAutomationForm()" style="padding:7px 14px;font-size:11px;">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        New Automation
+                    <button class="tasklet-action-btn" onclick="toggleBuiltinConfig()">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M21 12h-2M5 12H3"/></svg>
+                        Configure
                     </button>
                 </div>
-                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Build automations that can do almost anything — send emails, post to Zapier / Slack / Make, generate reports. Use <code style="background:var(--bg-hover);padding:1px 4px;border-radius:3px;">{{variable}}</code> tokens in your prompts.</p>
-
-                <!-- Inline create/edit form (hidden by default) -->
-                <div id="custom-auto-form" style="display:none;background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;">
-                    <input type="hidden" id="ca-edit-id">
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                        <div style="flex:1;min-width:160px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Automation Name *</label>
-                            <input type="text" id="ca-name" placeholder="Weekly Revenue Report" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
+                <!-- Config panel (collapsed) -->
+                <div id="builtin-config-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+                    <div class="tool-field-row" style="margin-bottom:12px;">
+                        <div class="tool-field">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Run Time (Hour, 24h)</label>
+                            <input type="number" id="auto-hour" placeholder="9" min="0" max="23" value="9" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;" oninput="document.getElementById('builtin-hour-display').textContent=this.value||9">
                         </div>
-                        <div style="min-width:140px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Trigger</label>
-                            <select id="ca-trigger" onchange="updateCustomAutoFormFields()" style="width:100%;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                                <option value="manual">Manual only</option>
-                                <option value="daily">Daily (cron)</option>
-                                <option value="weekly">Weekly (cron)</option>
-                                <option value="webhook">Incoming Webhook</option>
-                            </select>
+                        <div class="tool-field">
+                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">CC Email (optional)</label>
+                            <input type="email" id="auto-cc-email" placeholder="you@yourcompany.com" style="background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
                         </div>
                     </div>
-                    <div id="ca-trigger-fields" style="display:none;display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                        <div id="ca-hour-wrap" style="min-width:100px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Hour (0-23)</label>
-                            <input type="number" id="ca-hour" min="0" max="23" value="8" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                        </div>
-                        <div id="ca-dow-wrap" style="display:none;min-width:120px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Day of Week</label>
-                            <select id="ca-dow" style="width:100%;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                                <option value="0">Sunday</option>
-                                <option value="1">Monday</option>
-                                <option value="2">Tuesday</option>
-                                <option value="3">Wednesday</option>
-                                <option value="4">Thursday</option>
-                                <option value="5">Friday</option>
-                                <option value="6">Saturday</option>
-                            </select>
-                        </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button class="settings-save-btn" onclick="saveAutomationConfig()" style="width:auto;padding:8px 18px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                            Save
+                        </button>
+                        <button class="tasklet-action-btn" onclick="toggleBuiltinConfig()">Cancel</button>
                     </div>
-                    <div style="margin-bottom:10px;">
-                        <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">AI Prompt * <span style="color:var(--accent);font-size:9px;">Available: {{date}} {{time}} {{month}} {{overdue_count}} {{pending_count}} {{outstanding_total}} {{overdue_total}} {{overdue_invoices}} {{pending_invoices}}</span></label>
-                        <textarea id="ca-prompt" rows="5" placeholder="Generate a professional weekly summary of outstanding invoices as of {{date}}. Include overdue count ({{overdue_count}}) and total outstanding ({{outstanding_total}}). List all overdue invoices:&#10;{{overdue_invoices}}" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;"></textarea>
-                    </div>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                        <div style="min-width:140px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Action</label>
-                            <select id="ca-action" onchange="updateCustomAutoFormFields()" style="width:100%;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                                <option value="log">Log Only</option>
-                                <option value="email">Send Email</option>
-                                <option value="webhook">Post to Webhook</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="ca-email-fields" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                        <div style="flex:1;min-width:160px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Send To (email)</label>
-                            <input type="email" id="ca-email-to" placeholder="boss@company.com" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                        </div>
-                        <div style="flex:1;min-width:160px;">
-                            <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Subject</label>
-                            <input type="text" id="ca-email-subject" placeholder="Weekly Report - {{date}}" style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                        </div>
-                    </div>
-                    <div id="ca-outwebhook-fields" style="display:none;margin-bottom:10px;">
-                        <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Outbound Webhook URL (Zapier, Slack, Make, etc.)</label>
-                        <input type="url" id="ca-webhook-url" placeholder="https://hooks.zapier.com/hooks/catch/..." style="width:100%;box-sizing:border-box;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:12px;">
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;padding:10px 0 14px;">
-                        <button class="settings-save-btn" onclick="saveCustomAutomation()" style="width:auto;padding:8px 18px;font-size:12px;">Save</button>
-                        <button class="agent-action-btn" onclick="cancelCustomAutomationForm()" style="padding:8px 14px;font-size:12px;">Cancel</button>
-                        <span id="ca-form-status" style="font-family:var(--mono);font-size:11px;display:none;margin-left:8px;"></span>
-                    </div>
+                    <div id="auto-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
                 </div>
+            </div>
 
-                <!-- List of custom automations -->
-                <div id="custom-auto-list" style="padding-bottom:16px;">
-                    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:center;padding:20px 0;" id="custom-auto-empty">No custom automations yet. Click <strong>New Automation</strong> to create one.</p>
+            <!-- Custom automations list -->
+            <div id="custom-auto-list">
+                <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:center;padding:28px 0;" id="custom-auto-empty">No custom automations yet. Click <strong>New Automation</strong> to create one.</p>
+            </div>
+
+            <!-- Email Settings (collapsible) -->
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
+                <button class="tasklet-action-btn" onclick="toggleSmtpPanel()" style="width:100%;justify-content:space-between;padding:10px 14px;">
+                    <span style="display:inline-flex;align-items:center;gap:8px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Email Settings (SMTP)
+                    </span>
+                    <span id="email-status-badge" class="tasklet-status-badge off" style="margin:0;">Not Configured</span>
+                </button>
+                <div id="smtp-panel" style="display:none;background:var(--bg-hover);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:16px;margin-top:10px;">
+                    <div id="smtp-env-notice" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;">
+                        <strong style="color:var(--accent);">Note:</strong> SMTP is configured via environment variables. Settings below are read-only.
+                    </div>
+                    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.6;margin:0 0 12px;">Gmail: use App Password with smtp.gmail.com:587. Outlook: smtp.office365.com:587.</p>
+                    <div class="tool-field-row" style="margin-bottom:8px;">
+                        <div class="tool-field">
+                            <label for="smtp-host-input" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">SMTP Host</label>
+                            <input type="text" id="smtp-host-input" placeholder="smtp.gmail.com" style="background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                        </div>
+                        <div class="tool-field" style="max-width:100px;">
+                            <label for="smtp-port-input" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Port</label>
+                            <input type="number" id="smtp-port-input" placeholder="587" min="1" max="65535" value="587" style="background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <div class="tool-field-row" style="margin-bottom:8px;">
+                        <div class="tool-field">
+                            <label for="smtp-user-input" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Username / Email</label>
+                            <input type="email" id="smtp-user-input" placeholder="you@gmail.com" style="background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                        </div>
+                        <div class="tool-field">
+                            <label for="smtp-pass-input" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Password / App Password</label>
+                            <input type="password" id="smtp-pass-input" placeholder="••••••••••••" style="background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <div class="tool-field" style="margin-bottom:12px;">
+                        <label for="smtp-from-input" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">From Name / Email (optional)</label>
+                        <input type="text" id="smtp-from-input" placeholder="Legend Construction Services &lt;invoices@legendconstruction.com&gt;" style="background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:8px 11px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box;">
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="settings-save-btn" onclick="saveSmtpConfigUI()" style="width:auto;padding:9px 20px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                            Save
+                        </button>
+                        <button class="agent-action-btn" id="smtp-test-btn" onclick="testSmtpConnection()" style="padding:9px 16px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Test Connection
+                        </button>
+                    </div>
+                    <div id="smtp-save-status" style="font-family:var(--mono);font-size:11px;margin-top:8px;display:none;"></div>
+                    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin:10px 0 0;">Sending as: <span id="email-from-display" style="color:var(--accent);">Not set</span></p>
                 </div>
             </div>
 
@@ -3100,6 +3080,86 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
         </div>
         </div>
     </main>
+
+    <!-- New Automation Modal (Tasklet-style) -->
+    <div id="new-automation-modal" class="tasklet-modal-backdrop" style="display:none;" onclick="closeNewAutomationModalBg(event)">
+        <div class="tasklet-modal-card" onclick="event.stopPropagation()">
+            <div class="tasklet-modal-header">
+                <span id="new-auto-modal-title">New Automation</span>
+                <button class="tasklet-modal-close" onclick="closeNewAutomationModal()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="tasklet-modal-body">
+                <input type="hidden" id="ca-edit-id">
+                <div style="margin-bottom:14px;">
+                    <label>AUTOMATION NAME *</label>
+                    <input type="text" id="ca-name" placeholder="e.g. Weekly Invoice Summary">
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                    <div style="flex:1;min-width:140px;">
+                        <label>TRIGGER</label>
+                        <select id="ca-trigger" onchange="updateCustomAutoFormFields()">
+                            <option value="manual">&#9654; Manual only</option>
+                            <option value="daily">&#128336; Daily (scheduled)</option>
+                            <option value="weekly">&#128197; Weekly (scheduled)</option>
+                            <option value="webhook">&#128279; Incoming Webhook</option>
+                        </select>
+                    </div>
+                    <div id="ca-hour-wrap" style="min-width:90px;display:none;">
+                        <label>HOUR (0-23)</label>
+                        <input type="number" id="ca-hour" min="0" max="23" value="8">
+                    </div>
+                    <div id="ca-dow-wrap" style="min-width:120px;display:none;">
+                        <label>DAY OF WEEK</label>
+                        <select id="ca-dow">
+                            <option value="0">Sunday</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label>AI PROMPT * <span style="color:var(--accent);font-size:9px;">{{date}} {{time}} {{month}} {{overdue_count}} {{pending_count}} {{outstanding_total}} {{overdue_total}} {{overdue_invoices}} {{pending_invoices}}</span></label>
+                    <textarea id="ca-prompt" rows="4" placeholder="Generate a professional weekly summary of outstanding invoices as of {{date}}. Include overdue count ({{overdue_count}}) and total outstanding ({{outstanding_total}}). List all overdue invoices:&#10;{{overdue_invoices}}"></textarea>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label>ACTION</label>
+                    <select id="ca-action" onchange="updateCustomAutoFormFields()">
+                        <option value="log">&#128203; Log Only</option>
+                        <option value="email">&#9993; Send Email</option>
+                        <option value="webhook">&#128279; Post to Webhook</option>
+                    </select>
+                </div>
+                <div id="ca-email-fields" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                    <div style="flex:1;min-width:160px;">
+                        <label>SEND TO (EMAIL)</label>
+                        <input type="email" id="ca-email-to" placeholder="boss@company.com">
+                    </div>
+                    <div style="flex:1;min-width:160px;">
+                        <label>SUBJECT</label>
+                        <input type="text" id="ca-email-subject" placeholder="Weekly Report - {{date}}">
+                    </div>
+                </div>
+                <div id="ca-outwebhook-fields" style="display:none;margin-bottom:14px;">
+                    <label>OUTBOUND WEBHOOK URL (ZAPIER, SLACK, MAKE, ETC.)</label>
+                    <input type="url" id="ca-webhook-url" placeholder="https://hooks.zapier.com/hooks/catch/...">
+                </div>
+                <span id="ca-form-status" style="font-family:var(--mono);font-size:11px;display:none;"></span>
+            </div>
+            <div class="tasklet-modal-footer">
+                <button class="tasklet-action-btn" onclick="closeNewAutomationModal()">Cancel</button>
+                <button class="settings-save-btn" onclick="saveCustomAutomation()" style="width:auto;padding:9px 20px;margin:0;display:inline-flex;align-items:center;gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                    Save Automation
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Connector Overlay -->
     <div id="connector-overlay" class="connector-overlay" style="display:none" onclick="connectorOverlayBgClick(event)">
@@ -5604,7 +5664,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 var fromEl = document.getElementById('email-from-display');
                 if (badge) {
                     badge.textContent = smtpData.configured ? 'Configured' : 'Not Configured';
-                    badge.className = 'automation-card-status ' + (smtpData.configured ? 'on' : 'off');
+                    badge.className = 'tasklet-status-badge ' + (smtpData.configured ? 'on' : 'off');
                 }
                 if (fromEl) fromEl.textContent = smtpData.from || 'Not set';
 
@@ -5615,8 +5675,8 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                     var hourInput = document.getElementById('auto-hour');
                     var ccInput = document.getElementById('auto-cc-email');
                     if (toggle) toggle.checked = !!cfg.enabled;
-                    if (statusBadge) { statusBadge.textContent = cfg.enabled ? 'ON' : 'OFF'; statusBadge.className = 'automation-card-status ' + (cfg.enabled ? 'on' : 'off'); }
-                    if (hourInput) hourInput.value = cfg.hour || 9;
+                    if (statusBadge) { statusBadge.textContent = cfg.enabled ? 'ON' : 'OFF'; statusBadge.className = 'tasklet-status-badge ' + (cfg.enabled ? 'on' : 'off'); }
+                    if (hourInput) { hourInput.value = cfg.hour || 9; var hd = document.getElementById('builtin-hour-display'); if (hd) hd.textContent = cfg.hour || 9; }
                     if (ccInput) ccInput.value = cfg.ccEmail || '';
                 }
                 if (data.lastRun) {
@@ -5693,7 +5753,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             var ccEmail = (document.getElementById('auto-cc-email') || {}).value || '';
             var statusEl = document.getElementById('auto-save-status');
             var statusBadge = document.getElementById('overdue-followup-status');
-            if (statusBadge) { statusBadge.textContent = enabled ? 'ON' : 'OFF'; statusBadge.className = 'automation-card-status ' + (enabled ? 'on' : 'off'); }
+            if (statusBadge) { statusBadge.textContent = enabled ? 'ON' : 'OFF'; statusBadge.className = 'tasklet-status-badge ' + (enabled ? 'on' : 'off'); }
             try {
                 var resp = await fetch('/api/automations', {
                     method: 'POST',
@@ -5703,7 +5763,9 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 var data = await resp.json();
                 if (resp.ok && data.success) {
                     if (statusEl) { statusEl.style.display = ''; statusEl.textContent = 'Saved. Automation ' + (enabled ? 'active — runs daily at ' + hour + ':00.' : 'disabled.'); statusEl.style.color = 'var(--green)'; }
+                    var hd = document.getElementById('builtin-hour-display'); if (hd) hd.textContent = hour;
                     showSettingsToast('Automation settings saved');
+                    setTimeout(toggleBuiltinConfig, 800);
                 } else {
                     if (statusEl) { statusEl.style.display = ''; statusEl.textContent = data.error || 'Save failed'; statusEl.style.color = 'var(--red)'; }
                 }
@@ -5773,42 +5835,56 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             if (empty) empty.style.display = 'none';
             list.querySelectorAll('.ca-card').forEach(function(el) { el.remove(); });
 
-            var triggerLabels = { manual: 'Manual', daily: 'Daily', weekly: 'Weekly', webhook: 'Webhook' };
-            var actionLabels  = { log: 'Log Only', email: 'Send Email', webhook: 'Post to Webhook' };
+            var actionLabels = { log: 'Log Only', email: 'Send Email', webhook: 'Post to Webhook' };
             var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
             _customAutomations.forEach(function(a) {
                 var card = document.createElement('div');
-                card.className = 'ca-card';
+                card.className = 'ca-card tasklet-card';
                 card.dataset.id = a.id;
-                card.style.cssText = 'background:var(--bg);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;';
 
-                var trigDesc = triggerLabels[a.trigger] || a.trigger;
-                if (a.trigger === 'daily') trigDesc += ' at ' + String(a.triggerHour || 8).padStart(2,'0') + ':00';
-                if (a.trigger === 'weekly') trigDesc += ' ' + (dayNames[a.triggerDayOfWeek] || 'Mon') + ' at ' + String(a.triggerHour || 8).padStart(2,'0') + ':00';
+                var trigPillClass = a.trigger === 'webhook' ? 'webhook' : (a.trigger === 'manual' ? 'manual' : 'schedule');
+                var trigPillText = a.trigger === 'daily'
+                    ? '&#128336; Daily at ' + String(a.triggerHour || 8).padStart(2,'0') + ':00'
+                    : a.trigger === 'weekly'
+                    ? '&#128197; ' + (dayNames[a.triggerDayOfWeek] || 'Mon') + ' at ' + String(a.triggerHour || 8).padStart(2,'0') + ':00'
+                    : a.trigger === 'webhook'
+                    ? '&#128279; Webhook'
+                    : '&#9654; Manual';
 
-                var webhookInfo = '';
-                if (a.trigger === 'webhook' && a.webhookToken) {
-                    webhookInfo = '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:4px;word-break:break-all;">Webhook URL: <span style="color:var(--accent);">' + window.location.origin + '/webhooks/' + a.webhookToken + '</span></div>';
-                }
+                var webhookInfo = (a.trigger === 'webhook' && a.webhookToken)
+                    ? '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:4px;word-break:break-all;">URL: <span style="color:var(--accent);">' + escapeHtml(window.location.origin + '/webhooks/' + a.webhookToken) + '</span></div>'
+                    : '';
 
-                var lastRunText = a.lastRun ? 'Last run: ' + new Date(a.lastRun).toLocaleString() + (a.lastResult ? ' — ' + a.lastResult : '') : 'Never run';
-                var previewText = a.lastResultPreview ? '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden;">' + escapeHtml(a.lastResultPreview) + (a.lastResultPreview.length >= 300 ? '...' : '') + '</div>' : '';
+                var lastRunText = a.lastRun
+                    ? 'Last run: ' + new Date(a.lastRun).toLocaleString() + (a.lastResult ? ' \u2014 ' + a.lastResult : '')
+                    : 'Never run';
+                var previewText = a.lastResultPreview
+                    ? '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden;">' + escapeHtml(a.lastResultPreview) + (a.lastResultPreview.length >= 300 ? '...' : '') + '</div>'
+                    : '';
 
-                card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
-                    '<div style="display:flex;align-items:center;gap:8px;">' +
-                    '<label class="toggle-switch" style="margin:0;flex-shrink:0;"><input type="checkbox" ' + (a.enabled ? 'checked' : '') + ' onchange="toggleCustomAutomation(\\'' + a.id + '\\',this.checked)"><span class="toggle-slider"></span></label>' +
-                    '<div><div style="font-family:var(--mono);font-size:12px;color:var(--text);font-weight:600;">' + escapeHtml(a.name) + '</div>' +
-                    '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">' + trigDesc + ' &bull; ' + (actionLabels[a.action] || a.action) + '</div></div>' +
+                card.innerHTML =
+                    '<div class="tasklet-card-top">' +
+                    '<div class="tasklet-card-info">' +
+                    '<span class="tasklet-card-name">' + escapeHtml(a.name) + '</span>' +
+                    '<div class="tasklet-card-meta">' +
+                    '<span class="tasklet-trigger-pill ' + trigPillClass + '">' + trigPillText + '</span>' +
+                    '<span class="tasklet-meta-sep">&bull;</span>' +
+                    '<span class="tasklet-meta-text">' + escapeHtml(actionLabels[a.action] || a.action) + '</span>' +
                     '</div>' +
-                    '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-                    '<button class="agent-action-btn" onclick="runCustomAutomationNow(\\'' + a.id + '\\')" style="padding:5px 10px;font-size:10px;" title="Run Now">&#9654; Run</button>' +
-                    '<button class="agent-action-btn" onclick="openCustomAutomationForm(\\'' + a.id + '\\')" style="padding:5px 10px;font-size:10px;" title="Edit">&#9998; Edit</button>' +
-                    '<button class="agent-action-btn" onclick="deleteCustomAutomation(\\'' + a.id + '\\')" style="padding:5px 10px;font-size:10px;color:var(--red);" title="Delete">&#10005;</button>' +
-                    '</div></div>' +
-                    webhookInfo +
-                    '<div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:6px;" id="ca-status-' + a.id + '">' + escapeHtml(lastRunText) + '</div>' +
-                    previewText;
+                    '<div class="tasklet-card-lastrun" id="ca-status-' + a.id + '">' + escapeHtml(lastRunText) + '</div>' +
+                    webhookInfo + previewText +
+                    '</div>' +
+                    '<div class="tasklet-card-controls">' +
+                    '<span class="tasklet-status-badge ' + (a.enabled ? 'on' : 'off') + '">' + (a.enabled ? 'ON' : 'OFF') + '</span>' +
+                    '<label class="toggle-switch" style="margin:0;"><input type="checkbox" ' + (a.enabled ? 'checked' : '') + ' data-id="' + a.id + '" onchange="toggleCustomAutomation(this.dataset.id,this.checked)"><span class="toggle-slider"></span></label>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="tasklet-card-actions">' +
+                    '<button class="tasklet-action-btn" data-id="' + a.id + '" onclick="runCustomAutomationNow(this.dataset.id)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run</button>' +
+                    '<button class="tasklet-action-btn" data-id="' + a.id + '" onclick="openNewAutomationModal(this.dataset.id)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>' +
+                    '<button class="tasklet-action-btn danger" data-id="' + a.id + '" onclick="deleteCustomAutomation(this.dataset.id)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Delete</button>' +
+                    '</div>';
 
                 list.appendChild(card);
             });
@@ -5818,20 +5894,14 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        function openCustomAutomationForm(id) {
-            var form = document.getElementById('custom-auto-form');
-            if (!form) return;
-            form.style.display = '';
-
-            // Scroll form into view
-            setTimeout(function() { form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
-
-            // Reset status
+        function openNewAutomationModal(id) {
+            var modal = document.getElementById('new-automation-modal');
+            if (!modal) return;
+            var title = document.getElementById('new-auto-modal-title');
             var statusEl = document.getElementById('ca-form-status');
             if (statusEl) statusEl.style.display = 'none';
-
+            if (title) title.textContent = id ? 'Edit Automation' : 'New Automation';
             if (!id) {
-                // New form — clear fields
                 document.getElementById('ca-edit-id').value = '';
                 document.getElementById('ca-name').value = '';
                 document.getElementById('ca-trigger').value = 'manual';
@@ -5843,10 +5913,9 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 document.getElementById('ca-email-subject').value = 'Automation Report - {{date}}';
                 document.getElementById('ca-webhook-url').value = '';
                 updateCustomAutoFormFields();
+                modal.style.display = 'flex';
                 return;
             }
-
-            // Populate with existing automation
             var a = _customAutomations.find(function(x) { return x.id === id; });
             if (!a) return;
             document.getElementById('ca-edit-id').value = a.id;
@@ -5860,12 +5929,31 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             document.getElementById('ca-email-subject').value = a.emailSubject || 'Automation Report - {{date}}';
             document.getElementById('ca-webhook-url').value = a.webhookUrl || '';
             updateCustomAutoFormFields();
+            modal.style.display = 'flex';
         }
 
-        function cancelCustomAutomationForm() {
-            var form = document.getElementById('custom-auto-form');
-            if (form) form.style.display = 'none';
+        function closeNewAutomationModal() {
+            var modal = document.getElementById('new-automation-modal');
+            if (modal) modal.style.display = 'none';
         }
+
+        function closeNewAutomationModalBg(e) {
+            if (e.target === document.getElementById('new-automation-modal')) closeNewAutomationModal();
+        }
+
+        function toggleBuiltinConfig() {
+            var panel = document.getElementById('builtin-config-panel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function toggleSmtpPanel() {
+            var panel = document.getElementById('smtp-panel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        // Keep old name as alias for any remaining calls
+        function openCustomAutomationForm(id) { openNewAutomationModal(id); }
+        function cancelCustomAutomationForm() { closeNewAutomationModal(); }
 
         function updateCustomAutoFormFields() {
             var trigger = (document.getElementById('ca-trigger') || {}).value;
@@ -5916,7 +6004,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 });
                 var data = await resp.json();
                 if (resp.ok) {
-                    cancelCustomAutomationForm();
+                    closeNewAutomationModal();
                     loadCustomAutomationsUI();
                     showSettingsToast(id ? 'Automation updated' : 'Automation created');
                 } else {
