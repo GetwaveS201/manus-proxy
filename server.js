@@ -3383,7 +3383,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
             </button>
 
             <!-- Output -->
-            <div class="tool-output" id="invoice-output" style="display:none;">
+            <div class="tool-output" id="invoice-output">
                 <div class="tool-output-header">
                     <span class="tool-output-label">Generated Email</span>
                     <button class="tool-copy-btn" onclick="copyToolOutput('invoice-output-body')" aria-label="Copy to clipboard">
@@ -3471,7 +3471,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 Generate Follow-up Email
             </button>
 
-            <div class="tool-output" id="adjuster-output" style="display:none;">
+            <div class="tool-output" id="adjuster-output">
                 <div class="tool-output-header">
                     <span class="tool-output-label">Generated Email</span>
                     <button class="tool-copy-btn" onclick="copyToolOutput('adjuster-output-body')" aria-label="Copy to clipboard">
@@ -3587,7 +3587,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 Generate Estimate
             </button>
 
-            <div class="tool-output" id="est-output" style="display:none;">
+            <div class="tool-output" id="est-output">
                 <div class="tool-output-header">
                     <span class="tool-output-label">Generated Estimate</span>
                     <button class="tool-copy-btn" onclick="copyToolOutput('est-output-body')">
@@ -3671,7 +3671,7 @@ Format: Subject line, greeting, body, professional sign-off."></textarea>
                 Generate Change Order
             </button>
 
-            <div class="tool-output" id="co-output" style="display:none;">
+            <div class="tool-output" id="co-output">
                 <div class="tool-output-header">
                     <span class="tool-output-label">Generated Change Order</span>
                     <button class="tool-copy-btn" onclick="copyToolOutput('co-output-body')">
