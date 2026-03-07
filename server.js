@@ -6653,10 +6653,10 @@ function buildTemplateCard(t, conn) {
     (conn
       ? '<div class="connector-card-actions">' +
         '<span class="connector-connected-badge">Connected</span>' +
-        '<button class="connector-reveal-btn" onclick="revealConnectorKey(\\'' + connId + '\\', \\'' + t.name.replace(/'/g, '') + '\\')">Show Key</button>' +
-        '<button class="connector-remove-btn" onclick="removeConnector(\\'' + connId + '\\', \\'' + t.id + '\\')">Remove</button>' +
+        '<button class="connector-reveal-btn" data-cid="' + connId + '" data-name="' + (t.name || '').replace(/"/g, '') + '" onclick="revealConnectorKey(this.dataset.cid, this.dataset.name)">Show Key</button>' +
+        '<button class="connector-remove-btn" data-cid="' + connId + '" data-tid="' + t.id + '" onclick="removeConnector(this.dataset.cid, this.dataset.tid)">Remove</button>' +
         '</div>'
-      : '<button class="connector-add-btn" onclick="toggleDrawer(\\'' + t.id + '\\')">Add</button>'
+      : '<button class="connector-add-btn" data-tmpl="' + t.id + '" onclick="toggleDrawer(this.dataset.tmpl)">Add</button>'
     ) +
     '<div class="connector-add-drawer" id="drawer-' + t.id + '" style="display:none">' + buildAddDrawerHTML(t) + '</div>' +
     '</div>';
@@ -6672,8 +6672,8 @@ function buildAddDrawerHTML(t) {
     '<input type="password" id="conn-key-' + t.id + '" class="conn-input" placeholder="' + t.apiKeyLabel + '" style="margin-bottom:6px">' +
     '<input type="password" id="conn-pwd-' + t.id + '" class="conn-input" placeholder="Your account password" style="margin-bottom:8px">' +
     '<div style="display:flex;gap:8px">' +
-    '<button class="connector-add-btn" onclick="saveConnector(\\'' + t.id + '\\')">Save</button>' +
-    '<button class="connector-remove-btn" onclick="toggleDrawer(\\'' + t.id + '\\')">Cancel</button>' +
+    '<button class="connector-add-btn" data-tmpl="' + t.id + '" onclick="saveConnector(this.dataset.tmpl)">Save</button>' +
+    '<button class="connector-remove-btn" data-tmpl="' + t.id + '" onclick="toggleDrawer(this.dataset.tmpl)">Cancel</button>' +
     '</div></div>';
 }
 
@@ -6755,7 +6755,7 @@ function updateActiveConnectorsBar() {
   bar.style.display = 'flex';
   bar.innerHTML = '<span style="font-size:12px;color:var(--text-muted);margin-right:8px;white-space:nowrap;">Connectors:</span>' +
     myConnectors.map(function(c) {
-      return '<span class="active-connector-chip" onclick="triggerConnectorQuery(\\'' + c.id + '\\', \\'' + (c.name || '').replace(/'/g, "\\\\'") + '\\')">' +
+      return '<span class="active-connector-chip" data-cid="' + c.id + '" data-name="' + (c.name || '').replace(/"/g, '') + '" onclick="triggerConnectorQuery(this.dataset.cid, this.dataset.name)">' +
         (c.emoji || '') + ' ' + (c.name || c.templateId) +
         '</span>';
     }).join('');
@@ -7207,11 +7207,10 @@ app.get('/api/task/:id', requireApiKey, (req, res) => {
 });
 
 /**
- * Health check endpoint (protected)
+ * Health check endpoint (public - no auth so Render health checks work)
  * GET /health
- * Headers: X-API-Key (required)
  */
-app.get('/health', requireApiKey, (req, res) => {
+app.get('/health', (req, res) => {
   log('INFO', 'Health check', req.id);
 
   res.json({
